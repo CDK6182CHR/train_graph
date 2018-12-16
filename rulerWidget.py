@@ -1,0 +1,427 @@
+"""
+独立出来的标尺编辑窗口类。架空主程序中相关部分。
+2018.12.14修改，将main设为可选，保证可以从数据库独立调用。
+"""
+from PyQt5 import QtWidgets,QtCore,QtGui
+from PyQt5.QtCore import Qt
+from ruler import Ruler
+from line import Line
+
+class RulerWidget(QtWidgets.QTabWidget):
+    okClicked = QtCore.pyqtSignal()
+    showStatus = QtCore.pyqtSignal(str)
+    def __init__(self,line:Line,main=None):
+        super().__init__()
+        self.line = line
+        self.main = main
+
+    def setData(self):
+        self.clear()
+        line = self.line
+        for ruler in line.rulers:
+            self._addRulerTab(ruler)
+        new_ruler = Ruler(line=line)
+        self._addRulerTab(new_ruler)
+
+    def _addRulerTab(self,ruler):
+        widget = QtWidgets.QWidget()
+        widget.ruler = ruler
+
+        vlayout = QtWidgets.QVBoxLayout()
+        flayout = QtWidgets.QFormLayout()
+
+        nameEdit = QtWidgets.QLineEdit()
+        nameEdit.setText(ruler.name())
+        flayout.addRow("标尺名称", nameEdit)
+        widget.nameEdit = nameEdit
+
+        check = QtWidgets.QCheckBox()
+        check.setChecked(ruler.different())
+        flayout.addRow("上下行分设", check)
+        check.toggled.connect(lambda x: self._ruler_different_changed(ruler, x, tableWidget))
+
+        vlayout.addLayout(flayout)
+
+        # 2018.12.14修改：抽离main，将触发的函数弄到外面去
+        if self.main is not None:
+            # 若当前编辑的是运行图的标尺而不是数据库中的
+            btnRead = QtWidgets.QPushButton("从车次读取")
+            btnRead.clicked.connect(lambda: self._ruler_from_train(widget))
+            btnSet = QtWidgets.QPushButton("设为排图标尺")
+            btnSet.clicked.connect(lambda: self._apply_ruler_change(widget))  # 先提交标尺信息
+            btnSet.clicked.connect(lambda: self.main.changeOrdinateRuler(ruler))  # 直接触发修改函数
+            hlayout = QtWidgets.QHBoxLayout()
+            hlayout.addWidget(btnRead)
+            hlayout.addWidget(btnSet)
+
+            vlayout.addLayout(hlayout)
+
+        tableWidget = QtWidgets.QTableWidget()
+        tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
+        widget.tableWidget = tableWidget
+
+        self._setRulerTable(tableWidget, widget.ruler)
+
+        vlayout.addWidget(tableWidget)
+
+        btnOk = QtWidgets.QPushButton("确定")
+        btnCancel = QtWidgets.QPushButton("还原")
+        btnDel = QtWidgets.QPushButton("删除")
+
+        btnOk.clicked.connect(lambda: self._apply_ruler_change(widget))
+        btnCancel.clicked.connect(lambda: self._discard_ruler_change(widget))
+        btnDel.clicked.connect(lambda: self._del_ruler(ruler))
+
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnCancel)
+        hlayout.addWidget(btnDel)
+        vlayout.addLayout(hlayout)
+
+        widget.setLayout(vlayout)
+
+        tabname = ruler.name()
+        if not tabname:
+            tabname = "新建"
+
+        self.addTab(widget, tabname)
+
+    def _setRulerTable(self, tableWidget: QtWidgets.QTableWidget, ruler: Ruler):
+        """
+        设置ruler的table。
+        :param tableWidget:
+        :param ruler:
+        :return:
+        """
+        tableWidget.clear()
+        tableWidget.setRowCount(0)
+
+        tableWidget.verticalHeader().setVisible(False)
+        tableWidget.setColumnCount(6)
+        tableWidget.setHorizontalHeaderLabels(["区间", "分", "秒", "起", "停", "旅速"])
+        tableWidget.setColumnWidth(0, 150)
+        tableWidget.setColumnWidth(1, 40)
+        tableWidget.setColumnWidth(2, 50)
+        tableWidget.setColumnWidth(3, 50)
+        tableWidget.setColumnWidth(4, 50)
+        tableWidget.setColumnWidth(5, 70)
+
+        # 方便起见，直接调用line对象
+        line = ruler.line()
+        station_dicts = line.stations
+        blocker = "->" if ruler.different() else "<->"
+
+        former_dict = None
+        for i, st_dict in enumerate(station_dicts):
+            if not ruler.isDownPassed(st_dict["zhanming"]):
+                if former_dict is not None:
+                    mile = abs(st_dict["licheng"] - former_dict["licheng"])
+                    self._addRulerRow(former_dict["zhanming"], st_dict["zhanming"], blocker
+                                      , ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
+                                      tableWidget, mile)
+                former_dict = st_dict
+
+        former_dict = None
+        if ruler.different():
+            # 上下行不一致，增加上行部分
+            for st_dict in reversed(station_dicts):
+                if not ruler.isUpPassed(st_dict["zhanming"]):
+                    if former_dict is not None:
+                        mile = abs(st_dict["licheng"] - former_dict["licheng"])
+                        self._addRulerRow(former_dict["zhanming"], st_dict["zhanming"], blocker
+                                          , ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
+                                          tableWidget, mile)
+                    former_dict = st_dict
+
+    def _addRulerRow(self, fazhan, daozhan, blocker
+                     , node: dict, tableWidget: QtWidgets.QTableWidget,
+                     mile):
+        tableWidget.insertRow(tableWidget.rowCount())
+        now_line = tableWidget.rowCount() - 1
+        tableWidget.setRowHeight(now_line, 30)
+
+        interval = fazhan + blocker + daozhan
+        item = QtWidgets.QTableWidgetItem(interval)
+        item.setData(-1, [fazhan, daozhan])
+        tableWidget.setItem(now_line, 0, item)
+
+        minute = 0
+        second = 0
+        if node is not None:
+            minute = int(node["interval"] / 60)
+            second = node["interval"] % 60
+
+        spinMin = QtWidgets.QSpinBox()
+        spinMin.setRange(0, 300)
+        spinMin.setValue(minute)
+        spinMin.setMinimumSize(1,1)
+
+        spinSec = QtWidgets.QSpinBox()
+        spinSec.setRange(0, 60)
+        spinSec.setSingleStep(10)
+        spinSec.setValue(second)
+        spinSec.setMinimumSize(1,1)
+
+        spinMin.valueChanged.connect(lambda: self._ruler_interval_changed(
+            now_line, tableWidget, mile
+        ))
+        spinSec.valueChanged.connect(lambda: self._ruler_interval_changed(
+            now_line, tableWidget, mile
+        ))
+
+        tableWidget.setCellWidget(now_line, 1, spinMin)
+        tableWidget.setCellWidget(now_line, 2, spinSec)
+
+        spinStart = QtWidgets.QSpinBox()
+        spinStart.setRange(0, 300)
+        spinStart.setSingleStep(10)
+        spinStop = QtWidgets.QSpinBox()
+        spinStop.setRange(0, 300)
+        spinStop.setSingleStep(10)
+        spinStart.setMinimumSize(1,1)
+        spinStop.setMinimumSize(1,1)
+
+        start = 0
+        stop = 0
+
+        if node is not None:
+            start = node["start"]
+            stop = node["stop"]
+
+        spinStart.setValue(start)
+        spinStop.setValue(stop)
+
+        tableWidget.setCellWidget(now_line, 3, spinStart)
+        tableWidget.setCellWidget(now_line, 4, spinStop)
+
+        try:
+            speed = 1000 * mile / (minute * 60 + second) * 3.6
+        except ZeroDivisionError:
+            speed = 0
+
+        item = QtWidgets.QTableWidgetItem("%.2f" % speed)
+        tableWidget.setItem(now_line, 5, item)
+
+    #slots
+    def _ruler_different_changed(self, ruler: Ruler, checked: bool, tableWidget):
+        if checked == False:
+            if self.line.isSplited():
+                self._derr("本线存在上下行分设站，不能设置上下行一致的标尺！")
+                self.sender().setChecked(True)
+                return
+
+            flag = self.qustion("所有上行数据都将丢失，使用下行数据代表双向数据。是否继续？")
+            if flag == False:
+                self.sender().setChecked(True)
+                return
+            ruler.setDifferent(False, change=True)
+        else:
+            ruler.setDifferent(True, change=True)
+
+        self._setRulerTable(tableWidget, ruler)
+
+    def _apply_ruler_change(self, widget: QtWidgets.QWidget):
+        name = widget.nameEdit.text()
+        if not name:
+            self._derr("标尺名称不能为空！")
+            return
+        ruler = widget.ruler
+        line = ruler._line
+        if line.rulerNameExisted(name, ruler):
+            self._derr(f"标尺名称 {name} 已存在，请重新输入名称！")
+            return
+
+        ruler.setName(name)
+
+        tableWidget: QtWidgets.QTableWidget = widget.tableWidget
+
+        for row in range(tableWidget.rowCount()):
+            fazhan = tableWidget.item(row, 0).data(-1)[0]
+            daozhan = tableWidget.item(row, 0).data(-1)[1]
+            interval = tableWidget.cellWidget(row, 1).value() * 60 + \
+                       tableWidget.cellWidget(row, 2).value()
+            if not interval:
+                #这一行标红
+                color = QtGui.QColor(Qt.red)
+                color.setAlpha(150)
+                for col in range(tableWidget.columnCount()):
+                    try:
+                        tableWidget.item(row,col).setBackground(QtGui.QBrush(color))
+                    except:
+                        pass
+            else:
+                for col in range(tableWidget.columnCount()):
+                    try:
+                        tableWidget.item(row,col).setBackground(QtGui.QBrush(Qt.transparent))
+                    except:
+                        pass
+
+            start = tableWidget.cellWidget(row, 3).value()
+            stop = tableWidget.cellWidget(row, 4).value()
+            ruler.addStation_info(fazhan, daozhan, interval, start, stop, del_existed=True)
+
+        self.setTabText(self.currentIndex(), ruler.name())
+
+        if line.isNewRuler(ruler):
+            line.addRuler(ruler)
+            new_ruler = Ruler(line=line)
+            self._addRulerTab(new_ruler)
+
+        if self.main is not None:
+            self.main._setOrdinateCombo(self.main.ordinateCombo)
+
+    def _discard_ruler_change(self, widget: QtWidgets.QWidget):
+        flag = self.qustion("将此标尺数据恢复到保存的数据，所有未保存的修改都将丢失！是否继续？")
+        if not flag:
+            return
+
+        ruler = widget.ruler
+        widget.nameEdit.setText(ruler.name())
+        #第一重parent是stackedWidget，第二重才是tabWidget
+        self.setData()
+
+    def _del_ruler(self, ruler: Ruler):
+        new = False
+        line:Line = ruler.line()
+        if line.isNewRuler(ruler):
+            new = True
+
+        if not self.qustion("是否确认删除当前标尺？"):
+            return
+
+        if self.main is not None and ruler is self.main.graph.ordinateRuler():
+            #若是排图标尺，取消排图标尺
+            self.main.changeOrdinateRuler(None)
+
+        self.removeTab(self.currentIndex())
+        line.delRuler(ruler)
+
+        if new:
+            # 如果是新建标尺，则再新建一个tab
+            new_ruler = Ruler(line=line)
+            self._addRulerTab(new_ruler)
+
+    # 允许直接使用main
+    def _ruler_from_train(self, widget: QtWidgets.QWidget):
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("从车次读取标尺")
+        flayout = QtWidgets.QFormLayout()
+        label = QtWidgets.QLabel("请选择要读入的车次，设置默认的起停附加时分。"
+                                 "\n建议选择通过本线所有车站的车次。"
+                                 "\n起停附加单位均为秒。")
+        label.setWordWrap(True)
+        flayout.addRow(label)
+
+        label1 = QtWidgets.QLabel("选择车次")
+        combo = QtWidgets.QComboBox()
+        combo.setEditable(True)
+
+        for train in self.main.graph.trains():
+            combo.addItem(train.fullCheci())
+
+        if self.main.GraphWidget.selectedTrain is not None:
+            combo.setCurrentText(self.main.GraphWidget.selectedTrain.fullCheci())
+
+        flayout.addRow(label1, combo)
+
+        label2 = QtWidgets.QLabel("起步附加")
+        spinStart = QtWidgets.QSpinBox()
+        spinStart.setRange(0, 300)
+        spinStart.setValue(120)
+        spinStart.setSingleStep(10)
+        flayout.addRow(label2, spinStart)
+
+        label3 = QtWidgets.QLabel("停车附加")
+        spinStop = QtWidgets.QSpinBox()
+        spinStop.setRange(0, 300)
+        spinStop.setValue(120)
+        spinStop.setSingleStep(10)
+        flayout.addRow(label3, spinStop)
+
+        btnOk = QtWidgets.QPushButton("确定(&Y)")
+        btnOk.clicked.connect(lambda: self._ruler_from_train_ok(dialog, widget))
+        btnCancel = QtWidgets.QPushButton("取消(&C)")
+        btnCancel.clicked.connect(dialog.close)
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnCancel)
+
+        dialog.combo = combo
+        dialog.spinStart = spinStart
+        dialog.spinStop = spinStop
+
+        flayout.addRow(hlayout)
+
+        dialog.setLayout(flayout)
+        dialog.exec_()
+
+    # 允许使用main
+    def _ruler_from_train_ok(self, dialog, widget):
+        train = self.main.graph.trainFromCheci(dialog.combo.currentText())
+        if train is None:
+            self.main._derr("错误：无此车次!")
+            return
+
+        flag = self.main.qustion("车次覆盖区间的数据将丢失。是否继续？")
+        if not flag:
+            return
+
+        ruler: Ruler = widget.ruler
+
+        ruler.rulerFromTrain(train, dialog.spinStop.value(), dialog.spinStart.value())
+        tableWidget = widget.tableWidget
+        self._setRulerTable(tableWidget, ruler)
+        dialog.close()
+
+    def _ruler_interval_changed(self, now_line: int, tableWidget: QtWidgets.QTableWidget,
+                                mile: float):
+        # 重新计算均速
+        spinMin = tableWidget.cellWidget(now_line, 1)
+        spinSec = tableWidget.cellWidget(now_line, 2)
+
+        seconds = spinMin.value() * 60 + spinSec.value()
+
+        try:
+            speed = 1000 * mile / (seconds) * 3.6
+        except ZeroDivisionError:
+            speed = 0.0
+            color = QtGui.QColor(Qt.red)
+            color.setAlpha(150)
+            tableWidget.item(now_line, 0).setBackground(QtGui.QBrush(color))
+        else:
+            tableWidget.item(now_line, 0).setBackground(QtGui.QBrush(Qt.transparent))
+
+        tableWidget.item(now_line, 5).setText("%.2f" % speed)
+
+        if not seconds:
+            # 这一行标红
+            color = QtGui.QColor(Qt.red)
+            color.setAlpha(150)
+            for col in range(tableWidget.columnCount()):
+                try:
+                    tableWidget.item(now_line, col).setBackground(QtGui.QBrush(color))
+                except:
+                    pass
+        else:
+            for col in range(tableWidget.columnCount()):
+                try:
+                    tableWidget.item(now_line, col).setBackground(QtGui.QBrush(Qt.transparent))
+                except:
+                    pass
+
+    def _derr(self, note: str):
+        # print("_derr")
+        QtWidgets.QMessageBox.warning(self, "错误", note)
+
+    def _dout(self, note: str):
+        QtWidgets.QMessageBox.information(self, "提示", note)
+
+    def qustion(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self, '标尺编辑', note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default
