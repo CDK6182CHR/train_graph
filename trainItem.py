@@ -420,7 +420,6 @@ class TrainItem(QtWidgets.QGraphicsItem):
         result = False
         for sub in self.validItems():
             result = result or sub.contains(point)
-        print(result)
         return result
 
 

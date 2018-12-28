@@ -194,25 +194,6 @@ class Graph():
         for dict in self.line.stations:
             yield dict["zhanming"],dict["licheng"],dict["dengji"]
 
-    def train_from_item(self,item):
-        """
-        get train from item of line or label
-        :param item:
-        :return: train object，后一个返回值表示是否为运行线
-        """
-        for train in self._trains:
-            try:
-                train.endItem
-            except AttributeError:
-                print(train.fullCheci())
-            if train.labelItem is item:
-                return train,False
-            elif train.endItem is item:
-                return train,False
-            elif train.pathItem is item:
-                return train,True
-        return None,False
-
     def addEmptyRuler(self,name:str,different:bool=False):
         ruler = Ruler(name=name,different=different,line=self.line)
         self.line.rulers.append(ruler)
@@ -673,9 +654,7 @@ class Graph():
 
     def resetAllItems(self):
         for train in self.trains():
-            train.setPathItem(None)
-            train.setLabelItem(None)
-            train.setEndItem(None)
+            train.setItem(None)
 
     def stationMile(self,name:str):
         for st in self.line.stations:
@@ -717,7 +696,7 @@ class Graph():
             old_dict["zhanming"] = new if not auto_field else new.split('::')[0]
 
         for ruler in self.line.rulers:
-            ruler.changeStationName(old.new)
+            ruler.changeStationName(old,new)
         for train in self.trains():
             if train.isSfz(old):
                 train.sfz=new

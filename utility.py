@@ -47,6 +47,7 @@ def split_checi(checi):
             if not flag:
                 chaifen[i] = re.findall("(\d+)", s)[0]
 
+
     return chaifen
 
 

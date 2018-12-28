@@ -14,6 +14,7 @@ from forbidWidget import ForbidWidget
 from rulerWidget import RulerWidget
 from currentWidget import CurrentWidget
 from lineWidget import LineWidget
+from trainWidget import TrainWidget
 from trainFilter import TrainFilter
 import json
 from GraphicWidget import GraphicsWidget, TrainEventType,config_file
@@ -855,101 +856,24 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         if self.trainDockWidget is None:
             return
 
-        trainWidget = QtWidgets.QWidget(self)
-        vlayout = QtWidgets.QVBoxLayout()
-        tableWidget = QtWidgets.QTableWidget()
+        trainWidget = TrainWidget(self.graph,self,self)
+        self.trainWidget = trainWidget
+        trainWidget.initWidget()
+        trainWidget.search_train.connect(self._search_train)
+        trainWidget.current_train_changed.connect(self._current_train_changed)
+        trainWidget.train_double_clicked.connect(self._train_table_doubleClicked)
+        trainWidget.trainShowChanged.connect(self._train_show_changed)
+        trainWidget.addNewTrain.connect(self._add_train_from_list)
+        trainWidget.showStatus.connect(self.statusOut)
 
-        hlayout = QtWidgets.QHBoxLayout()
-        lineEdit = QtWidgets.QLineEdit()
-        lineEdit.setFixedHeight(30)
-        lineEdit.editingFinished.connect(lambda: self._search_train(lineEdit.text()))
-        btnSearch = QtWidgets.QPushButton("搜索车次")
-        btnSearch.clicked.connect(lambda: self._search_train(lineEdit.text()))
-        hlayout.addWidget(lineEdit)
-        hlayout.addWidget(btnSearch)
-        vlayout.addLayout(hlayout)
-
-        tableWidget.setRowCount(self.graph.trainCount())
-        tableWidget.setColumnCount(6)
-        tableWidget.setHorizontalHeaderLabels(["车次", "始发", "终到", "类型", "显示","本线里程"])
-        tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-        tableWidget.setSelectionBehavior(tableWidget.SelectRows)
-        tableWidget.currentCellChanged.connect(self._current_train_changed)
-
-        tableWidget.setColumnWidth(0, 90)
-        tableWidget.setColumnWidth(1, 80)
-        tableWidget.setColumnWidth(2, 80)
-        tableWidget.setColumnWidth(3, 80)
-        tableWidget.setColumnWidth(4, 40)
-        tableWidget.setColumnWidth(5, 80)
-
-        tableWidget.setViewportMargins(0, 0, 0, 0)
-        tableWidget.doubleClicked.connect(self._train_table_doubleClicked)
-
-        self.trainTable = tableWidget
-
-        now_line = 0
-        for train in self.graph.trains():
-            tableWidget.setRowHeight(now_line, 30)
-
-            item = QtWidgets.QTableWidgetItem(train.fullCheci())
-            item.setData(-1, train)
-            tableWidget.setItem(now_line, 0, item)
-
-            item = QtWidgets.QTableWidgetItem(train.sfz)
-            tableWidget.setItem(now_line, 1, item)
-
-            item = QtWidgets.QTableWidgetItem(train.zdz)
-            tableWidget.setItem(now_line, 2, item)
-
-            item = QtWidgets.QTableWidgetItem(train.type)
-            tableWidget.setItem(now_line, 3, item)
-
-            item = QtWidgets.QTableWidgetItem('%.2f'%train.localMile(self.graph))
-            item.setData(0,train.localMile(self.graph))
-            tableWidget.setItem(now_line,5,item)
-
-            # 修改直接生效
-            check = QtWidgets.QCheckBox()
-            check.setChecked(train.isShow())
-            check.setMinimumSize(1,1)
-            check.setStyleSheet("QCheckBox{margin:3px}")
-            # check.toggled.connect(lambda x:self._train_show_changed(now_line,tableWidget,x))
-            check.train = train
-            check.toggled.connect(self._train_show_changed)
-            tableWidget.setCellWidget(now_line, 4, check)
-
-            now_line += 1
-
-        vlayout.addWidget(tableWidget)
-
-        btnEdit = QtWidgets.QPushButton("编辑")
-        btnEdit.setMinimumWidth(80)
-        btnAdd = QtWidgets.QPushButton("添加")
-        btnAdd.setMinimumWidth(80)
-        btnDel = QtWidgets.QPushButton("删除")
-        btnDel.setMinimumWidth(80)
-
-        btnEdit.clicked.connect(lambda: self._edit_train_from_list(tableWidget))
-        btnAdd.clicked.connect(lambda: self._add_train_from_list(tableWidget))
-        btnDel.clicked.connect(lambda: self._del_train_from_list(tableWidget))
-
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(btnEdit)
-        hlayout.addWidget(btnAdd)
-        hlayout.addWidget(btnDel)
-        vlayout.addLayout(hlayout)
-
-        trainWidget.setLayout(vlayout)
         self.trainDockWidget.setWidget(trainWidget)
 
-        header: QtWidgets.QHeaderView = tableWidget.horizontalHeader()
-        header.setSortIndicator(0, Qt.AscendingOrder)
-        header.setSortIndicatorShown(True)
-        header.setSectionsClickable(True)
-        header.sectionClicked.connect(tableWidget.sortByColumn)
-
-    def _train_table_doubleClicked(self, index: QtCore.QModelIndex):
+    def _train_table_doubleClicked(self, train:Train):
+        """
+        2018.12.28新增逻辑，强制显示运行线
+        """
+        train.setIsShow(True,affect_item=True)
+        self.GraphWidget._line_selected(train.getItem())
         dock: QtWidgets.QDockWidget = self.currentDockWidget
         dock.setVisible(True)
 
@@ -965,69 +889,25 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         self.GraphWidget._line_selected(train.item, ensure_visible=True)
 
-    def _train_show_changed(self):
+    def _train_show_changed(self,train:Train,show:bool):
         """
-        遍历表格寻找信号发送者。此slot从tableWidget修改emit。
+        从trainWidget的同名函数触发
+        2018.12.28修改：封装trainWidget部分，直接接受车次对象。这个函数只管划线部分
         """
-        sender = self.sender()
-        train = sender.train
 
-        train.setIsShow(sender.isChecked())
-
-        if sender.isChecked() and train.getItem() is None:
+        if show and train.getItem() is None:
             # 如果最初铺画没有铺画运行线而要求显示运行线，重新铺画。
             # print('重新铺画运行线。Line972')
             self.GraphWidget.addTrainLine(train)
 
-        if train is self.GraphWidget.selectedTrain and not sender.isChecked():
+        if train is self.GraphWidget.selectedTrain and not show:
             #若取消显示当前选中的Item，则取消选择
             self.GraphWidget._line_un_selected()
 
-    def _edit_train_from_list(self, tableWidget):
-        self.currentDockWidget.setVisible(True)
-
-    def _add_train_from_list(self, tableWidget: QtWidgets.QTableWidget):
+    def _add_train_from_list(self):
         self._setCurrentWidgetData()
         self.currentDockWidget.setVisible(True)
         self.currentDockWidget.setFocus(True)
-
-    def _del_train_from_list(self, tableWidget: QtWidgets.QTableWidget):
-        # 直接执行
-
-        rows = []
-        # tableWidget.currentCellChanged.disconnect(self._current_train_changed)
-        # 说明：用Nuitka编译后此行代码导致程序崩溃，故删除这条语句。
-        for index in tableWidget.selectedIndexes():
-            row = index.row()
-            if row not in rows:
-                rows.append(row)
-
-        rows.reverse()
-
-        progressDialog = QtWidgets.QProgressDialog()
-        progressDialog.setWindowTitle('正在删除')
-        progressDialog.setRange(0,len(rows))
-        progressDialog.setCancelButtonText('取消')
-
-        count = len(rows)
-
-        for i,row in enumerate(rows):
-            train = tableWidget.item(row, 0).data(-1)
-            self.graph.delTrain(train)
-            self.GraphWidget.delTrainLine(train)
-            tableWidget.removeRow(row)
-            progressDialog.setLabelText(f'正在删除车次({i+1}/{len(rows)}): {train.fullCheci()} ')
-            progressDialog.setValue(i+1)
-            QtCore.QCoreApplication.processEvents()
-            if progressDialog.wasCanceled():
-                count = i+1
-                break
-
-        if count:
-            self.statusOut(f"成功删除{count}个车次")
-        else:
-            self.statusOut("未作改动")
-        tableWidget.currentCellChanged.connect(self._current_train_changed)
 
     def _initLineDock(self):
         dockLine = QtWidgets.QDockWidget()
@@ -1700,23 +1580,17 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
 
         # 设置train编辑中的current
-        for i in range(self.trainTable.rowCount()):
-            if train is self.trainTable.item(i, 0).data(-1):
-                self.trainTable.setCurrentCell(i, 0)
-                self.trainTable.cellWidget(i,4).setChecked(train.isShow())
+        self.trainWidget.setCurrentTrain(train)
 
         # 设置currentWidget
         self._setCurrentWidgetData(train)
 
-    def _current_train_changed(self, row, *args):
+    def _current_train_changed(self, train:Train):
         """
         tableWidget选中的行变化触发。第一个参数是行数有效，其余无效。
+        2018.12.28修改：把解读车次的逻辑放入trainWidget中。这里直接接受列车对象
         """
-        item = self.trainTable.item(row, 0)
-        if item is None:
-            return
 
-        train: Train = item.data(-1)
         # print("current train changed. line 1708", row,train.fullCheci())
 
         #取消不响应非显示列车的逻辑。2018年11月20日

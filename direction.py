@@ -70,7 +70,10 @@ def judge_direction(colv):
                             down = True
                             judged = True
     if un_blank >= 3:
-        return (down,un_blank)
+        try:
+            return (down,un_blank)
+        except NameError:
+            return (True,un_blank)
     else:
         try:
             return (down,un_blank)

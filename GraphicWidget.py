@@ -193,11 +193,13 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             # if train.trainType() in UIDict["not_show_types"]:
             #     train.setIsShow(False,affect_item=False)
 
+            # 2018.12.23补正：如果车次在本线里程为0会绕过下面的set None过程，故这里先加一个无条件set。
+            train.setItem(None)
             if train.isShow():
                 self.addTrainLine(train)
-            else:
-                # 2018.12.15补正：对show=False的将item设为None，相当于删除item对象，防止再次要求显示时发生错误。
-                train.setItem(None)
+            # else:
+            #     # 2018.12.15补正：对show=False的将item设为None，相当于删除item对象，防止再次要求显示时发生错误。
+            #     train.setItem(None)
 
             if self.parent():
                 progressDialog.setValue(i)
@@ -584,7 +586,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         return point
 
     def _line_selected(self,item:QtWidgets.QGraphicsPathItem,ensure_visible=False):
-        print(item)
+        # print(item)
         if item is None:
             return
         if not isinstance(item,TrainItem):
@@ -619,6 +621,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             self._line_un_selected()
 
         item:QtWidgets.QGraphicsItem = self.scene.itemAt(pos,self.transform())
+        if item is None:
+            return
         # print(item)
         while item.parentItem():
             item = item.parentItem()

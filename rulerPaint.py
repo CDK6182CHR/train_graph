@@ -465,13 +465,13 @@ class rulerPainter(QtWidgets.QWidget):
                 self.train.addStation(name, ddsj, cfsj, auto_cover=True, to_end=False)
 
         new = True
-        if self.train.getPathItem() is not None:
+        if self.train.getItem() is not None:
             self.graphWindow.delTrainLine(self.train)
             new = False
 
         self.graphWindow.addTrainLine(self.train)
         if new:
-            self.graphWindow.ensureVisible(self.train.getPathItem())
+            self.graphWindow.ensureVisible(self.train.getItem())
 
     def _setEndStation(self,row:int):
         """
@@ -631,18 +631,18 @@ class rulerPainter(QtWidgets.QWidget):
             self.train.autoType()
 
             graph.addTrain(self.train)
-            if self.train.getPathItem() is not None:
+            if self.train.getItem() is not None:
                 self.graphWindow.delTrainLine(self.train)
             self.graphWindow.addTrainLine(self.train)
 
         else:
             #追加排图模式
-            if self.train.getPathItem() is not None:
+            if self.train.getItem() is not None:
                 self.graphWindow.delTrainLine(self.train)
 
             train:Train = self.graph.trainFromCheci(self.train.fullCheci())
 
-            if train.getPathItem() is not None:
+            if train.getItem() is not None:
                 self.graphWindow.delTrainLine(train)
 
             train.coverData(self.train)
