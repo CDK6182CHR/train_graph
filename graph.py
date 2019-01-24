@@ -72,7 +72,7 @@ class Graph():
 
     def loadGraph(self,filename:str):
         """
-        暂定直接打开json文件读，减少传递大字典的代价
+        暂定直接打开json文件读
         """
         self.filename = filename
         fp = open(filename,encoding='utf8',errors='ignore')

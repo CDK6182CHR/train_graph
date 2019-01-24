@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt
 from graph import Graph,config_file
 from train import Train
 from datetime import timedelta,datetime
-from utility import isKeche
+from Timetable_new.utility import isKeche
 from ruler import Ruler
 from enum import Enum
 from forbid import Forbid
@@ -507,11 +507,17 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
     def addTrainLine(self,train):
         """
         """
-        #print("add_train_line",train.fullCheci())
+        if train.fullCheci() == 'K1502/3':
+            print("add_train_line",train.fullCheci())
         if not train.isShow():
             #若设置为不显示，忽略此命令
             return
-        item = TrainItem(train,self.graph,self)
+        try:
+            self.graph.UIConfigData()["showFullCheci"]
+        except KeyError:
+            self.graph.UIConfigData()["showFullCheci"] = False
+        item = TrainItem(train,self.graph,self,
+                         self.graph.UIConfigData()['showFullCheci'])
         item.setLine()
         self.scene.addItem(item)
 

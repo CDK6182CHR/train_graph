@@ -9,14 +9,15 @@ from PyQt5.QtCore import Qt
 
 from graph import Graph
 from train import Train
-from utility import isKeche
+from Timetable_new.utility import isKeche
 
 class TrainItem(QtWidgets.QGraphicsItem):
-    def __init__(self,train:Train,graph:Graph,graphWidget,parent=None):
+    def __init__(self,train:Train,graph:Graph,graphWidget,showFullCheci=False,parent=None):
         super().__init__(parent)
         self.train = train
         self.graph = graph
         self.graphWidget = graphWidget
+        self.showFullCheci=showFullCheci
 
         self.pathItem = None
         self.startLabelItem = None
@@ -83,7 +84,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
             return
 
         end_point = path.currentPosition()
-        checi = train.downCheci() if down else train.upCheci()
+        train.setIsDown(down)
+        checi = train.fullCheci() if self.showFullCheci else train.localCheci()
 
         # 在跨界点添加标签
         for y in span_left:
@@ -103,16 +105,14 @@ class TrainItem(QtWidgets.QGraphicsItem):
         label = QtGui.QPainterPath()
         label.moveTo(start_point)
 
-        train.setIsDown(down)
-
         # 终点标签
         endLabel = QtGui.QPainterPath()
         if down:
             endLabel.moveTo(end_point)
             endLabel.lineTo(end_point.x(), end_point.y() + 18)
             endLabel.moveTo(end_point.x() - 30, end_point.y() + 18)
-            endLabel.addText(end_point.x() - (len(train.downCheci()) * 9) / 2,
-                             end_point.y() + 20 + 12, QtGui.QFont(), train.downCheci())
+            endLabel.addText(end_point.x() - (len(checi) * 9) / 2,
+                             end_point.y() + 20 + 12, QtGui.QFont(), checi)
             endLabel.moveTo(end_point.x() - 30, end_point.y() + 18)
             endLabel.lineTo(end_point.x() + 30, end_point.y() + 18)
 
@@ -120,20 +120,20 @@ class TrainItem(QtWidgets.QGraphicsItem):
             endLabel.moveTo(end_point)
             endLabel.lineTo(end_point.x(), end_point.y() - 18)
             endLabel.moveTo(end_point.x() - 30, end_point.y() - 18)
-            endLabel.addText(end_point.x() - (len(train.upCheci()) * 9) / 2, end_point.y() - 18, QtGui.QFont(),
-                             train.upCheci())
+            endLabel.addText(end_point.x() - (len(checi) * 9) / 2, end_point.y() - 18, QtGui.QFont(),
+                             checi)
             endLabel.moveTo(end_point.x() - 30, end_point.y() - 18)
             endLabel.lineTo(end_point.x() + 30, end_point.y() - 18)
 
-        # 处理车次标签
+        # 起点标签
         if down:
             label.moveTo(start_point)
             next_point = QtCore.QPoint(start_point.x(), start_point.y() - 30)
             label.lineTo(next_point)
             next_point.setX(next_point.x() - 30)
             label.moveTo(next_point)
-            label.addText(next_point.x() + 30 - (len(train.downCheci()) * 9) / 2, next_point.y(), QtGui.QFont(),
-                          train.downCheci())
+            label.addText(next_point.x() + 30 - (len(checi) * 9) / 2, next_point.y(), QtGui.QFont(),
+                          checi)
             label.moveTo(next_point)
             next_point.setX(next_point.x() + 60)
             label.lineTo(next_point)
@@ -144,8 +144,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
             next_point.setX(next_point.x() - 30)
             next_point.setY(next_point.y() + 12)
             label.moveTo(next_point)
-            label.addText(next_point.x() + 30 - (len(train.upCheci()) * 9) / 2, next_point.y(), QtGui.QFont(),
-                          train.upCheci())
+            label.addText(next_point.x() + 30 - (len(checi) * 9) / 2, next_point.y(), QtGui.QFont(),
+                          checi)
             next_point.setY(next_point.y() - 12)
             label.moveTo(next_point)
             next_point.setX(next_point.x() + 60)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 车次类修订。引入split()方法，对完整车次分段。允许包含括号的复车次。
 生成文件名车次，将所有“/”换为“-”。
 除一位0在首位外，字母均必须在开头（括号内除外），即允许0K9484，但不允许00K9484，也不允许1K9484。
@@ -49,9 +49,22 @@ class Checi():
         self.keche = isKeche(self.type)
         print(chaifen,self.type)
 
+    def getDirCheci(self,down):
+        if down:
+            return self.down
+        else:
+            return self.up
+
 class Train():
-    def __init__(self,checi1,checi2,stations,times,sfz='',zdz='',type='',sfzdGiven=False):
+    def __init__(self,checi1,checi2,sfz='',zdz='',type=''):
         self.checi = Checi(checi1,checi2)
+        self.sfz=sfz
+        self.zdz=zdz
+        self.type = type
+        if not self.type:
+            self.type = self.checi.type
+
+    def parse_list(self,stations,times,sfz='',zdz='',type='',sfzdGiven=False):
         self.stations = []
         for station in stations:
             if station.strip():
@@ -79,11 +92,11 @@ class Train():
         tuple = judge_direction(times)
         if tuple[1] == -1:
             print("Direction judge error in",self.checi.full)
-            return
+            return False
         if tuple[1] <= 2:
             self.exist = False
             self.down = False
-            return
+            return False
         else:
             self.exist = True
         self.down = tuple[0]
@@ -161,7 +174,7 @@ class Train():
             #*2 *2+1
             if colv[i*2] and colv[i*2+1] and '--' not in colv[i*2] and '--' not in colv[i*2+1]:
                 self.timetable[s] = (colv[i*2],colv[i*2+1])
-        self.autoReflect()
+        return True
 
     # @staticmethod
     def _completeCell(self,cell):
@@ -207,18 +220,21 @@ class Train():
             pass
         else:
             if tm_now/tm_rev > 5.0:
+                print("区间判据翻转",self.checi.full)
                 toRev = True
 
         stop_now = self.stopTotal(timetable,False)
         stop_rev = self.stopTotal(timetable,True)
         try:
             if stop_now/stop_rev > 5.0:
+                print("停车判据翻转",self.checi.full)
                 toRev = True
         except ZeroDivisionError:
             pass
 
         if toRev:
             self.reverse()
+        return toRev
 
     def reverse(self):
         """
@@ -274,9 +290,123 @@ class Train():
             dt_int += 3600*24
         return dt_int
 
+    def detectError(self):
+        """
+        检查并改正可能存在的顺序排错问题。
+        """
+        changed = False
+        timelist = list(self.timetable.items())
+        for i in range(len(timelist)-1):
+            cfsj_str = timelist[i][1][1]
+            ddsj_str = timelist[i+1][1][0]
+            sec = self.cal_interval(cfsj_str,ddsj_str)
+            if self.error_interval(sec):
+                # 当前站与后一站的时间超出合理阈值，将当前站往下沉
+                if i>0:
+                    interval_before = self.cal_interval(timelist[i-1][1][1],timelist[i][1][0])
+                else:
+                    interval_before = -1
+                j = i
+                find = False
+                while j<len(timelist)-1:
+                    # j是考虑放置现在的第i个元素的位置的前一个元素
+                    j+=1
+                    if j<len(timelist)-1:
+                        int_try_next = self.cal_interval(cfsj_str,timelist[j+1][1][0])
+                    else:
+                        int_try_next = 1
+                    if not self.error_interval(int_try_next):
+                        # 下一区间时间合法，再考虑前一区间时间是否小于原来的前一区间时间。
+                        # 这部分待定，可能考虑删去。试一下再说。
+                        int_try_before = self.cal_interval(timelist[j][1][1],timelist[i][1][0])
+                        if int_try_before < interval_before or interval_before == -1:
+                            print("detect error change",self.checi.full,timelist[i],timelist[j])
+                            find = True
+                            break
+                        else:
+                            print("上一区间数据不合法",timelist[i],timelist[j])
+                if find:
+                    changed = True
+                    tm = timelist.pop(i)
+                    timelist.insert(j,tm)
+                else:
+                    print("未能解决问题",self.checi.full,timelist[i])
+        self.timetable = OrderedDict(timelist)
+        return changed
+
+    @staticmethod
+    def cal_interval(t1:str,t2:str):
+        """
+        计算两时间差值，后一个减前一个。返回秒数。
+        """
+        tm1 = datetime.strptime(t1,'%H:%M:%S')
+        tm2 = datetime.strptime(t2,'%H:%M:%S')
+        dt:timedelta = tm2-tm1
+        sec = dt.seconds
+        if dt.days<0:
+            sec += 24*3600
+        return sec
+
+    @staticmethod
+    def error_interval(sec:int):
+        """
+        判定是否为非法区间。阈值暂定为20小时。
+        """
+        allow = 20*3600
+        return sec>allow
+
+    def toDict(self):
+        train_dict = {}
+        train_dict["checi"] = [self.checi.full, self.checi.down, self.checi.up]
+        train_dict["type"] = self.type
+        train_dict["timetable"] = []
+        train_dict["sfz"] = self.sfz
+        train_dict["zdz"] = self.zdz
+        train_dict["UI"] = {}
+        for name, tuple in self.timetable.items():
+            st_dict = {}
+            st_dict["zhanming"] = name
+            st_dict["ddsj"] = tuple[0]
+            st_dict["cfsj"] = tuple[1]
+            train_dict["timetable"].append(st_dict)
+        return train_dict
+
+    def addStation(self,zm,ddsj:str,cfsj:str):
+        """
+        2019.01.23新增API，将程序适用于网络爬虫。
+        注意：拒绝添加重复项。
+        """
+        try:
+            self.timetable
+        except:
+            self.timetable = OrderedDict()
+        else:
+            try:
+                d,c = self.timetable[zm]
+            except:
+                pass
+            else:
+                if ddsj == d and cfsj == c:
+                    # 重复项，拒绝添加
+                    print("拒绝添加重复项",self.checi.full,zm,ddsj,cfsj)
+                    return
+        self.timetable[zm]=(ddsj,cfsj)
+
+    def empty(self):
+        try:
+            self.timetable
+        except AttributeError:
+            return True
+        else:
+            if len(self.timetable.keys())>=2:
+                return False
+            return True
+
+
 class OnlineTrain():
     """
     爬虫所需车次类，相比表格所需车次类更为简洁。
+    2019.01.23标记：out of date
     """
     def __init__(self,checi,down,sfz="",zdz=""):
         self.down = down
@@ -297,6 +427,9 @@ class OnlineTrain():
             return True
         else:
             return False
+
+
+
 
 class ReadTrain():
     """

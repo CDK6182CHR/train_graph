@@ -3,8 +3,7 @@
 时间统一使用：datetime.datetime实例
 """
 import sys
-sys.path.append('../Timetable_new')
-from checi3 import Checi
+from Timetable_new.checi3 import Checi
 from datetime import datetime,timedelta
 from utility import judge_type,stationEqual
 import traceback

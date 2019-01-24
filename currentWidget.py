@@ -7,7 +7,7 @@ from ruler import Ruler
 from line import Line
 from train import Train
 from datetime import datetime,timedelta
-from checi3 import Checi
+from Timetable_new.checi3 import Checi
 from utility import judge_type
 
 class CurrentWidget(QtWidgets.QWidget):

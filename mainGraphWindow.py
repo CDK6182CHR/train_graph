@@ -26,15 +26,14 @@ from detectWidget import DetectWidget
 import traceback
 import cgitb
 cgitb.enable(format='text')
-sys.path.append("../Timetable_new")
 
 
 class mainGraphWindow(QtWidgets.QMainWindow):
     stationVisualSizeChanged = QtCore.pyqtSignal(int)
     def __init__(self):
         super().__init__()
-        self.title = "运行图系统V1.2.6"  # 一次commit修改一次版本号
-        self.build = '20181214'
+        self.title = "运行图系统V1.3.1"  # 一次commit修改一次版本号
+        self.build = '20190124'
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         self.showMaximized()
@@ -1027,6 +1026,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.ordinateCombo = combo
         layout.addRow(label10, combo)
 
+        check = QtWidgets.QCheckBox()
+        check.setChecked(self.graph.UIConfigData().setdefault('showFullCheci',False))
+        layout.addRow("显示完整车次",check)
+
         vlayout.addLayout(layout)
 
         label = QtWidgets.QLabel("运行图说明或备注")
@@ -1112,10 +1115,12 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                 if ruler is former:
                     # 标尺不变
                     rulerChanged=False
+            elif label.text() == '显示完整车次':
+                UIDict['showFullCheci'] = field.isChecked()
 
             else:
                 print("无效的label")
-                raise Exception("Invalid label. Add elif here.")
+                raise Exception("Invalid label. Add elif here.",label.text())
 
         textEdit = self.configDockWidget.textEdit
         self.graph.setMarkdown(textEdit.toPlainText())
