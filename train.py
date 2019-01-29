@@ -871,6 +871,25 @@ class Train():
                     return False
         return False
 
+    def intervalPassedCount(self,graph,start=None,end=None):
+        """
+        计算start-end区间跨越的站点的个数。start,end两站必须在时刻表上。缺省则使用本线第一个/最后一个站。
+        """
+        if start is None:
+            start = self.localFirst(graph)
+        if end is None:
+            end = self.localLast(graph)
+        from graph import Graph
+        graph:Graph
+        startIdx = graph.stationIndex(start)
+        endIdx = graph.stationIndex(end)
+        cnt = 0
+        stations = list(map(lambda x:x["zhanming"],self.timetable))
+        for i in range(startIdx,endIdx+1):
+            if graph.stationByIndex(i)['zhanming'] not in stations:
+                cnt += 1
+        return cnt
+
     def __str__(self):
         return f"Train object at <0x{id(self):X}> {self.fullCheci()}  {self.sfz}->{self.zdz}"
 

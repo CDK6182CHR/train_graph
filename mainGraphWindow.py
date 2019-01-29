@@ -32,8 +32,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     stationVisualSizeChanged = QtCore.pyqtSignal(int)
     def __init__(self):
         super().__init__()
-        self.title = "运行图系统V1.3.1"  # 一次commit修改一次版本号
-        self.build = '20190124'
+        self.title = "运行图系统V1.3.2"  # 一次commit修改一次版本号
+        self.build = '20190129'
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         self.showMaximized()
@@ -1490,8 +1490,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.setWindowTitle(f"{self.title} {self.graph.filename if self.graph.filename else '新运行图'}")
 
     def _outputGraph(self):
-        filename = QtWidgets.QFileDialog.getSaveFileName(self, caption='导出运行图', filter="图像(*.png)")[0]
-        if not filename:
+        filename,ok = QtWidgets.QFileDialog.getSaveFileName(self,
+                                                         caption='导出运行图',
+                                                         directory=self.graph.lineName(),
+                                                         filter="图像(*.png)")
+        if not filename or not ok:
             return
         self.GraphWidget.save(filename)
         self._dout("导出成功！")

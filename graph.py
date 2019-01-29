@@ -674,13 +674,13 @@ class Graph():
 
     def stationIndex(self,name:str):
         for i,st in enumerate(self.line.stations):
-            if st["zhanming"] == name:
+            if stationEqual(st["zhanming"] , name):
                 return i
         raise Exception("No such station",name)
 
     def stationByDict(self,name:str):
         for st in self.line.stations:
-            if st["zhanming"] == name:
+            if stationEqual(st["zhanming"],name):
                 return st
 
         #二轮循环，匹配站名
@@ -1072,6 +1072,9 @@ class Graph():
             }
             count_list.append(int_dict)
         return count_list
+
+    def stationByIndex(self,idx):
+        return self.line.stations[idx]
 
 
 if __name__ == '__main__':

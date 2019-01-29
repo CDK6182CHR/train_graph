@@ -48,8 +48,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.sysConfig = self.readSysConfig()
         self.margins = {
             "left": 160,
-            "up": 85,
-            "down": 85,
+            "up": 90,
+            "down": 90,
             "right": 160,
             "label_width": 100,
         }
@@ -507,8 +507,6 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
     def addTrainLine(self,train):
         """
         """
-        if train.fullCheci() == 'K1502/3':
-            print("add_train_line",train.fullCheci())
         if not train.isShow():
             #若设置为不显示，忽略此命令
             return
@@ -616,7 +614,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         item:TrainItem = train.getItem()
         item.unSelect()
 
-        self.nowItem.setPlainText('')
+        self.nowItem.setPlainText(' ')
         self.selectedTrain = None
 
     def mousePressEvent(self, QMouseEvent):
@@ -638,6 +636,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.lastpos = pos
 
     def save(self,filename:str='output/test.png'):
+        """
+        导出为PNG。
+        """
         self.marginItemGroups["left"].setX(0)
         self.marginItemGroups["right"].setX(0)
         self.marginItemGroups["up"].setY(0)
@@ -645,7 +646,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         #image = QtGui.QImage(self.scene.width(),self.scene.height(),QtGui.QImage.Format_ARGB32)
         #image = QtGui.QImage(self.scene.sceneRect().toSize,QtGui.QImage.Format_ARGB32)
-        image = QtGui.QImage(self.scene.width(),self.scene.height()+100,QtGui.QImage.Format_ARGB32)
+        note_apdx=0
+        if self.graph.markdown():
+            note_apdx = 80
+        image = QtGui.QImage(self.scene.width(),self.scene.height()+100+note_apdx,QtGui.QImage.Format_ARGB32)
         image.fill(Qt.white)
 
         painter = QtGui.QPainter()
@@ -656,10 +660,19 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         font.setBold(True)
         font.setUnderline(True)
         painter.setFont(font)
-        painter.drawText(self.margins["left"],80,"{} {}-{}间列车运行图  {}km".format(self.graph.lineName(),
+        painter.drawText(self.margins["left"],80,"{}{}-{}间列车运行图  {}km".format(self.graph.lineName(),
                                                  self.graph.firstStation(),self.graph.lastStation(),
                                                                                self.graph.lineLength()),
                          )
+        if self.graph.markdown():
+            font.setPixelSize(20)
+            font.setBold(False)
+            font.setUnderline(False)
+            painter.setFont(font)
+            nnn='\n'
+            painter.drawText(self.margins["left"],self.scene.height()+100+40,
+                             f"备注：{self.graph.markdown().replace(nnn,' ')}"
+                             )
 
         painter.setRenderHint(painter.Antialiasing,True)
         self.scene.render(painter,target=QtCore.QRectF(0,100,self.scene.width(),self.scene.height()))

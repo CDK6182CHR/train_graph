@@ -33,8 +33,8 @@ class TrainWidget(QtWidgets.QWidget):
         vlayout.addLayout(hlayout)
 
         tableWidget.setRowCount(self.graph.trainCount())
-        tableWidget.setColumnCount(6)
-        tableWidget.setHorizontalHeaderLabels(["车次", "始发", "终到", "类型", "显示", "本线里程"])
+        tableWidget.setColumnCount(7)
+        tableWidget.setHorizontalHeaderLabels(["车次", "始发", "终到", "类型", "显示", "本线里程",'跨越站数'])
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
         tableWidget.setSelectionBehavior(tableWidget.SelectRows)
         tableWidget.currentCellChanged.connect(self._current_row_changed)
@@ -44,7 +44,8 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.setColumnWidth(2, 80)
         tableWidget.setColumnWidth(3, 80)
         tableWidget.setColumnWidth(4, 40)
-        tableWidget.setColumnWidth(5, 80)
+        tableWidget.setColumnWidth(5, 90)
+        tableWidget.setColumnWidth(6, 90)
 
         tableWidget.setViewportMargins(0, 0, 0, 0)
         tableWidget.doubleClicked.connect(self._train_table_doubleClicked)
@@ -71,6 +72,11 @@ class TrainWidget(QtWidgets.QWidget):
             item = QtWidgets.QTableWidgetItem('%.2f' % train.localMile(self.graph))
             item.setData(0, train.localMile(self.graph))
             tableWidget.setItem(now_line, 5, item)
+
+            train:Train
+            item = QtWidgets.QTableWidgetItem()
+            item.setData(0,train.intervalPassedCount(self.graph))
+            tableWidget.setItem(now_line,6,item)
 
             # 修改直接生效
             check = QtWidgets.QCheckBox()
