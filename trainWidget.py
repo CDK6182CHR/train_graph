@@ -17,6 +17,7 @@ class TrainWidget(QtWidgets.QWidget):
         super().__init__(parent)
         self.graph = graph
         self.main = main
+        self.trainMapToRow=dict()
 
     def initWidget(self):
         vlayout = QtWidgets.QVBoxLayout()
@@ -32,7 +33,7 @@ class TrainWidget(QtWidgets.QWidget):
         hlayout.addWidget(btnSearch)
         vlayout.addLayout(hlayout)
 
-        tableWidget.setRowCount(self.graph.trainCount())
+        tableWidget.setRowCount(0)
         tableWidget.setColumnCount(7)
         tableWidget.setHorizontalHeaderLabels(["车次", "始发", "终到", "类型", "显示", "本线里程",'跨越站数'])
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
@@ -52,43 +53,7 @@ class TrainWidget(QtWidgets.QWidget):
 
         self.trainTable = tableWidget
 
-        now_line = 0
-        for train in self.graph.trains():
-            tableWidget.setRowHeight(now_line, 30)
-
-            item = QtWidgets.QTableWidgetItem(train.fullCheci())
-            item.setData(-1, train)
-            tableWidget.setItem(now_line, 0, item)
-
-            item = QtWidgets.QTableWidgetItem(train.sfz)
-            tableWidget.setItem(now_line, 1, item)
-
-            item = QtWidgets.QTableWidgetItem(train.zdz)
-            tableWidget.setItem(now_line, 2, item)
-
-            item = QtWidgets.QTableWidgetItem(train.type)
-            tableWidget.setItem(now_line, 3, item)
-
-            item = QtWidgets.QTableWidgetItem('%.2f' % train.localMile(self.graph))
-            item.setData(0, train.localMile(self.graph))
-            tableWidget.setItem(now_line, 5, item)
-
-            train:Train
-            item = QtWidgets.QTableWidgetItem()
-            item.setData(0,train.intervalPassedCount(self.graph))
-            tableWidget.setItem(now_line,6,item)
-
-            # 修改直接生效
-            check = QtWidgets.QCheckBox()
-            check.setChecked(train.isShow())
-            check.setMinimumSize(1, 1)
-            check.setStyleSheet("QCheckBox{margin:3px}")
-            # check.toggled.connect(lambda x:self._train_show_changed(now_line,tableWidget,x))
-            check.train = train
-            check.toggled.connect(self._train_show_changed)
-            tableWidget.setCellWidget(now_line, 4, check)
-
-            now_line += 1
+        self.setData()
 
         vlayout.addWidget(tableWidget)
 
@@ -117,10 +82,113 @@ class TrainWidget(QtWidgets.QWidget):
 
         self.setLayout(vlayout)
 
+    def setData(self):
+        """
+        根据自带的graph数据对象重新设置表格信息。
+        原则上只有系统初始化时才可以调用initWidget。
+        """
+        self.trainMapToRow=dict()
+        self.trainTable.setRowCount(0)
+        for train in self.graph.trains():
+            self.addTrain(train)
+
+    def addTrain(self,train:Train):
+        """
+        添加新车次到末尾。由初始化函数和标尺排图、添加车次调用。
+        """
+        tableWidget = self.trainTable
+
+        now_line = tableWidget.rowCount()
+        tableWidget.insertRow(now_line)
+        tableWidget.setRowHeight(now_line, 30)
+
+        item = QtWidgets.QTableWidgetItem(train.fullCheci())
+        item.setData(-1, train)
+        tableWidget.setItem(now_line, 0, item)
+
+        item = QtWidgets.QTableWidgetItem(train.sfz)
+        tableWidget.setItem(now_line, 1, item)
+
+        item = QtWidgets.QTableWidgetItem(train.zdz)
+        tableWidget.setItem(now_line, 2, item)
+
+        item = QtWidgets.QTableWidgetItem(train.type)
+        tableWidget.setItem(now_line, 3, item)
+
+        item = QtWidgets.QTableWidgetItem('%.2f' % train.localMile(self.graph))
+        item.setData(0, train.localMile(self.graph))
+        tableWidget.setItem(now_line, 5, item)
+
+        train: Train
+        item = QtWidgets.QTableWidgetItem()
+        item.setData(0, train.intervalPassedCount(self.graph))
+        tableWidget.setItem(now_line, 6, item)
+
+        # 修改直接生效
+        check = QtWidgets.QCheckBox()
+        check.setChecked(train.isShow())
+        check.setMinimumSize(1, 1)
+        check.setStyleSheet("QCheckBox{margin:3px}")
+        # check.toggled.connect(lambda x:self._train_show_changed(now_line,tableWidget,x))
+        check.train = train
+        check.toggled.connect(self._train_show_changed)
+        tableWidget.setCellWidget(now_line, 4, check)
+
+        self.trainMapToRow[train] = now_line
+
+    def updateShow(self):
+        """
+        在已知其他不变的情况下，只更新显示项目，以提高效率。
+        """
+        tableWidget = self.trainTable
+        col = 4  # “显示”所在的列
+        for row in range(tableWidget.rowCount()):
+            train = self.trainByRow(row)
+            if train is None:
+                continue
+            tableWidget.cellWidget(row,col).setChecked(train.isShow())
+
+    def updateRowByNum(self,row:int):
+        """
+        已知列车对象不变，更新一行的数据。
+        """
+        # ["车次", "始发", "终到", "类型", "显示", "本线里程",'跨越站数']
+        item:QtWidgets.QTableWidgetItem
+        train = self.trainByRow(row)
+        tableWidget = self.trainTable
+        item = tableWidget.item(row,0)
+        item.setText(train.fullCheci())
+
+        tableWidget.item(row,1).setText(train.sfz)
+        tableWidget.item(row,2).setText(train.zdz)
+        tableWidget.item(row,3).setText(train.trainType())
+        tableWidget.cellWidget(row,4).setChecked(train.isShow())
+        tableWidget.item(row,5).setData(0,train.localMile(self.graph))
+        tableWidget.item(row,6).setData(0,train.intervalPassedCount(self.graph))
+
+    def updateRowByTrain(self,train:Train):
+        row = self.trainMapToRow[train]
+        self.updateRowByNum(row)
+
+    def updateAllTrains(self):
+        """
+        已知不增加减少列车，更新所有行的数据。
+        """
+        for row in range(self.trainTable.rowCount()):
+            self.updateRowByNum(row)
+
+    def addTrainsFromBottom(self,count:int):
+        """
+        将车次表末尾的count个添加到表格中，已知其他车次信息不变。
+        called when: 从运行图添加车次。
+        """
+        for train in self.graph._trains[-count:]:
+            self.addTrain(train)
+
     def trainByRow(self,row):
         item = self.trainTable.item(row, 0)
         if item is None:
-            return
+            return None
 
         train: Train = item.data(-1)
         return train
@@ -131,7 +199,9 @@ class TrainWidget(QtWidgets.QWidget):
                 self.trainTable.setCurrentCell(i, 0)
                 self.trainTable.cellWidget(i,4).setChecked(train.isShow())
 
-    #slots
+
+
+    # slots
     def _current_row_changed(self,row):
         """
         trainTable行变化，解析出列车信息，然后emit信号给main窗口。对应在main的855行
@@ -186,7 +256,8 @@ class TrainWidget(QtWidgets.QWidget):
                 self.main.GraphWidget.delTrainLine(train)
                 progressDialog.setLabelText(f'正在删除车次({i+1}/{len(rows)}): {train.fullCheci()} ')
                 progressDialog.setValue(i + 1)
-                QtCore.QCoreApplication.processEvents()
+                if i % 10 == 0:
+                    QtCore.QCoreApplication.processEvents()
                 if progressDialog.wasCanceled():
                     count = i + 1
                     break

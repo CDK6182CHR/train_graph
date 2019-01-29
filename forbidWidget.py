@@ -23,6 +23,7 @@ class ForbidWidget(QtWidgets.QWidget):
 
         checkDifferent = QtWidgets.QCheckBox()
         checkDifferent.setChecked(self.data.different())
+        self.checkDifferent = checkDifferent
         flayout.addRow('上下行分设',checkDifferent)
         checkDifferent.toggled.connect(self._different_changed)
 
@@ -34,6 +35,8 @@ class ForbidWidget(QtWidgets.QWidget):
         checkUp.setChecked(self.data.upShow())
         checkDown.setChecked(self.data.downShow())
         flayout.addRow('显示天窗',hlayout)
+        self.checkUpShow = checkUp
+        self.checkDownShow = checkDown
 
         checkDown.toggled.connect(lambda checked: self._show_changed(checked, True))
         checkUp.toggled.connect(lambda checked: self._show_changed(checked, False))
@@ -55,6 +58,14 @@ class ForbidWidget(QtWidgets.QWidget):
         self.addAction(actionCpAll)
         actionCpAll.triggered.connect(self._copy_all)
 
+        tableWidget = QtWidgets.QTableWidget()
+        self.tableWidget = tableWidget
+        tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
+        self.tableWidget = tableWidget
+        tableWidget.setColumnCount(4)
+        for i, s in enumerate((120, 100, 100, 60)):
+            tableWidget.setColumnWidth(i, s)
+        tableWidget.setHorizontalHeaderLabels(('区间', '开始时间', '结束时间', '时长'))
         self._setTableWidget()
         vlayout.addWidget(self.tableWidget)
 
@@ -69,16 +80,15 @@ class ForbidWidget(QtWidgets.QWidget):
 
         self.setLayout(vlayout)
 
-    def _setTableWidget(self):
-        tableWidget = QtWidgets.QTableWidget()
-        tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-        self.tableWidget = tableWidget
-        tableWidget.setColumnCount(4)
-        for i, s in enumerate((120, 100, 100, 60)):
-            tableWidget.setColumnWidth(i, s)
-        tableWidget.setHorizontalHeaderLabels(('区间','开始时间','结束时间','时长'))
+    def setData(self):
+        self.checkDifferent.setChecked(self.data.different())
+        self.checkDownShow.setChecked(self.data.downShow())
+        self.checkUpShow.setChecked(self.data.upShow())
 
-        # from line import Line
+    def _setTableWidget(self):
+        tableWidget = self.tableWidget
+        tableWidget.setRowCount(0)
+
         line = self.data.line()
         station_dicts = line.stations
         blocker = "->" if self.data.different() else "<->"

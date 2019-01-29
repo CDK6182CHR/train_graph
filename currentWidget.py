@@ -157,6 +157,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
         hlayout = QtWidgets.QHBoxLayout()
         btnOk = QtWidgets.QPushButton("确定")
+        btnOk.setShortcut('Ctrl+Shift+I')
         btnCancel = QtWidgets.QPushButton("还原")
         btnDel = QtWidgets.QPushButton("删除车次")
         btnOk.setMinimumWidth(100)
@@ -181,9 +182,9 @@ class CurrentWidget(QtWidgets.QWidget):
         """
         self.train = train
         if train is None:
+            # 2019.01.29修改：取消return，空列车信息按空白处置
             # self.initUI()  #TODO bug风险
-            self.train = Train()
-            return
+            train = self.train = Train()
 
         self.checiEdit.setText(train.fullCheci())
         self.checiDown.setText(train.downCheci())
@@ -203,7 +204,7 @@ class CurrentWidget(QtWidgets.QWidget):
             self.btnColor.setStyleSheet(self.color)
         self.spinWidth.setValue(train.lineWidth())
 
-        self.checkDown.setChecked(train.isDown())
+        self.checkDown.setChecked(train.isDown(default=True))
         self.checkShow.setChecked(train.isShow())
 
         timeTable: QtWidgets.QTableWidget = self.timeTable
@@ -428,7 +429,10 @@ class CurrentWidget(QtWidgets.QWidget):
         trainType = self.comboType.currentText()
 
         if not trainType:
-            trainType = judge_type(fullCheci)
+            try:
+                trainType = judge_type(fullCheci)
+            except:
+                trainType = '未知'
 
         elif trainType not in self.main.graph.typeList:
             self.main.graph.typeList.append(trainType)
@@ -468,8 +472,10 @@ class CurrentWidget(QtWidgets.QWidget):
 
         if not self.graph.trainExisted(train):
             self.graph.addTrain(train)
+            self.main.trainWidget.addTrain(train)
 
-        self.main._initTrainWidget()
+        else:
+            self.main.trainWidget.updateRowByTrain(train)
 
         if domain:
             self.main._out_domain_info()

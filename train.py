@@ -280,12 +280,14 @@ class Train():
     def setIsDown(self,down):
         self.down = down
 
-    def isDown(self,auto_guess=False,graph=None):
+    def isDown(self,auto_guess=False,graph=None,default=None):
         not_decided = False
         if self.down is None:
             not_decided = True
         if not_decided and auto_guess:
             self.autoDown(graph)
+        if not_decided and default is not None:
+            return default
 
         return self.down
 
@@ -877,10 +879,13 @@ class Train():
         """
         if start is None:
             start = self.localFirst(graph)
+            if start is None:
+                return 0
         if end is None:
             end = self.localLast(graph)
-        from graph import Graph
-        graph:Graph
+
+        # from graph import Graph
+        # graph:Graph
         startIdx = graph.stationIndex(start)
         endIdx = graph.stationIndex(end)
         cnt = 0

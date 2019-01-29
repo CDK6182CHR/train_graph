@@ -14,7 +14,7 @@ class LineWidget(QtWidgets.QWidget):
         super().__init__()
         self.line = line
 
-    def setData(self):
+    def initWidget(self):
         """
         add arribute to lineWidget:
         btnOk,btnReturn,tableWidget,nameEdit,line
@@ -34,8 +34,7 @@ class LineWidget(QtWidgets.QWidget):
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
         self.tableWidget = tableWidget
 
-        self._initLineTable(tableWidget,line)
-        self.tableWidget = tableWidget
+        self._initLineTable()
 
         vlayout.addLayout(flayout)
         vlayout.addWidget(tableWidget)
@@ -72,7 +71,16 @@ class LineWidget(QtWidgets.QWidget):
 
         self.setLayout(vlayout)
 
-    def _initLineTable(self, tableWidget: QtWidgets.QTableWidget,line:Line):
+    def setData(self):
+        """
+        更新所有数据，不重新创建对象。
+        """
+        self.nameEdit.setText(self.line.name)
+        self._initLineTable()
+
+    def _initLineTable(self):
+        tableWidget = self.tableWidget
+        line = self.line
         tableWidget.clear()
         tableWidget.setColumnCount(5)
         tableWidget.setHorizontalHeaderLabels(["站名", "里程", "等级", "显示", "单向站"])
