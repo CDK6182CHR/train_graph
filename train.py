@@ -2,11 +2,9 @@
 列车信息模块
 时间统一使用：datetime.datetime实例
 """
-import sys
 from Timetable_new.checi3 import Checi
 from datetime import datetime,timedelta
-from utility import judge_type,stationEqual
-import traceback
+from Timetable_new.utility import judge_type,stationEqual,strToTime
 import re
 
 import cgitb
@@ -35,6 +33,8 @@ class Train():
         self.item = None
         self.down = None
         self.shown = True  #是否显示运行线
+        self._localFirst=None
+        self._localLast=None
         if origin is not None:
             #从既有字典读取数据
             self.loadTrain(origin)
@@ -64,6 +64,8 @@ class Train():
         self.type = origin["type"]
         self.sfz = origin["sfz"]
         self.zdz = origin["zdz"]
+        self._localFirst = origin.get('localFirst',None)
+        self._localLast = origin.get('localLast',None)
 
         try:
             origin["shown"]
@@ -83,19 +85,12 @@ class Train():
     def _transfer_time(self):
         """
         将读取到的时刻中的时间转为datetime.datetime对象
-        :return:
         """
         for dict in self.timetable:
             if isinstance(dict["ddsj"],str):
-                try:
-                    ddsj = datetime.strptime(dict["ddsj"],"%H:%M")
-                except ValueError:
-                    ddsj = datetime.strptime(dict["ddsj"], "%H:%M:%S")
+                ddsj = strToTime(dict['ddsj'])
 
-                try:
-                    cfsj = datetime.strptime(dict["cfsj"],"%H:%M")
-                except ValueError:
-                    cfsj = datetime.strptime(dict["cfsj"], "%H:%M:%S")
+                cfsj = strToTime(dict['cfsj'])
 
                 dict["ddsj"] = ddsj
                 dict["cfsj"] = cfsj
@@ -147,15 +142,9 @@ class Train():
     def addStation(self,name:str,ddsj,cfsj,auto_cover=False,to_end=True):
         #增加站。暂定到达时间、出发时间用datetime类。
         if isinstance(ddsj,str):
-            try:
-                ddsj = datetime.strptime(ddsj,"%H:%M")
-            except ValueError:
-                ddsj = datetime.strptime(ddsj,"%H:%M:%S")
+            ddsj = strToTime(ddsj)
 
-            try:
-                cfsj = datetime.strptime(cfsj, "%H:%M")
-            except ValueError:
-                cfsj = datetime.strptime(cfsj, "%H:%M:%S")
+            cfsj = strToTime(cfsj)
 
         dict = {
             "zhanming":name,
@@ -250,7 +239,9 @@ class Train():
             "timetable":[],
             "sfz":self.sfz,
             "zdz":self.zdz,
-            "shown":self.shown
+            "shown":self.shown,
+            "localFirst":self._localFirst,
+            "localLast":self._localLast,
         }
         for dict in self.timetable:
             ddsj:datetime = dict["ddsj"]
@@ -378,19 +369,36 @@ class Train():
         else:
             return '未知'
 
-    def localFirst(self,graph):
+    def updateLocalFirst(self,graph):
         for st in self.timetable:
             name = st["zhanming"]
             for station in graph.line.stations:
                 if stationEqual(name,station["zhanming"]):
+                    self._localFirst = name
                     return name
 
-    def localLast(self,graph):
+    def localFirst(self,graph):
+        if self._localFirst is not None:
+            return self._localFirst
+        else:
+            return self.updateLocalFirst(graph)
+
+    def updateLocalLast(self,graph):
+        """
+        2019.02.03修改：时间换空间，计算并维护好数据。原函数名: localLast
+        """
         for st in reversed(self.timetable):
             name = st["zhanming"]
             for station in graph.line.stations:
                 if stationEqual(name,station["zhanming"]):
+                    self._localLast = name
                     return name
+
+    def localLast(self,graph):
+        if self._localLast is not None:
+            return self._localLast
+        else:
+            return self.updateLocalLast(graph)
 
     def intervalCount(self,graph,start,end):
         count = 0
@@ -408,6 +416,9 @@ class Train():
         return count
 
     def localCount(self,graph):
+        """
+        只由车次信息计算过程调用，暂时保留线性算法
+        """
         count = 0
         for st in self.timetable:
             name = st["zhanming"]
@@ -446,10 +457,6 @@ class Train():
     def intervalRunStayTime(self,graph,start,end):
         """
         不算起点和终点
-        :param graph:
-        :param start:
-        :param end:
-        :return:
         """
         started = False
         running = 0
@@ -479,8 +486,6 @@ class Train():
     def localRunStayTime(self,graph):
         """
         计算本线纯运行时间的总和、本线停站时间总和。算法是从本线入图点开始，累加所有区间时分。
-        :param graph:
-        :return:
         """
         started = False
         running = 0
@@ -531,9 +536,6 @@ class Train():
     def jointTrain(self,train,former:bool,graph):
         """
         将train连接到本车次上。
-        :param train:
-        :param former:
-        :return:
         """
         if former:
             for st in reversed(train.timetable):
@@ -662,12 +664,9 @@ class Train():
         self.down = train.down
         self.timetable = deepcopy(train.timetable)
 
-    from ruler import Ruler
     def relativeError(self,ruler):
         """
         计算本车次关于标尺的相对误差。返回百分比。非本线站点已经删除。
-        :param ruler:
-        :return:
         """
         former=None
         this_time=0
@@ -693,9 +692,6 @@ class Train():
     def detectPassStation(self,graph,ruler,toStart,toEnd):
         """
         按标尺推定通过站的时刻。保证非本线站已经删除。
-        :param graph:
-        :param ruler:
-        :return:
         """
         if not self.timetable:
             return
@@ -799,18 +795,12 @@ class Train():
     def stationStopped(self,station:dict):
         """
         注意，输入的是字典
-        :param station:
-        :return:
         """
         return bool((station['ddsj']-station['cfsj']).seconds)
 
     def makeStationDict(self,name,rate:float,reference:dict,ruler_node:dict):
         """
         从参考点开始，移动interval_sec秒作为新车站的通过时刻。
-        :param name:
-        :param interval_sec:
-        :param reference:
-        :return:
         """
         # print("detect",self.fullCheci(),"station",name,'reference',reference)
         interval_sec = int(rate*ruler_node['interval'])
@@ -886,14 +876,34 @@ class Train():
 
         # from graph import Graph
         # graph:Graph
-        startIdx = graph.stationIndex(start)
-        endIdx = graph.stationIndex(end)
+        try:
+            startIdx = graph.stationIndex(start)
+            endIdx = graph.stationIndex(end)
+        except:
+            # 贵阳北::渝贵贵广场改为贵阳北渝贵贵广场会报错，暂时用这种低级方法处理。
+            start,end = self.updateLocalFirst(graph),self.updateLocalLast(graph)
+            startIdx = graph.stationIndex(start)
+            endIdx = graph.stationIndex(end)
+        if startIdx >= endIdx:
+            startIdx,endIdx = endIdx,startIdx
         cnt = 0
         stations = list(map(lambda x:x["zhanming"],self.timetable))
         for i in range(startIdx,endIdx+1):
-            if graph.stationByIndex(i)['zhanming'] not in stations:
+            name = graph.stationByIndex(i)['zhanming']
+            if (graph.stationDirection(name) & self.binDirection()) and name not in stations:
                 cnt += 1
         return cnt
+
+    def binDirection(self,default=0x11):
+        """
+        返回通过方向的常量表示形式。
+        """
+        if self.down is True:
+            return 0b01
+        elif self.down is False:
+            return 0b10
+        else:
+            return default
 
     def __str__(self):
         return f"Train object at <0x{id(self):X}> {self.fullCheci()}  {self.sfz}->{self.zdz}"

@@ -174,7 +174,7 @@ class LineWidget(QtWidgets.QWidget):
     def _discard_line_info_change(self, tableWidget,line):
         if not self.qustion("是否恢复线路信息？当前所有修改都将丢失。"):
             return
-        self._initLineTable(tableWidget,line)
+        self._initLineTable()
 
     def _apply_line_info_change(self):
         """
@@ -212,7 +212,6 @@ class LineWidget(QtWidgets.QWidget):
                 self._derr("本线已存在站名：{}，请重新设置站名！\n在第{}行。".format(zhanming, i + 1))
                 return
 
-
             info = {
                 "zhanming": zhanming,
                 "licheng": licheng,
@@ -226,7 +225,7 @@ class LineWidget(QtWidgets.QWidget):
             new_line.adjustLichengTo0()
 
         line.copyData(new_line)
-        self._initLineTable(self.tableWidget,line)
+        self.setData()
 
         # 2018.12.14将确认信息后的操作移动回主窗口
         self.lineChangedApplied.emit()

@@ -15,5 +15,5 @@ py_modules = ['checi3','currentWidget','detectWidget',
               'ruler','rulerPaint','rulerWidget',
               'stationvisualize','thread','train','trainFilter',
               'trainItem','trainWidget',
-              'utility','__init__',]  # 发布的包中的模块文件列表
+              'utility','__init__',], requires=['PyQt5']  # 发布的包中的模块文件列表
 )

@@ -88,10 +88,13 @@ class TrainFilter(QtCore.QObject):
 
         hlayout = QtWidgets.QHBoxLayout()
         btnOk = QtWidgets.QPushButton("确定")
+        btnClear = QtWidgets.QPushButton("清空")
         btnCancel = QtWidgets.QPushButton("取消")
         btnOk.clicked.connect(self._ok_cliecked)
         btnCancel.clicked.connect(dialog.close)
+        btnClear.clicked.connect(self.clear)
         hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnClear)
         hlayout.addWidget(btnCancel)
 
         layout.addLayout(flayout)
@@ -285,6 +288,23 @@ class TrainFilter(QtCore.QObject):
         print(self.includes,self.excludes)
         self.FilterChanged.emit()
 
+    def clear(self):
+        """
+        清除所有筛选条件.
+        """
+        if not self.question('清除所有筛选条件，即设置所有车次都被选中。是否继续？'):
+            return
+        self.useType = False
+        self.types = []
+        self.useInclude = False
+        self.includes = []
+        self.useExclude = False
+        self.excludes = []
+        self.direction = self.DownAndUp
+        self.showOnly = False
+        self.dialog.close()
+        self.FilterChanged.emit()
+
     def checkInclude(self,train:Train):
         if not self.useInclude:
             return False
@@ -344,3 +364,13 @@ class TrainFilter(QtCore.QObject):
 
     def setGraph(self,graph):
         self.graph = graph
+
+    def question(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self.dialog, self.dialog.windowTitle(), note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default

@@ -3,6 +3,7 @@
 """
 from ruler import Ruler
 from forbid import Forbid
+
 class Line():
     """
     线路类，数据结构：
@@ -19,6 +20,8 @@ class Line():
 
     def __init__(self,name='',origin=None):
         #默认情况下构造空对象。从文件读取时，用dict构造。
+        self.nameMap = {} # 站名查找表
+        self.fieldMap = {} # 站名-站名::场名映射表
         if origin is not None:
             self.loadLine(origin)
         else:
@@ -29,6 +32,53 @@ class Line():
 
     def setLineName(self,name:str):
         self.name = name
+
+    def setNameMap(self):
+        """
+        线性算法，重置站名查找表
+        """
+        self.nameMap = {}
+        for st in self.stations:
+            self.nameMap[st['zhanming']] = st
+
+    def setFieldMap(self):
+        """
+        线性算法，重置所有站名-场名映射表
+        """
+        self.fieldMap = {}
+        for st in self.stations:
+            self.fieldMap.setdefault(st["zhanming"].split('::')[0],[]).append(st['zhanming'])
+
+    def addFieldMap(self,name):
+        self.fieldMap.setdefault(name.split('::')[0],[]).append(name)
+
+    def delFieldMap(self,name):
+        bare = name.split('::')[0]
+        lst = self.fieldMap[bare]
+        if len(lst) > 1:
+            lst.remove(name)
+        else:
+            del self.fieldMap[bare]
+
+    def findStation(self,name):
+        """
+        在支持域解析符的前提下，返回匹配的站名列表。返回的是map中的元素，可以直接修改。
+        """
+        return self.fieldMap.get(name.split('::')[0],list())
+
+    def stationDictByName(self,name:str,strict:bool=False):
+        """
+        基于查找表，按站名返回站名对应的字典对象。strict=False时允许按域解析符进行模糊匹配。
+        如有多个结果，返回第一个。如果没有结果，返回None。
+        """
+        if strict:  # 严格匹配时直接返回，提高效率
+            return self.nameMap.get(name,None)
+
+        selectedName = self.findStation(name)
+        if not selectedName:
+            return None
+        else:
+            return self.nameMap[selectedName[0]]
 
     def loadLine(self,origin):
         self.name = origin["name"]
@@ -51,12 +101,16 @@ class Line():
             pass
         else:
             self.forbid.loadForbid(origin["forbid"])
+        self.setNameMap()
+        self.setFieldMap()
 
     def addStation_by_origin(self,origin,index=-1):
         if index==-1:
             self.stations.append(origin)
         else:
             self.stations.insert(index,origin)
+        self.nameMap[origin["zhanming"]] = origin
+        self.addFieldMap(origin['zhanming'])
 
     def addStation_by_info(self,zhanming,licheng,dengji=4,index=-1):
         info = {
@@ -107,18 +161,12 @@ class Line():
     def stationInLine(self,station,strict=False):
         """
         2018.08.06 加入域解析符的支持
-        :param station:
-        strict: 严格匹配
-        :return:
+        2019.02.02 删去线性算法
         """
-        for st in self.stations:
-            if station == st["zhanming"]:
-                return True
-            elif not strict:
-                if station.split('::')[0] == st["zhanming"].split('::')[0]:
-                    print("域解析符有效",station)
-                    return True
-        return False
+        if strict:
+            return bool(self.nameMap.get(station))
+        else:
+            return bool(self.findStation(station))
 
     def rulerByName(self,name:str):
         for ruler in self.rulers:
@@ -127,28 +175,30 @@ class Line():
         return None
 
     def delStation(self,name):
-        dict = None
-        for i in self.stations:
-            if name == i["zhanming"]:
-                dict = i
-                break
-        if dict is not None:
-            self.stations.remove(dict)
-
-    def _station_dict_by_name(self,name:str):
-        for st in self.stations:
-            if st["zhanming"] == name:
-                return st
+        """
+        2019.02.02删除线性算法。name应该严格匹配。
+        """
+        dct = self.nameMap.get(name,None)
+        if dct is None:
+            return
+        self.stations.remove(dct)
+        # 更新映射表
+        del self.nameMap[name]
+        if len(self.findStation(name))>1:
+            self.findStation(name).remove(name)
+        else:
+            del self.fieldMap[name]
 
     def stationExisted(self,name:str):
-        for st in self.stations:
-            if name == st["zhanming"]:
-                return True
-
-        return False
+        """
+        删除线性算法。不支持域解析符。
+        """
+        return bool(self.nameMap.get(name,False))
 
     def addStationDict(self,info):
         self.stations.append(info)
+        self.addFieldMap(info['zhanming'])
+        self.nameMap[info['zhanming']] = info
 
     def adjustLichengTo0(self):
         if not self.stations:
@@ -182,19 +232,20 @@ class Line():
         return True
 
     def stationViaDirection(self,name:str):
-        for st in self.stations:
-            if st["zhanming"] == name:
-                try:
-                    return st["direction"]
-                except:
-                    st["direction"] = 0x3
-                    return 0x3
-        return None
+        """
+        返回name指向车站的direction参数，若无此key，设为0x3；若无此车站，返回None.
+        2019.02.02 删除线性算法。
+        """
+        dct = self.nameMap.get(name,None)
+        if dct is None:
+            return None
+        return dct.setdefault('direction',0x3)
 
     def setStationViaDirection(self,name:str,via:int):
-        for st in self.stations:
-            if st["zhanming"] == name:
-                st["direction"] = via
+        """
+        设置name指向车站的direction属性。不支持域解析符。若无此车站，不作操作。
+        """
+        self.nameMap.get(name,{})['direction'] = via
 
     def isSplited(self):
         """
@@ -202,10 +253,7 @@ class Line():
         :return:
         """
         for st in self.stations:
-            try:
-                st["direction"]
-            except KeyError:
-                st["direction"] = 0x3
+            st.setdefault('direction',0x3)
 
             if st["direction"] == 0x1 or st["direction"] == 0x2:
                 return True
@@ -226,19 +274,22 @@ class Line():
         return len(self.stations)
 
     def stationDicts(self):
+        """
+        依次迭代所有车站的dict。
+        """
         for station in self.stations:
             yield station
 
     def copyData(self,line,withRuler=False):
         """
         复制并覆盖本线所有数据
-        :param line:
-        :return:
         """
         self.name = line.name
         self.stations = line.stations
         if withRuler:
             self.rulers = line.rulers
+        self.nameMap = line.nameMap
+        self.fieldMap = line.fieldMap
 
     def rulerNameExisted(self,name,ignore:Ruler=None):
         for r in self.rulers:
@@ -266,6 +317,24 @@ class Line():
     def addRuler(self,ruler:Ruler):
         self.rulers.append(ruler)
 
+    def setStationYValue(self,name,y):
+        """
+        设置某个站的纵坐标值。
+        2019.02.02从graph类移植，并删除线性算法。暂时不允许域解析符。
+        若无此车站，不作操作。
+        """
+        self.nameMap.get(name,{})['y_value'] = y
+
+    def changeStationNameUpdateMap(self,old,new):
+        """
+        修改站名时调用，修改映射查找表。调用时已经修改完毕。
+        """
+        print(self.nameMap)
+        dct = self.nameMap[old]
+        del self.nameMap[old]
+        self.nameMap[new] = dct
+        self.delFieldMap(old)
+        self.addFieldMap(new)
 
 if __name__ == '__main__':
     line = Line("宁芜线")

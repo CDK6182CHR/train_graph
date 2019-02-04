@@ -35,9 +35,38 @@ class Graph():
         self._trains = []
         self._circuits = []
         self._config = {}
-        self.typeList = [] #public data
+        self.typeList = [] # public data
         self.readConfig()
         self._markdown = ''
+        self.fullCheciMap = {} # 全车次查找表 str|->Train
+        self.singleCheciMap = {} # 单车次查找表str|->list<Train>
+
+    def setFullCheciMap(self):
+        """
+        设置全车次查找表。
+        """
+        for train in self.trains():
+            self.fullCheciMap[train.fullCheci()]=train
+
+    def setSingleCheciMap(self):
+        for train in self.trains():
+            for cc in (train.downCheci(),train.upCheci()):
+                if cc:
+                    self.singleCheciMap.setdefault(cc,[]).append(train)
+
+    def addSingleCheciMap(self,train):
+        for cc in (train.downCheci(),train.upCheci()):
+            if cc:
+                self.singleCheciMap.setdefault(cc,[]).append(train)
+
+    def delSingleCheciMap(self,train):
+        for cc in (train.downCheci(),train.upCheci()):
+            if cc:
+                lst = self.singleCheciMap.get(cc)
+                if len(lst) > 1:
+                    lst.remove(train)
+                else:
+                    del self.singleCheciMap[cc]
 
     def readConfig(self):
         fp = open(config_file,encoding='utf-8',errors='ignore')
@@ -107,18 +136,24 @@ class Graph():
             self._markdown = ''
 
         fp.close()
+        self.setFullCheciMap()
+        self.setSingleCheciMap()
 
     def addCircuit(self):
         pass
 
     def addTrain(self,train:Train):
         self._trains.append(train)
+        self.fullCheciMap[train.fullCheci()] = train
+        self.addSingleCheciMap(train)
 
     def delTrain(self,train:Train):
         try:
             self._trains.remove(train)
+            del self.fullCheciMap[train.fullCheci()]
+            self.delSingleCheciMap(train)
         except:
-            print("No such train!",train.fullCheci())
+            print("del train: No such train!",train.fullCheci())
 
     def trains(self):
         for train in self._trains:
@@ -147,9 +182,13 @@ class Graph():
             for station in reversed(self.line.stations):
                 yield station["zhanming"]
 
-    def stationDicts(self):
-        for station in self.line.stations:
-            yield station
+    def stationDicts(self,reverse=False):
+        if not reverse:
+            for station in self.line.stations:
+                yield station
+        else:
+            for station in reversed(self.line.stations):
+                yield station
 
     def save(self,filename:str):
         """
@@ -185,7 +224,6 @@ class Graph():
     def line_station_mileages(self):
         """
         生成器，返回 dict["zhanming"],dict["licheng"]
-        :return:
         """
         for dict in self.line.stations:
             yield dict["zhanming"],dict["licheng"]
@@ -205,8 +243,6 @@ class Graph():
     def delRuler(self,ruler:Ruler):
         """
         返回被删除的标尺是否是排图标尺
-        :param ruler:
-        :return:
         """
         try:
             self.line.rulers.remove(ruler)
@@ -229,47 +265,39 @@ class Graph():
 
     def setStationYValue(self,name,y):
         """
-        设置某个站的纵坐标值
-        :param name:
-        :param y:
-        :return:
+        设置某个站的纵坐标值。2019.02.02移植到line类并删除线性算法。
         """
-        for dict in self.line.stations:
-            if dict["zhanming"] == name:
-                dict["y_value"] = y
-                return
+        self.line.setStationYValue(name,y)
 
     def stationYValue(self,name:str):
         st_dict = self.stationByDict(name)
-        try:
-            return st_dict["y_value"]
-        except:
+        if st_dict is not None:
+            return st_dict.get('y_value',-1)
+        else:
             return -1
 
     def stationMileYValues(self):
-        for dict in self.line.stations:
-            try:
-                dict["y_value"]
-            except KeyError:
-                yield dict["zhanming"],dict["licheng"],None
-            else:
-                yield dict["zhanming"],dict["licheng"],dict["y_value"]
+        for dct in self.line.stations:
+            yield dct['zhanming'],dct['licheng'],dct.get('y_value',None)
 
     def trainFromCheci(self,checi:str,full_only=False):
-        for train in self._trains:
-            if checi == train.fullCheci():
-                return train
+        """
+        根据车次查找Train对象。如果full_only，则仅根据全车次查找；否则返回单车次匹配的第一个结果。
+        若不存在，返回None。
+        2019.02.03删除线性算法。
+        """
+        t = self.fullCheciMap.get(checi,None)
+        if t is not None:
+            return t
         if not full_only:
-            for train in self._trains:
-                if checi in (train.downCheci(),train.upCheci()):
-                    return train
+            selected = self.singleCheciMap.get(checi,None)
+            if selected is not None:
+                return selected[0]
         return None
 
     def multiSearch(self,checi:str):
         """
-        非严格搜索
-        :param checi:
-        :return:
+        非严格搜索。线性算法。
         """
         selected = []
         for train in self.trains():
@@ -293,21 +321,20 @@ class Graph():
         return self.line.stationInLine(name,strict)
 
     def setStationIsShow(self,name:str,show:bool):
-        for st in self.line.stations:
-            if st["zhanming"]==name:
-                st["show"] = show
-                return
-        raise Exception("No such station")
+        """
+        不支持域解析符。2019.02.02删除线性算法。
+        """
+        st = self.line.stationDictByName(name,True)
+        if st is None:
+            raise Exception("setStationIsShow: no such station")
+        else:
+            st['show'] = show
 
     def stationIsShow(self,name:str):
-        dict = self.line._station_dict_by_name(name)
-        if dict is None:
+        dct = self.line.stationDictByName(name)
+        if dct is None:
             raise Exception("No such station")
-        try:
-            return dict["show"]
-        except KeyError:
-            dict["show"]=True
-            return True
+        return dct.setdefault('show',True)
 
     def graphFileName(self):
         return self.filename
@@ -329,11 +356,7 @@ class Graph():
         self.line.stations = []
 
     def stationExisted(self,name:str):
-        for st in self.line.stations:
-            if name == st["zhanming"]:
-                return True
-
-        return False
+        self.line.stationExisted(name)
 
     def addStationDict(self,info:dict):
         self.line.stations.append(info)
@@ -386,21 +409,12 @@ class Graph():
         return True
 
     def stationDirection(self,name:str):
-        st = self.stationByDict(name)
-        if st is None:
-            raise Exception("No such station",name)
-        else:
-            try:
-                st["direction"]
-            except KeyError:
-                st["direction"] = 0x3
-            return st["direction"]
+        return self.line.stationViaDirection(name)
 
     def formerBothStation(self,name:str):
         """
-        寻找本站往前的第一个【下行方向通过】的站
-        :param name:
-        :return:
+        寻找本站往前的第一个【下行方向通过】的站。
+        TODO 2019.02.02 保留线性算法。下一个函数同。
         """
         former_dict = None
         for st in self.line.stations:
@@ -421,16 +435,15 @@ class Graph():
         raise Exception("No latter station")
 
     def stationLevel(self,name:str):
-        for st in self.line.stations:
-            if st["zhanming"] == name:
-                try:
-                    return st["dengji"]
-                except KeyError:
-                    st["dengji"] = 4
-                    return 4
+        """
+        返回车站等级。若不存在，返回None；若没有这个字段，设为并返回4. 不支持域解析符
+        """
+        st = self.line.stationDictByName(name,strict=True)
+        if st is None:
+            return None
+        return st.setdefault('dengji',4)
 
     def setNotShowTypes(self,not_show):
-        # print(not_show)
         self.UIConfigData()["not_show_types"] = not_show
         for train in self.trains():
             if train.type in not_show:
@@ -439,7 +452,6 @@ class Graph():
                 train.setIsShow(True,affect_item=False)
 
     def setDirShow(self,down,show):
-        # print(down,show)
         for train in self.trains():
             if train.isDown() == down:
                 # print(train.fullCheci())
@@ -447,15 +459,25 @@ class Graph():
                 # print("ok")
 
     def trainExisted(self,train:Train,ignore:Train=None):
+        """
+        比较Train对象，线性算法
+        """
         for t in self._trains:
             if train is t and t is not ignore:
                 return True
         return False
 
     def checiExisted(self,checi:str,ignore:Train=None):
-        for t in self._trains:
-            if t is not ignore and t.fullCheci() == checi:
-                return True
+        """
+        比较全车次。2019.02.03替换掉线性算法。
+        """
+        # for t in self._trains:
+        #     if t is not ignore and t.fullCheci() == checi:
+        #         return True
+        # return False
+        t = self.fullCheciMap.get(checi,None)
+        if t is not None and t is not ignore:
+            return True
         return False
 
     def rulerCount(self):
@@ -535,8 +557,6 @@ class Graph():
     def loadTrcGraph(self,filename):
         """
         阅读旧版trc格式的运行图
-        :param filename:
-        :return:
         """
         fp = open(filename,encoding='utf-8',errors='ignore')
 
@@ -580,8 +600,6 @@ class Graph():
     def _decodeTrcTrain(self,now_list:list):
         """
         阅读trc中单个车次的信息，不含===Train===标志头
-        :param now_list:
-        :return:
         """
         train = Train()
         for i,line in enumerate(now_list):
@@ -657,10 +675,13 @@ class Graph():
             train.setItem(None)
 
     def stationMile(self,name:str):
-        for st in self.line.stations:
-            if st["zhanming"] == name:
-                return st["licheng"]
-        return -1
+        """
+        返回车站的里程数据，若不存在返回-1.不支持域解析符。2019.02.03删除线性算法。
+        """
+        st = self.line.stationDictByName(name,strict=True)
+        if st is None:
+            return -1
+        return st["licheng"]
 
     def adjacentStation(self,name:str,ignore:list):
         index = self.stationIndex(name)
@@ -678,17 +699,12 @@ class Graph():
                 return i
         raise Exception("No such station",name)
 
-    def stationByDict(self,name:str):
-        for st in self.line.stations:
-            if stationEqual(st["zhanming"],name):
-                return st
-
-        #二轮循环，匹配站名
-        for st in self.line.stations:
-            if '::' in name:
-                if st["zhanming"] == name.split('::')[0]:
-                    return st
-        return None
+    def stationByDict(self,name:str,strict=False):
+        """
+        根据站名返回dict对象，函数名写错了。支持域解析符。
+        2019.02.02删除线性算法。
+        """
+        return self.line.stationDictByName(name,strict)
 
     def resetStationName(self,old,new,auto_field=False):
         old_dict = self.stationByDict(old)
@@ -702,15 +718,18 @@ class Graph():
                 train.sfz=new
             if train.isZdz(old):
                 train.zdz=new
+            if train._localFirst == old:
+                train._localFirst = new
+            elif train._localLast == old:
+                train._localLast = new
             st_dict = train.stationDict(old)
             if st_dict is not None:
                 st_dict["zhanming"] = new
+        self.line.changeStationNameUpdateMap(old,new)
 
     def addTrainByGraph(self,graph):
         """
         添加车次，返回数量
-        :param graph:
-        :return:
         """
         num = 0
         for train in graph.trains():
@@ -1075,6 +1094,14 @@ class Graph():
 
     def stationByIndex(self,idx):
         return self.line.stations[idx]
+
+    def resetAllTrainsLocalFirstLast(self):
+        """
+        当线路数据更新时，重置所有列车的localFirst/Last。
+        """
+        for train in self.trains():
+            train.updateLocalFirst(self)
+            train.updateLocalLast(self)
 
 
 if __name__ == '__main__':

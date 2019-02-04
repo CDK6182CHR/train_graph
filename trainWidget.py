@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from graph import Graph
 from train import Train
+from trainFilter import TrainFilter
 
 class TrainWidget(QtWidgets.QWidget):
     search_train = QtCore.pyqtSignal(str)
@@ -18,6 +19,7 @@ class TrainWidget(QtWidgets.QWidget):
         self.graph = graph
         self.main = main
         self.trainMapToRow=dict()
+        self.filter = TrainFilter(self.graph,self)
 
     def initWidget(self):
         vlayout = QtWidgets.QVBoxLayout()
@@ -27,10 +29,15 @@ class TrainWidget(QtWidgets.QWidget):
         lineEdit = QtWidgets.QLineEdit()
         lineEdit.setFixedHeight(30)
         lineEdit.editingFinished.connect(lambda: self.search_train.emit(lineEdit.text()))
-        btnSearch = QtWidgets.QPushButton("搜索车次")
+        btnSearch = QtWidgets.QPushButton("搜索")
+        btnSearch.setMinimumWidth(80)
         btnSearch.clicked.connect(lambda: self.search_train.emit(lineEdit.text()))
         hlayout.addWidget(lineEdit)
         hlayout.addWidget(btnSearch)
+        btnFilter = QtWidgets.QPushButton('筛选')
+        btnFilter.setMinimumWidth(80)
+        btnFilter.clicked.connect(self.filter.setFilter)
+        hlayout.addWidget(btnFilter)
         vlayout.addLayout(hlayout)
 
         tableWidget.setRowCount(0)
@@ -82,6 +89,8 @@ class TrainWidget(QtWidgets.QWidget):
 
         self.setLayout(vlayout)
 
+        self.filter.FilterChanged.connect(self.setData) # 不能放在init中，否则报错
+
     def setData(self):
         """
         根据自带的graph数据对象重新设置表格信息。
@@ -90,7 +99,8 @@ class TrainWidget(QtWidgets.QWidget):
         self.trainMapToRow=dict()
         self.trainTable.setRowCount(0)
         for train in self.graph.trains():
-            self.addTrain(train)
+            if self.filter.check(train):
+                self.addTrain(train)
 
     def addTrain(self,train:Train):
         """
@@ -119,7 +129,7 @@ class TrainWidget(QtWidgets.QWidget):
         item.setData(0, train.localMile(self.graph))
         tableWidget.setItem(now_line, 5, item)
 
-        train: Train
+        # train: Train
         item = QtWidgets.QTableWidgetItem()
         item.setData(0, train.intervalPassedCount(self.graph))
         tableWidget.setItem(now_line, 6, item)

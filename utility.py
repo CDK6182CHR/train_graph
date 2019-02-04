@@ -3,7 +3,7 @@
 """
 import re
 import json
-
+from datetime import datetime
 
 def split_checi(checi):
     """
@@ -207,9 +207,6 @@ def lines_to_json():
 def stationEqual(st1: str, st2: str, strict=False):
     """
     比较两站名是否相同，支持域解析符
-    :param st1:
-    :param st2:
-    :return:
     """
     if st1 == st2:
         return True
@@ -219,6 +216,14 @@ def stationEqual(st1: str, st2: str, strict=False):
             #仅一侧有域解析符才能模糊匹配
             return True
     return False
+
+def strToTime(src:str):
+    """
+    将字符串转换为datetime.datetime对象并返回。支持两种格式："%H:%M"；"%H:%M:%S"。
+    用于代替库函数datetime.striptime，后者效率有点低。
+    """
+    digits = list(map(int,src.split(':')))
+    return datetime(1900,1,1,*digits)
 
 
 if __name__ == '__main__':
