@@ -90,6 +90,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
             last_point = cfpoint
 
+        if station_count < 2:
+            return
+
         if start_point is None:
             print(train.fullCheci())
             return

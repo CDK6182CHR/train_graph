@@ -204,6 +204,9 @@ class TrainWidget(QtWidgets.QWidget):
         return train
 
     def setCurrentTrain(self,train):
+        """
+        TODO 线性算法，要优化
+        """
         for i in range(self.trainTable.rowCount()):
             if train is self.trainTable.item(i, 0).data(-1):
                 self.trainTable.setCurrentCell(i, 0)

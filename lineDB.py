@@ -50,6 +50,7 @@ class LineDB(QtWidgets.QDialog):
             widget = LineWidget(line)
             item = QtWidgets.QListWidgetItem(f"{count} {name}")
             if count == 1:
+                widget.initWidget()
                 widget.setData()
                 widget.btnOk.clicked.connect(self._update_line)
                 item.setData(-1, True)
@@ -256,6 +257,7 @@ class LineDB(QtWidgets.QDialog):
             print("set widget",index)
             stackedWidget.setCurrentIndex(index)
             widget = stackedWidget.currentWidget()
+            widget.initWidget()
             widget.setData()
             widget.btnOk.clicked.connect(lambda: self._update_line)
             item.setData(-1,True)

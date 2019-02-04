@@ -882,6 +882,8 @@ class Train():
         except:
             # 贵阳北::渝贵贵广场改为贵阳北渝贵贵广场会报错，暂时用这种低级方法处理。
             start,end = self.updateLocalFirst(graph),self.updateLocalLast(graph)
+            if start is None:
+                return 0
             startIdx = graph.stationIndex(start)
             endIdx = graph.stationIndex(end)
         if startIdx >= endIdx:

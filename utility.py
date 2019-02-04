@@ -222,7 +222,7 @@ def strToTime(src:str):
     将字符串转换为datetime.datetime对象并返回。支持两种格式："%H:%M"；"%H:%M:%S"。
     用于代替库函数datetime.striptime，后者效率有点低。
     """
-    digits = list(map(int,src.split(':')))
+    digits = map(int,src.split(':'))
     return datetime(1900,1,1,*digits)
 
 

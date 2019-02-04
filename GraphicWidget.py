@@ -50,14 +50,15 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         self.sysConfig = self.readSysConfig()
         self.margins = {
-            'left_white':15, # 左侧白边，不能有任何占用的区域
-            "left": 305,
+            "left_white":15, # 左侧白边，不能有任何占用的区域
+            "right_white":10,
+            "left": 325,
             "up": 90,
             "down": 90,
-            "right": 160,
+            "right": 170,
             "label_width": 100,
             "mile_label_width":50,
-            "ruler_label_width":80,
+            "ruler_label_width":100,
         }
         self.appendix_margins = {
             "title_row_height":40,  # 左侧表格的表头高度
@@ -130,7 +131,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
     def paintGraph(self, throw_error=False):
         """
-        :param throw_error:出现标尺排图错误时是否继续向外抛出。
+        throw_error:出现标尺排图错误时是否继续向外抛出。
         在标尺编辑面板调整重新排图是置为True，显示报错信息。
         """
         self.scene.clear()
@@ -248,7 +249,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         rectLeft.setZValue(-1)
         leftItems.append(rectLeft)
 
-        rectRight = self.scene.addRect(self.scene.width() - self.margins["label_width"],
+        rectRight = self.scene.addRect(self.scene.width() - self.margins["label_width"]-
+                                       self.margins["right_white"],
                                        self.margins["up"] - 15, self.margins["label_width"], height + 30)
         rectRight.setBrush(QtGui.QBrush(brushColor))
         rectRight.setPen(QtGui.QPen(Qt.transparent))
@@ -589,17 +591,25 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         textItem.setY(y - 13)
         # textItem.setX(self.margins["label_width"] - len(name) * 18.2 - 5)
         textWidth = textItem.boundingRect().width()
+        font = QtGui.QFont()
+        font.setBold(textFont.bold())
+        font.setRawName(textFont.rawName())
         if textWidth > self.margins["label_width"]:
             # 超大的字
-            font = QtGui.QFont()
-            font.setBold(textFont.bold())
-            font.setRawName(textFont.rawName())
             stretch = int(100*self.margins["label_width"] / textWidth+0.5)
             font.setStretch(stretch)
             textItem.setFont(font)
+        textWidth = textItem.boundingRect().width()
+        cnt = len(name)
+        if textWidth < self.margins['label_width'] and cnt>1:
+            # 两端对齐
+            font.setLetterSpacing(QtGui.QFont.AbsoluteSpacing,(self.margins["label_width"]-textWidth)/(cnt-1))
+            textItem.setFont(font)
+        # self.scene.addRect(textItem.boundingRect())
 
         textWidth = textItem.boundingRect().width()
-        textItem.setX(self.margins["label_width"] + self.margins["left_white"] - textWidth+label_start_x)
+        # textItem.setX(self.margins["label_width"] + self.margins["left_white"] - textWidth+label_start_x)
+        textItem.setX(label_start_x+self.margins["left_white"])
         leftItems.append(textItem)
 
         # 右侧
@@ -607,7 +617,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         textItem.setDefaultTextColor(textColor)
         textItem.setFont(textFont)
         textItem.setY(y - 13)
-        textItem.setX(self.scene.width() - self.margins["label_width"])
+        textItem.setX(self.scene.width() - self.margins["label_width"]-self.margins["right_white"])
         textWidth = textItem.boundingRect().width()
         if textWidth > self.margins["label_width"]:
             # 超大的字
@@ -616,6 +626,12 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             font.setRawName(textFont.rawName())
             stretch = int(100 * self.margins["label_width"] / textWidth + 0.5)
             font.setStretch(stretch)
+            textItem.setFont(font)
+        cnt = len(name)
+        textWidth = textItem.boundingRect().width()
+        if textWidth < self.margins['label_width'] and cnt > 1:
+            # 两端对齐
+            font.setLetterSpacing(QtGui.QFont.AbsoluteSpacing,(self.margins["label_width"] - textWidth) / (cnt - 1))
             textItem.setFont(font)
 
         rightItems.append(textItem)
@@ -721,7 +737,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         item = TrainItem(train, self.graph, self,
                          self.graph.UIConfigData()['showFullCheci'])
         # item.setLine()  # 重复调用，init中已经调用过一次了，故删去。
-        self.scene.addItem(item)
+        if train.item is not None:
+            self.scene.addItem(item)
 
     def delTrainLine(self, train):
         if train is self.selectedTrain:

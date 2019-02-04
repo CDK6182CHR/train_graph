@@ -953,10 +953,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _on_line_changed(self):
         """
         lineWidget确认线路信息触发
-        :return:
         """
         self.graph.line.resetRulers()
-
+        for train in self.graph.trains():
+            train.updateLocalFirst(self.graph)
+            train.updateLocalLast(self.graph)
         try:
             self.main.GraphWidget.paintGraph()
         except:
@@ -1634,7 +1635,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _add_train_by_ruler(self):
         """
         标尺排图向导
-        :return:
         """
         if not self.graph.rulerCount():
             self._derr("标尺排图向导：无可用标尺！")
@@ -2625,7 +2625,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         else:
             num = self.graph.addTrainByGraph(graph)
             self.GraphWidget.paintGraph()
-            self.trainWidget.addTrain(num)
+            self.trainWidget.addTrainsFromBottom(num)
             self._dout(f"成功导入{num}个车次。")
 
     def _import_train_real(self):
