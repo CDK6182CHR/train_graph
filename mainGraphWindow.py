@@ -16,6 +16,7 @@ from currentWidget import CurrentWidget
 from lineWidget import LineWidget
 from trainWidget import TrainWidget
 from trainFilter import TrainFilter
+from configWidget import ConfigWidget
 import json
 from GraphicWidget import GraphicsWidget, TrainEventType, config_file
 from rulerPaint import rulerPainter
@@ -125,11 +126,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut('停靠面板刷新开始')
         self.trainWidget.setData()
         self.statusOut('车次面板刷新完毕')
-        self._initConfigWidget()
+        self.configWidget.setData()
         self.statusOut('设置面板刷新完毕')
         self.lineWidget.setData()
         self.statusOut('线路面板刷新完毕')
-        self.rulerWidget.setData()
+        self.rulerWidget.updateRulerTabs()  # 效率考虑
         self.statusOut('标尺面板刷新完毕')
         self._initTypeWidget()
         self.statusOut('类型面板刷新完毕')
@@ -367,6 +368,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         scroll.setWidget(widget)
 
         self.currentDockWidget.setWidget(scroll)
+        self.currentDockWidget.visibilityChanged.connect(
+            lambda: self.currentWidget.setData(self.GraphWidget.selectedTrain))
 
     def _check_ruler(self, train: Train):
         """
@@ -375,8 +378,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         1-起通
         2-通停
         3-起停
-        :param train:
-        :return:
         """
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle(f"标尺对照*{train.fullCheci()}")
@@ -870,7 +871,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         trainDock.visibilityChanged.connect(lambda: self._dock_visibility_changed("车次编辑", trainDock))
         self.addDockWidget(Qt.LeftDockWidgetArea, trainDock)
         self.trainDockWidget = trainDock
-        trainDock.close()
+        trainDock.setVisible(False)
 
     def _initTrainWidget(self):
         if self.trainDockWidget is None:
@@ -937,7 +938,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dockLine.visibilityChanged.connect(lambda: self._dock_visibility_changed("线路编辑", dockLine))
         self.addDockWidget(Qt.RightDockWidgetArea, dockLine)
         self.lineDockWidget = dockLine
-        dockLine.setVisible(False)
+        # dockLine.setVisible(False)
 
     def _initLineWidget(self):
         if self.lineDockWidget is None:
@@ -959,10 +960,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             train.updateLocalFirst(self.graph)
             train.updateLocalLast(self.graph)
         try:
-            self.main.GraphWidget.paintGraph()
+            self.GraphWidget.paintGraph()
         except:
             self.graph.setOrdinateRuler(None)
             self.GraphWidget.paintGraph()
+        self.rulerWidget.updateRulerTabs()
 
     def _initConfigDock(self):
         configDock = QtWidgets.QDockWidget()
@@ -974,237 +976,29 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, configDock)
 
     def _initConfigWidget(self):
-        if self.configDockWidget is None:
-            return
-
-        configWidget = QtWidgets.QWidget(self)
-
-        vlayout = QtWidgets.QVBoxLayout()
-        layout = QtWidgets.QFormLayout()
-        vlayout.addLayout(layout)
-
-        label1 = QtWidgets.QLabel("起始时刻")
-        spin1 = QtWidgets.QSpinBox()
-        spin1.setSingleStep(1)
-        spin1.setRange(0, 24)
-        spin1.setValue(self.graph.UIConfigData()["start_hour"])
-        layout.addRow(label1, spin1)
-
-        label2 = QtWidgets.QLabel("结束时刻")
-        spin2 = QtWidgets.QSpinBox()
-        spin2.setSingleStep(1)
-        spin2.setRange(0, 24)
-        spin2.setValue(self.graph.UIConfigData()["end_hour"])
-        layout.addRow(label2, spin2)
-
-        label3 = QtWidgets.QLabel("默认客车线宽")
-        spin3 = QtWidgets.QDoubleSpinBox()
-        spin3.setSingleStep(0.5)
-        spin3.setValue(self.graph.UIConfigData()["default_keche_width"])
-        layout.addRow(label3, spin3)
-
-        label4 = QtWidgets.QLabel("默认货车线宽")
-        spin4 = QtWidgets.QDoubleSpinBox()
-        spin4.setSingleStep(0.5)
-        spin4.setValue(self.graph.UIConfigData()["default_huoche_width"])
-        layout.addRow(label4, spin4)
-
-        # TODO 使用slider
-        label7 = QtWidgets.QLabel("横轴每像素秒数")
-        spin7 = QtWidgets.QDoubleSpinBox()
-        spin7.setSingleStep(1)
-        spin7.setRange(0, 240)
-        spin7.setValue(self.graph.UIConfigData()["seconds_per_pix"])
-        layout.addRow(label7, spin7)
-
-        label8 = QtWidgets.QLabel("纵轴每像素秒数")
-        spin8 = QtWidgets.QDoubleSpinBox()
-        spin8.setSingleStep(1)
-        spin8.setRange(0, 240)
-        spin8.setValue(self.graph.UIConfigData()["seconds_per_pix_y"])
-        layout.addRow(label8, spin8)
-
-        label9 = QtWidgets.QLabel("纵轴每公里像素")
-        spin9 = QtWidgets.QDoubleSpinBox()
-        spin9.setSingleStep(1)
-        spin9.setRange(0, 20)
-        spin9.setValue(self.graph.UIConfigData()["pixes_per_km"])
-        layout.addRow(label9, spin9)
-
-        label9 = QtWidgets.QLabel("最低粗线等级")
-        spin9 = QtWidgets.QSpinBox()
-        spin9.setSingleStep(1)
-        spin9.setRange(0, 20)
-        spin9.setValue(self.graph.UIConfigData()["bold_line_level"])
-        layout.addRow(label9, spin9)
-
-        label9 = QtWidgets.QLabel("每小时纵线数")
-        spin9 = QtWidgets.QSpinBox()
-        spin9.setSingleStep(1)
-        spin9.setRange(1, 20)
-        spin9.setValue(60 / (self.graph.UIConfigData()["minutes_per_vertical_line"]) - 1)
-        layout.addRow(label9, spin9)
-
-        label10 = QtWidgets.QLabel("纵坐标标尺")
-        combo = QtWidgets.QComboBox()
-        self._setOrdinateCombo(combo)
-        self.ordinateCombo = combo
-        layout.addRow(label10, combo)
-
-        check = QtWidgets.QCheckBox()
-        check.setChecked(self.graph.UIConfigData().setdefault('showFullCheci', False))
-        layout.addRow("显示完整车次", check)
-
-        vlayout.addLayout(layout)
-
-        label = QtWidgets.QLabel("运行图说明或备注")
-        vlayout.addWidget(label)
-        textEdit = QtWidgets.QTextEdit()
-        textEdit.setText(self.graph.markdown())
-        self.configDockWidget.textEdit = textEdit
-        vlayout.addWidget(textEdit)
-
-        btn1 = QtWidgets.QPushButton("确定")
-        btn1.clicked.connect(self._applyConfig)
-        btn2 = QtWidgets.QPushButton("默认")
-        btn2.clicked.connect(self._clearConfig)
-        btnlay = QtWidgets.QHBoxLayout()
-        btnlay.addWidget(btn1)
-        btnlay.addWidget(btn2)
-
-        vlayout.addLayout(btnlay)
-
-        configWidget.setLayout(vlayout)
+        configWidget = ConfigWidget(self.graph,self)
+        self.configWidget = configWidget
+        configWidget.RepaintGraph.connect(self._apply_config_repaint)
+        configWidget.SaveSystemConfig.connect(lambda :self.GraphWidget.saveSysConfig(Copy=True))
 
         self.configDockWidget.setWidget(configWidget)
 
-    def _setOrdinateCombo(self, combo: QtWidgets.QComboBox):
-        combo.clear()
-        combo.addItem("按里程")
-        for ruler in self.graph.rulers():
-            combo.addItem(ruler.name())
-        ordinate = self.graph.ordinateRuler()
-        if ordinate is None:
-            combo.setCurrentIndex(0)
-        else:
-            combo.setCurrentText(ordinate.name())
-
-    def _typeShowConfig(self):
+    def _apply_config_repaint(self):
         """
-        设置要显示的车次类型
-        :return:
+        由configWidget的repaint信号触发，进行铺画运行图操作。
         """
-        self.mdi = QtWidgets.QMdiArea()
-        widget = QtWidgets.QWidget(self)
-        configWindow = QtWidgets.QMdiSubWindow()
-        configWindow.setWidget(widget)
-        self.mdi.addSubWindow(configWindow)
-        configWindow.show()
-
-    def _applyConfig(self):
-        vlayout: QtWidgets.QVBoxLayout = self.configDockWidget.widget().layout()
-
-        UIDict = self.graph.UIConfigData()
-
-        layout: QtWidgets.QFormLayout = vlayout.itemAt(0)
-        for i in range(layout.rowCount()):
-            label = layout.itemAt(i, layout.LabelRole).widget()
-            field = layout.itemAt(i, layout.FieldRole).widget()
-            if label.text() == '起始时刻':
-                UIDict["start_hour"] = field.value()
-            elif label.text() == '结束时刻':
-                UIDict["end_hour"] = field.value()
-            elif label.text() == '默认客车线宽':
-                UIDict["default_keche_width"] = field.value()
-            elif label.text() == '默认货车线宽':
-                UIDict["default_huoche_width"] = field.value()
-            elif label.text() == '横轴每像素秒数':
-                UIDict["seconds_per_pix"] = field.value()
-            elif label.text() == '纵轴每像素秒数':
-                UIDict["seconds_per_pix_y"] = field.value()
-            elif label.text() == '纵轴每公里像素':
-                UIDict["pixes_per_km"] = field.value()
-            elif label.text() == '最低粗线等级':
-                UIDict["bold_line_level"] = field.value()
-            elif label.text() == '每小时纵线数':
-                UIDict["minutes_per_vertical_line"] = 60 / (field.value() + 1)
-            elif label.text() == '纵坐标标尺':
-                former = self.graph.ordinateRuler()
-                name = field.currentText()
-                if field.currentIndex() == 0:
-                    ruler = None
-                else:
-                    ruler = self.graph.line.rulerByName(name)
-
-                rulerChanged = True
-                if ruler is former:
-                    # 标尺不变
-                    rulerChanged = False
-            elif label.text() == '显示完整车次':
-                UIDict['showFullCheci'] = field.isChecked()
-
-            else:
-                print("无效的label")
-                raise Exception("Invalid label. Add elif here.", label.text())
-
-        textEdit = self.configDockWidget.textEdit
-        self.graph.setMarkdown(textEdit.toPlainText())
-
-        dialog = QtWidgets.QMessageBox()
-        btnOk = QtWidgets.QPushButton("保存默认(&D)")
-        # btnOk.setShortcut('D')
-        btnOk.clicked.connect(lambda: self.GraphWidget.saveSysConfig(Copy=True))
-        btnCancel = QtWidgets.QPushButton("仅运行图(&G)")
-        # btnCancel.setShortcut('G')
-        dialog.addButton(btnOk, dialog.AcceptRole)
-        dialog.addButton(btnCancel, dialog.RejectRole)
-        dialog.setText("请选择将以上设置保存为系统默认设置，还是仅应用到本运行图？")
-        dialog.setWindowTitle(self.title)
-        dialog.exec_()
-
-        flag = self.changeOrdinateRuler(ruler)
-        if not flag:
-            self.changeOrdinateRuler(former)
-        # 注意：变更纵坐标标尺操作引起重新铺画运行图操作，故替代原有代码。
-
-    def _clearConfig(self):
-        """
-        将所有设置恢复为默认设置
-        :return:
-        """
-        r = QtWidgets.QMessageBox.question(self, "提示",
-                                           "确定将所有设置恢复为系统默认？当前运行图的有关设置将丢失。",
-                                           QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-                                           QtWidgets.QMessageBox.Yes)
-
-        if r == QtWidgets.QMessageBox.Rejected or r == QtWidgets.QMessageBox.NoButton:
-            return
-
-        keys = (
-            "seconds_per_pix",
-            "seconds_per_pix_y",
-            "pixes_per_km",
-            "default_keche_width",
-            "default_huoche_width",
-            "start_hour",
-            "end_hour",
-            "minutes_per_vertical_line",
-            "bold_line_level",
-        )
-
-        buff = self.graph.readSystemConfig()
         try:
-            for key in keys:
-                self.graph.UIConfigData()[key] = buff[key]
+            self.GraphWidget.paintGraph(True)
         except:
-            traceback.print_exc()
-        self._initConfigWidget()
+            self._derr("铺画失败，可能由于排图标尺不符合要求。已自动恢复为按里程排图。")
+            self.graph.setOrdinateRuler(None)
+            self.GraphWidget.paintGraph()
+            self.configWidget.setOrdinateCombo()
 
     def changeOrdinateRuler(self, ruler: Ruler):
         """
         调整排图标尺。返回是否成功。
-        :param ruler:
-        :return:
+        本函数只由rulerWidget中按钮调用。
         """
         former = self.graph.ordinateRuler()
         try:
@@ -1212,12 +1006,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.GraphWidget.paintGraph(throw_error=True)
         except:
             self._derr("设置排图标尺失败！设为排图纵坐标的标尺必须填满每个区间数据。自动变更为按里程排图。")
-            traceback.print_exc()
             self.graph.setOrdinateRuler(former)
             self.GraphWidget.paintGraph()
             return False
 
-        self._setOrdinateCombo(self.ordinateCombo)
+        self.configWidget.setOrdinateCombo()
         return True
 
     def _initMenuBar(self):
@@ -2592,7 +2385,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         self.GraphWidget.paintGraph()
         self.trainWidget.updateAllTrains()
-        self.lineWidget.setData()
+        self.lineWidget.updateData()
         self.rulerWidget.setData()
 
         self.statusOut("站名变更成功")
@@ -2671,7 +2464,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         由dialog的信号触发。
         """
         self.GraphWidget.paintGraph()
-        self.lineWidget.setData()
+        self.lineWidget.updateData()
         self.trainWidget.updateAllTrains()
 
     def _detect_pass_time(self):

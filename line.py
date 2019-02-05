@@ -273,11 +273,15 @@ class Line():
     def stationCount(self):
         return len(self.stations)
 
-    def stationDicts(self):
+    def stationDicts(self,start_index=0):
         """
         依次迭代所有车站的dict。
         """
-        for station in self.stations:
+        for station in self.stations[start_index:]:
+            yield station
+
+    def reversedStationDicts(self):
+        for station in reversed(self.stations):
             yield station
 
     def copyData(self,line,withRuler=False):
@@ -335,6 +339,13 @@ class Line():
         self.nameMap[new] = dct
         self.delFieldMap(old)
         self.addFieldMap(new)
+
+    def stationDictByIndex(self,idx):
+        try:
+            return self.stations[idx]
+        except IndexError:
+            return None
+
 
 if __name__ == '__main__':
     line = Line("宁芜线")

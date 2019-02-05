@@ -23,8 +23,16 @@ class RulerWidget(QtWidgets.QTabWidget):
         new_ruler = Ruler(line=line)
         self._addRulerTab(new_ruler)
 
+    def updateRulerTabs(self):
+        """
+        已知标尺不增减，只有内部变化，更新所有标尺的标签页。
+        """
+        for i in range(self.count()):
+            widget = self.widget(i)
+            self._updateRulerTabWidget(widget)
+
     def _addRulerTab(self,ruler):
-        widget = QtWidgets.QWidget()
+        widget = QtWidgets.QWidget(self)
         widget.ruler = ruler
 
         vlayout = QtWidgets.QVBoxLayout()
@@ -39,6 +47,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         check.setChecked(ruler.different())
         flayout.addRow("上下行分设", check)
         check.toggled.connect(lambda x: self._ruler_different_changed(ruler, x, tableWidget))
+        widget.check = check
 
         vlayout.addLayout(flayout)
 
@@ -89,22 +98,20 @@ class RulerWidget(QtWidgets.QTabWidget):
     def _setRulerTable(self, tableWidget: QtWidgets.QTableWidget, ruler: Ruler):
         """
         设置ruler的table。
-        :param tableWidget:
-        :param ruler:
-        :return:
         """
         tableWidget.clear()
         tableWidget.setRowCount(0)
 
         tableWidget.verticalHeader().setVisible(False)
-        tableWidget.setColumnCount(6)
-        tableWidget.setHorizontalHeaderLabels(["区间", "分", "秒", "起", "停", "旅速"])
+        tableWidget.setColumnCount(7)
+        tableWidget.setHorizontalHeaderLabels(["区间", "分", "秒", "起", "停","距离", "旅速"])
         tableWidget.setColumnWidth(0, 150)
         tableWidget.setColumnWidth(1, 40)
         tableWidget.setColumnWidth(2, 50)
         tableWidget.setColumnWidth(3, 50)
         tableWidget.setColumnWidth(4, 50)
         tableWidget.setColumnWidth(5, 70)
+        tableWidget.setColumnWidth(6, 70)
 
         # 方便起见，直接调用line对象
         line = ruler.line()
@@ -199,8 +206,94 @@ class RulerWidget(QtWidgets.QTabWidget):
         except ZeroDivisionError:
             speed = 0
 
+        tableWidget.setItem(now_line,5,QtWidgets.QTableWidgetItem(f"{mile:.1f}"))
+
         item = QtWidgets.QTableWidgetItem("%.2f" % speed)
-        tableWidget.setItem(now_line, 5, item)
+        tableWidget.setItem(now_line, 6, item)
+
+    def _updateRulerTabWidget(self,widget):
+        ruler:Ruler = widget.ruler
+        widget.check.setChecked(ruler.different())
+        self._updateRulerTable(widget.tableWidget,ruler)
+
+    def _updateRulerTable(self,tableWidget:QtWidgets.QTableWidget,ruler:Ruler):
+        """
+        逐行更新数据。尽量减少变动。
+        """
+        blocker = "->" if ruler.different() else "<->"
+
+        former_dict = None
+        row_cnt = 0
+        for i, st_dict in enumerate(self.line.stationDicts()):
+            if not ruler.isDownPassed(st_dict["zhanming"]):
+                if former_dict is not None:
+                    if row_cnt >= tableWidget.rowCount():
+                        # 原来没有的行，直接插入
+                        mile = abs(st_dict["licheng"] - former_dict["licheng"])
+                        self._addRulerRow(former_dict["zhanming"], st_dict["zhanming"], blocker
+                                          , ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
+                                          tableWidget, mile)
+                    else:
+                        # 原来有的行，更新
+                        mile = abs(st_dict["licheng"] - former_dict["licheng"])
+                        self._updateTableRowData(tableWidget,row_cnt,
+                                                 ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
+                                                 mile,blocker,former_dict["zhanming"], st_dict["zhanming"]
+                                                 )
+                        row_cnt += 1
+                former_dict = st_dict
+
+        if not ruler.different():
+            tableWidget.setRowCount(row_cnt)
+            return
+        for i, st_dict in enumerate(self.line.reversedStationDicts()):
+            if not ruler.isUpPassed(st_dict["zhanming"]):
+                if former_dict is not None:
+                    if row_cnt >= tableWidget.rowCount():
+                        # 原来没有的行，直接插入
+                        mile = abs(st_dict["licheng"] - former_dict["licheng"])
+                        self._addRulerRow(former_dict["zhanming"], st_dict["zhanming"], blocker
+                                          , ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
+                                          tableWidget, mile)
+                    else:
+                        # 原来有的行，更新
+                        mile = abs(st_dict["licheng"] - former_dict["licheng"])
+                        self._updateTableRowData(tableWidget,row_cnt,
+                                                 ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
+                                                 mile,blocker,former_dict["zhanming"], st_dict["zhanming"]
+                                                 )
+                        row_cnt += 1
+                former_dict = st_dict
+        tableWidget.setRowCount(row_cnt)
+
+    @staticmethod
+    def _tableRowInterval(tableWidget:QtWidgets.QTableWidget,row:int):
+        """
+        返回某一行对应的区间。
+        """
+        try:
+            return tableWidget.item(row,0).data(-1)
+        except:
+            return None
+
+    @staticmethod
+    def _updateTableRowData(tableWidget:QtWidgets.QTableWidget,row:int,info,mile,blocker,start,end):
+        """
+        已知这一行存在且各数据有效，使用info中的数据更新这一行的数据。
+        """
+        if info is None:
+            info = {}
+        item:QtWidgets.QTableWidgetItem = tableWidget.item(row,0)
+        item.setText(f"{start}{blocker}{end}")
+        item.setData(-1,[start,end])
+
+        int_sec = info.get("interval",0)
+        tableWidget.cellWidget(row,1).setValue(int(int_sec/60))
+        tableWidget.cellWidget(row,2).setValue(int_sec%60)
+        tableWidget.cellWidget(row,3).setValue(info.get("start",0))
+        tableWidget.cellWidget(row,4).setValue(info.get("stop",0))
+        tableWidget.item(row,5).setText(f"{mile:.1f}")
+
 
     #slots
     def _ruler_different_changed(self, ruler: Ruler, checked: bool, tableWidget):
@@ -268,7 +361,7 @@ class RulerWidget(QtWidgets.QTabWidget):
             self._addRulerTab(new_ruler)
 
         if self.main is not None:
-            self.main._setOrdinateCombo(self.main.ordinateCombo)
+            self.main.configWidget.setOrdinateCombo()
 
     def _discard_ruler_change(self, widget: QtWidgets.QWidget):
         flag = self.qustion("将此标尺数据恢复到保存的数据，所有未保存的修改都将丢失！是否继续？")
@@ -391,7 +484,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         else:
             tableWidget.item(now_line, 0).setBackground(QtGui.QBrush(Qt.transparent))
 
-        tableWidget.item(now_line, 5).setText("%.2f" % speed)
+        tableWidget.item(now_line, 6).setText("%.2f" % speed)
 
         if not seconds:
             # 这一行标红

@@ -240,10 +240,12 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         brushColor.setAlpha(200)
         label_start_x = self.margins["mile_label_width"]+self.margins["ruler_label_width"]
         rectLeft = self.scene.addRect(0,
-                                      self.margins["up"] - 15,
+                                      self.margins["up"] - self.appendix_margins["title_row_height"]-
+                                      self.appendix_margins["first_row_append"],
                                       self.margins["label_width"]+self.margins["ruler_label_width"]+
                                       self.margins["mile_label_width"]+self.margins["left_white"],
-                                      height + 30)
+                                      height + 2*self.appendix_margins["first_row_append"]+
+                                      self.appendix_margins["title_row_height"])
         rectLeft.setBrush(QtGui.QBrush(brushColor))
         rectLeft.setPen(QtGui.QPen(Qt.transparent))
         rectLeft.setZValue(-1)
@@ -251,7 +253,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         rectRight = self.scene.addRect(self.scene.width() - self.margins["label_width"]-
                                        self.margins["right_white"],
-                                       self.margins["up"] - 15, self.margins["label_width"], height + 30)
+                                       self.margins["up"] - self.appendix_margins["title_row_height"] -
+                                       self.appendix_margins["first_row_append"],
+                                       self.margins["label_width"],
+                                       height + 2 * self.appendix_margins["first_row_append"] +
+                                       self.appendix_margins["title_row_height"])
         rectRight.setBrush(QtGui.QBrush(brushColor))
         rectRight.setPen(QtGui.QPen(Qt.transparent))
         rightItems.append(rectRight)
@@ -531,9 +537,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
 
         group1 = self.scene.createItemGroup(leftItems)
-        group1.setZValue(2)
+        group1.setZValue(4)
         group2 = self.scene.createItemGroup(rightItems)
-        group2.setZValue(2)
+        group2.setZValue(4)
         self.marginItemGroups["left"] = group1
         self.marginItemGroups["right"] = group2
 
@@ -542,14 +548,14 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         左侧排图标尺表格中添加文字的函数。自动附加左侧白边宽度。
         """
         start_x += self.margins["left_white"]
-        rulerTitle:QtWidgets.QGraphicsTextItem = self.scene.addText(text)
+        rulerTitle:QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(text)
         font = QtGui.QFont()
         font.setRawName(textFont.rawName())
         if rulerTitle.boundingRect().width() > width:
             stretch = int(100*width/rulerTitle.boundingRect().width())
             font.setStretch(stretch)
         rulerTitle.setFont(font)
-        rulerTitle.setDefaultTextColor(textColor)
+        rulerTitle.setBrush(QtGui.QBrush(textColor))
         rulerTitle.setX(start_x + (width-rulerTitle.boundingRect().width())/2)
         rulerTitle.setY(start_y +
                         (height-rulerTitle.boundingRect().height())/2)
@@ -560,14 +566,14 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         左侧排图标尺表格中【每个站】位置的字体。与上一个的区别是设置中心y而不是高度。自动附加左侧白边。
         """
         start_x += self.margins["left_white"]
-        rulerTitle: QtWidgets.QGraphicsTextItem = self.scene.addText(text)
+        rulerTitle: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(text)
         font = QtGui.QFont()
         font.setRawName(textFont.rawName())
         if rulerTitle.boundingRect().width() > width:
             stretch = int(100 * width / rulerTitle.boundingRect().width())
             font.setStretch(stretch)
         rulerTitle.setFont(font)
-        rulerTitle.setDefaultTextColor(textColor)
+        rulerTitle.setBrush(QtGui.QBrush(textColor))
         rulerTitle.setX(start_x + (width - rulerTitle.boundingRect().width()) / 2)
         rulerTitle.setY(center_y-rulerTitle.boundingRect().height() / 2)
         return rulerTitle
@@ -579,16 +585,18 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         """
         textFont.setBold(False)
         # print(name,dir_)
-        dir_dict = {
-            0x0: 'N', 0x1: 'D', 0x2: 'U', 0x3: '',
-        }
-        name = dir_dict[dir_] + name
+        # dir_dict = {
+        #     0x0: 'N', 0x1: 'D', 0x2: 'U', 0x3: '',
+        # }
+        # name = dir_dict[dir_] + name
 
         self.scene.addLine(self.margins["left"], y, width + self.margins["left"], y, pen)
-        textItem: QtWidgets.QGraphicsTextItem = self.scene.addText(name)
-        textItem.setDefaultTextColor(textColor)
+        textItem: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(name) # todo
+        # textItem.setDefaultTextColor(textColor)
+        # textItem.setPen(QtGui.QPen(textColor))
+        textItem.setBrush(QtGui.QBrush(textColor))
         textItem.setFont(textFont)
-        textItem.setY(y - 13)
+        textItem.setY(y - textItem.boundingRect().height()/2)
         # textItem.setX(self.margins["label_width"] - len(name) * 18.2 - 5)
         textWidth = textItem.boundingRect().width()
         font = QtGui.QFont()
@@ -613,8 +621,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         leftItems.append(textItem)
 
         # 右侧
-        textItem = self.scene.addText(name)
-        textItem.setDefaultTextColor(textColor)
+        textItem = self.scene.addSimpleText(name)
+        textItem.setBrush(QtGui.QBrush(textColor))
         textItem.setFont(textFont)
         textItem.setY(y - 13)
         textItem.setX(self.scene.width() - self.margins["label_width"]-self.margins["right_white"])
@@ -687,18 +695,20 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             x = self.margins["left"] + i * 3600 / UIDict["seconds_per_pix"]
             hour = (i + UIDict["start_hour"]) % 24
 
-            textItem1: QtWidgets.QGraphicsTextItem = self.scene.addText(str(hour))
-            textItem2: QtWidgets.QGraphicsTextItem = self.scene.addText(str(hour))
+            textItem1: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(str(hour))
+            textItem2: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(str(hour))
             textItem1.setFont(font)
             textItem1.setX(x - 12)
-            textItem1.setDefaultTextColor(gridColor)
+            textItem1.setBrush(QtGui.QBrush(gridColor))
+            # textItem1.setDefaultTextColor(gridColor)
             timeItems.append(textItem1)
 
             # 下时间坐标
             textItem2.setFont(font)
             textItem2.setX(x - 12)
             textItem2.setY(self.scene.height() - 30)
-            textItem2.setDefaultTextColor(gridColor)
+            textItem2.setBrush(QtGui.QBrush(gridColor))
+            # textItem2.setDefaultTextColor(gridColor)
             downItems.append(textItem2)
 
             if i == hour_count:

@@ -34,7 +34,18 @@ class LineWidget(QtWidgets.QWidget):
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
         self.tableWidget = tableWidget
 
-        self._initLineTable()
+        tableWidget.setColumnCount(5)
+        tableWidget.setHorizontalHeaderLabels(["站名", "里程", "等级", "显示", "单向站"])
+
+        tableWidget.setColumnWidth(0, 100)
+        tableWidget.setColumnWidth(1, 80)
+        tableWidget.setColumnWidth(2, 60)
+        tableWidget.setColumnWidth(3, 40)
+        tableWidget.setColumnWidth(4, 80)
+
+        tableWidget.setRowCount(line.stationCount())
+
+        self._setLineTable()
 
         vlayout.addLayout(flayout)
         vlayout.addWidget(tableWidget)
@@ -76,24 +87,39 @@ class LineWidget(QtWidgets.QWidget):
         更新所有数据，不重新创建对象。
         """
         self.nameEdit.setText(self.line.name)
-        self._initLineTable()
+        self._setLineTable()
 
-    def _initLineTable(self):
+    def updateData(self):
+        """
+        逐行检查表数据，如果没有变化就不修改了。
+        """
+        self.nameEdit.setText(self.line.name)
+        self.tableWidget.setRowCount(self.line.stationCount())
+        for row in range(self.tableWidget.rowCount()):
+            dct = self.line.stationDictByIndex(row)
+            item = self.tableWidget.item(row,0)
+            if item is not None:
+                self._updateTableRow(dct,row)
+            else:
+                self._setLineTable(row+1)
+                break
+
+    def _updateTableRow(self,dct,row:int):
+        """
+        已知当前行的item, cellWidget存在
+        """
+        self.tableWidget.item(row,0).setText(dct["zhanming"])
+        self.tableWidget.cellWidget(row, 1).setValue(dct["licheng"])
+        self.tableWidget.cellWidget(row, 2).setValue(dct["dengji"])
+        self.tableWidget.cellWidget(row, 3).setChecked(dct.get('show', True))
+        self.tableWidget.cellWidget(row, 4).setCurrentIndex(dct.get('direction', 0x3))
+
+    def _setLineTable(self,start_index=0):
         tableWidget = self.tableWidget
         line = self.line
-        tableWidget.clear()
-        tableWidget.setColumnCount(5)
-        tableWidget.setHorizontalHeaderLabels(["站名", "里程", "等级", "显示", "单向站"])
 
-        tableWidget.setColumnWidth(0, 100)
-        tableWidget.setColumnWidth(1, 80)
-        tableWidget.setColumnWidth(2, 60)
-        tableWidget.setColumnWidth(3, 40)
-        tableWidget.setColumnWidth(4, 80)
-
-        tableWidget.setRowCount(line.stationCount())
-        now_line = 0
-        for stationDict in line.stationDicts():
+        now_line = start_index
+        for stationDict in line.stationDicts(start_index):
 
             item = QtWidgets.QTableWidgetItem(stationDict["zhanming"])
             tableWidget.setItem(now_line, 0, item)
@@ -174,7 +200,7 @@ class LineWidget(QtWidgets.QWidget):
     def _discard_line_info_change(self, tableWidget,line):
         if not self.qustion("是否恢复线路信息？当前所有修改都将丢失。"):
             return
-        self._initLineTable()
+        self._setLineTable()
 
     def _apply_line_info_change(self):
         """
@@ -225,7 +251,7 @@ class LineWidget(QtWidgets.QWidget):
             new_line.adjustLichengTo0()
 
         line.copyData(new_line)
-        self.setData()
+        self.updateData()
 
         # 2018.12.14将确认信息后的操作移动回主窗口
         self.lineChangedApplied.emit()

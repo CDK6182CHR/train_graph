@@ -177,13 +177,13 @@ class CurrentWidget(QtWidgets.QWidget):
     def setData(self,train:Train=None):
         """
         将current中的信息变为train的信息
-        :param train:
-        :return:
         """
+        if train is self.train:
+            # 此逻辑不确定
+            return
         self.train = train
         if train is None:
             # 2019.01.29修改：取消return，空列车信息按空白处置
-            # self.initUI()  #TODO bug风险
             train = self.train = Train()
 
         self.checiEdit.setText(train.fullCheci())
