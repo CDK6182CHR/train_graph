@@ -36,7 +36,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
         # self.labelItemWidth=None
         # self.labelItemHeight=None
 
+        self.color = self._trainColor()
         self.setLine()
+
 
 
     def setLine(self):
@@ -205,19 +207,23 @@ class TrainItem(QtWidgets.QGraphicsItem):
         else:
             train.setItem(None)
 
+    def _trainColor(self):
+        color_str = self.train.color()
+        if not color_str:
+            try:
+                color_str = self.graph.UIConfigData()["default_colors"][self.train.trainType()]
+            except KeyError:
+                color_str = self.graph.UIConfigData()["default_colors"]["default"]
+            # train.setUI(color=color_str)
+        color = QtGui.QColor(color_str)
+        return color
+
     def _trainPen(self):
         """
         Decide QPen used to draw path.
         """
         train = self.train
-        color_str = train.color()
-        if not color_str:
-            try:
-                color_str = self.graph.UIConfigData()["default_colors"][train.trainType()]
-            except KeyError:
-                color_str = self.graph.UIConfigData()["default_colors"]["default"]
-            #train.setUI(color=color_str)
-        color = QtGui.QColor(color_str)
+        color = self.color
 
         width = train.lineWidth()
         if width == 0:
@@ -286,7 +292,6 @@ class TrainItem(QtWidgets.QGraphicsItem):
             else:
                 span_left.append(point1.y())
                 span_right.append(point1.y())
-                print("跨日：",point1,point2)
                 if show:
                     path.lineTo(width+self.graphWidget.margins["left"],point2.y())
                     path.moveTo(self.graphWidget.margins["left"],point2.y())
@@ -438,6 +443,25 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
         self.isHighlighted = False
 
+    def setColor(self,color:QtGui.QColor=None):
+        if color is self.color:
+            return
+        if color is None:
+            color = self._trainColor()
+        for sub in self.validItems(containSpan=True):
+            if sub is None:
+                continue
+            if isinstance(sub,QtWidgets.QGraphicsPathItem):
+                pen:QtGui.QPen = sub.pen()
+                pen.setColor(color)
+                sub.setPen(pen)
+            elif isinstance(sub,QtWidgets.QGraphicsSimpleTextItem):
+                sub.setBrush(QtGui.QBrush(color))
+            elif isinstance(sub,QtWidgets.QGraphicsTextItem):
+                sub.setDefaultTextColor(color)
+        self.color = color
+
+
     def paint(self, QPainter, QStyleOptionGraphicsItem, widget=None):
         return
         # for sub in (self.pathItem,
@@ -454,7 +478,6 @@ class TrainItem(QtWidgets.QGraphicsItem):
     def boundingRect(self):
         """
         返回的是所有元素的bounding rect的并
-        :return:
         """
         minStartX,minStartY = 1000000,1000000
         maxEndX,maxEndY = 0,0

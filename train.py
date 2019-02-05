@@ -208,7 +208,7 @@ class Train():
         注意，affect_item只影响True->False情况
         """
         if self.isShow() == show:
-            #未做改动，直接返回
+            # 未做改动，直接返回
             return
         self.shown = show
         if not affect_item:
@@ -906,6 +906,13 @@ class Train():
             return 0b10
         else:
             return default
+
+    def updateColor(self):
+        """
+        由颜色面板修改调用。重绘运行线。
+        """
+        if self.item is not None:
+            self.item.setColor()
 
     def __str__(self):
         return f"Train object at <0x{id(self):X}> {self.fullCheci()}  {self.sfz}->{self.zdz}"

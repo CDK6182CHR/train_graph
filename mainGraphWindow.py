@@ -17,6 +17,8 @@ from lineWidget import LineWidget
 from trainWidget import TrainWidget
 from trainFilter import TrainFilter
 from configWidget import ConfigWidget
+from typeWidget import TypeWidget
+from colorWidget import ColorWidget
 import json
 from GraphicWidget import GraphicsWidget, TrainEventType, config_file
 from rulerPaint import rulerPainter
@@ -132,11 +134,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut('线路面板刷新完毕')
         self.rulerWidget.updateRulerTabs()  # 效率考虑
         self.statusOut('标尺面板刷新完毕')
-        self._initTypeWidget()
+        self.typeWidget._setTypeList()
         self.statusOut('类型面板刷新完毕')
         self.currentWidget.setData()
         self.statusOut('当前车次面板刷新完毕')
-        self._initColorWidget()
+        self.colorWidget.setData()
         self.statusOut('颜色面板刷新完毕')
         self.forbidWidget.setData()
         self.statusOut('所有停靠面板刷新完毕')
@@ -179,174 +181,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         colorDock.setVisible(False)
 
     def _initColorWidget(self):
-        if self.colorDockWidget is None:
-            return
-
-        UIDict = self.graph.UIConfigData()
-
-        widget = QtWidgets.QWidget()
-
-        layout = QtWidgets.QVBoxLayout()
-        flayout = QtWidgets.QFormLayout()
-
-        gridBtn = QtWidgets.QPushButton(UIDict["grid_color"])
-        gridColor = QtGui.QColor(UIDict["grid_color"])
-        widget.gridColor = gridColor
-        widget.gridBtn = gridBtn
-        gridBtn.setStyleSheet(f"background-color:rgb({gridColor.red()},{gridColor.green()},{gridColor.blue()})")
-        gridBtn.setMaximumWidth(150)
-        gridBtn.clicked.connect(lambda: self._choose_color(gridColor, widget))
-        flayout.addRow("运行线格颜色", gridBtn)
-
-        textBtn = QtWidgets.QPushButton(UIDict["text_color"])
-        textColor = QtGui.QColor(UIDict["text_color"])
-        widget.textColor = textColor
-        widget.textBtn = textBtn
-        textBtn.setStyleSheet(f"background-color:rgb({textColor.red()},{textColor.green()},{textColor.blue()})")
-        textBtn.setMaximumWidth(150)
-        textBtn.clicked.connect(lambda: self._choose_color(textColor))
-        flayout.addRow("文字颜色", textBtn)
-
-        defaultBtn = QtWidgets.QPushButton(UIDict["default_colors"]["default"])
-        defaultColor = QtGui.QColor(UIDict["default_colors"]["default"])
-        widget.defaultColor = defaultColor
-        widget.defaultBtn = defaultBtn
-        defaultBtn.setStyleSheet(
-            f"background-color:rgb({defaultColor.red()},{defaultColor.green()},{defaultColor.blue()})")
-        defaultBtn.setMaximumWidth(150)
-        defaultBtn.clicked.connect(lambda: self._choose_color(defaultColor))
-        flayout.addRow("默认运行线颜色", defaultBtn)
-
-        layout.addLayout(flayout)
-
-        tableWidget = QtWidgets.QTableWidget()
-        tableWidget.setColumnCount(2)
-        tableWidget.setHorizontalHeaderLabels(["类型", "颜色"])
-        tableWidget.setRowCount(len(UIDict["default_colors"]) - 1)
-        tableWidget.setColumnWidth(0, 80)
-        tableWidget.setColumnWidth(1, 120)
-        tableWidget.setEditTriggers(tableWidget.CurrentChanged)
-
-        tableWidget.cellClicked.connect(self._choose_color_table)
-        widget.tableWidget = tableWidget
-
-        row = 0
-        for key, value in UIDict["default_colors"].items():
-            if key == "default":
-                continue
-
-            tableWidget.setRowHeight(row, 30)
-            item = QtWidgets.QTableWidgetItem(key)
-            tableWidget.setItem(row, 0, item)
-
-            item = QtWidgets.QTableWidgetItem(value)
-            item.setBackground(QtGui.QBrush(QtGui.QColor(value)))
-            tableWidget.setItem(row, 1, item)
-            item.setFlags(Qt.NoItemFlags)
-
-            row += 1
-
-        layout.addWidget(tableWidget)
-
-        hlayout = QtWidgets.QHBoxLayout()
-        btnAdd = QtWidgets.QPushButton("添加类型")
-        btnAdd.setMinimumWidth(90)
-        btnDel = QtWidgets.QPushButton("删除类型")
-        btnDel.setMinimumWidth(90)
-        btnOk = QtWidgets.QPushButton("确定")
-        btnOk.setMinimumWidth(60)
-        btnCancel = QtWidgets.QPushButton("还原")
-        btnCancel.setMinimumWidth(60)
-        hlayout.addWidget(btnAdd)
-        hlayout.addWidget(btnDel)
-        hlayout.addWidget(btnOk)
-        hlayout.addWidget(btnCancel)
-
-        btnAdd.clicked.connect(lambda: self._add_color_row(tableWidget))
-        btnDel.clicked.connect(lambda: self._del_color_row(tableWidget))
-        btnOk.clicked.connect(lambda: self._apply_color(widget))
-        btnCancel.clicked.connect(lambda: self._default_color(widget))
-
-        layout.addLayout(hlayout)
-
-        widget.setLayout(layout)
-
-        self.colorDockWidget.setWidget(widget)
-
-    def _add_color_row(self, table: QtWidgets.QTableWidget):
-        row = table.rowCount()
-        table.insertRow(table.rowCount())
-        table.setRowHeight(row, 30)
-
-        item = QtWidgets.QTableWidgetItem('#FFFFFF')
-        item.setFlags(Qt.NoItemFlags)
-        table.setItem(row, 1, item)
-
-    def _del_color_row(self, table: QtWidgets.QTableWidget):
-        table.removeRow(table.currentRow())
-
-    def _apply_color(self, widget: QtWidgets.QWidget):
-        UIDict = {}
-        UIDict["grid_color"] = widget.gridBtn.text()
-        UIDict["text_color"] = widget.textBtn.text()
-        UIDict["default_colors"] = {}
-        UIDict["default_colors"]["default"] = widget.defaultBtn.text()
-
-        tableWidget: QtWidgets.QTableWidget = widget.tableWidget
-        for row in range(tableWidget.rowCount()):
-            key = tableWidget.item(row, 0).text()
-            value = tableWidget.item(row, 1).text()
-            try:
-                UIDict["default_colors"][key] = value
-            except:
-                self._derr(f"类型名称重复：{key}，请重新编辑！")
-                return
-
-        flag = self.qustion("是否将数据保存为系统默认？\n选择是（Yes）保存系统默认，选择“否（No）”仅应用到本运行图")
-
-        for key, value in UIDict.items():
-            self.graph.UIConfigData()[key] = value
-
-        if flag:
-            self.GraphWidget.saveSysConfig(Copy=True)
-
-        self.GraphWidget.paintGraph()
-
-    def _default_color(self, widget: QtWidgets.QWidget):
-        flag = self.qustion("将颜色设置恢复为系统默认，当前运行图相关设置的修改将丢失。是否继续？")
-        if not flag:
-            return
-
-        keys = ("grid_color", "default_colors", "text_color")
-        for key in keys:
-            self.graph.UIConfigData()[key] = self.GraphWidget.sysConfig[key]
-
-        self._initColorWidget()
-
-    def _choose_color(self, initColor: QtGui.QColor, widget):
-        btn: QtWidgets.QPushButton = self.sender()
-        color: QtGui.QColor = QtWidgets.QColorDialog.getColor(initColor, title=btn.text())
-        btn.setText("#%02X%02X%02X" % (color.red(), color.green(), color.blue()))
-        btn.setStyleSheet(f"background-color:rgb({color.red()},{color.green()},{color.blue()})")
-        arribute_dict = {
-            '运行线格颜色': widget.gridColor,
-            '文字颜色': widget.textColor,
-            '默认运行线颜色': widget.defaultColor,
-        }
-        arribute_dict[btn.text()] = color
-
-    def _choose_color_table(self, row):
-        """
-        slot。colorDock中的表格双机进入。
-        :param row:
-        :param col:
-        :return:
-        """
-        table: QtWidgets.QTableWidget = self.sender()
-        initColor = QtGui.QColor(table.item(row, 1).text())
-        color = QtWidgets.QColorDialog.getColor(initColor, title=f"默认颜色: {table.item(row,0).text()}")
-        table.item(row, 1).setBackground(QtGui.QBrush(color))
-        table.item(row, 1).setText("#%02X%02X%02X" % (color.red(), color.green(), color.blue()))
+        colorWidget = ColorWidget(self.graph,self)
+        self.colorWidget = colorWidget
+        self.colorWidget.SaveSysConfig.connect(lambda:self.GraphWidget.saveSysConfig(Copy=True))
+        self.colorWidget.RepaintGraph.connect(self.GraphWidget.paintGraph)
+        self.colorDockWidget.setWidget(colorWidget)
 
     def _initCurrentDock(self):
         currentDock = QtWidgets.QDockWidget()
@@ -555,7 +394,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         leave = 4 #出发
         pass_settled = 5
         pass_calculated = 6
-        :return:
         """
         import time
         from thread import ThreadDialog
@@ -776,73 +614,20 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         typeDock.setVisible(False)
 
     def _initTypeWidget(self):
-        typeWidget = QtWidgets.QWidget(self)
-
-        vlayout = QtWidgets.QVBoxLayout()
-
-        hlayout = QtWidgets.QHBoxLayout()
-        btnShowDown = QtWidgets.QPushButton("显示下行")
-        btnShowDown.clicked.connect(lambda: self._set_dir_show(True, True))
-        btnShowUp = QtWidgets.QPushButton("显示上行")
-        btnShowUp.clicked.connect(lambda: self._set_dir_show(False, True))
-        hlayout.addWidget(btnShowDown)
-        hlayout.addWidget(btnShowUp)
-        vlayout.addLayout(hlayout)
-
-        hlayout = QtWidgets.QHBoxLayout()
-        btnNoDown = QtWidgets.QPushButton("隐藏下行")
-        btnNoDown.clicked.connect(lambda: self._set_dir_show(True, False))
-        btnNoUp = QtWidgets.QPushButton("隐藏上行")
-        btnNoUp.clicked.connect(lambda: self._set_dir_show(False, False))
-        hlayout.addWidget(btnNoDown)
-        hlayout.addWidget(btnNoUp)
-        vlayout.addLayout(hlayout)
-
-        listWidget = QtWidgets.QListWidget()
-        listWidget.setSelectionMode(listWidget.MultiSelection)
-
-        self._setTypeList(listWidget)
-
-        vlayout.addWidget(listWidget)
-
-        btnOk = QtWidgets.QPushButton("确定")
-        btnCancel = QtWidgets.QPushButton("还原")
-
-        btnOk.clicked.connect(lambda: self._apply_type_show(listWidget))
-        btnCancel.clicked.connect(lambda: self._setTypeList(listWidget))
-
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(btnOk)
-        hlayout.addWidget(btnCancel)
-
-        vlayout.addLayout(hlayout)
-
-        typeWidget.setLayout(vlayout)
+        typeWidget = TypeWidget(self.graph,self)
+        self.typeWidget = typeWidget
+        typeWidget.TypeShowChanged.connect(self._apply_type_show)
 
         self.typeDockWidget.setWidget(typeWidget)
 
-    def _set_dir_show(self, down, show):
-        self.graph.setDirShow(down, show)
-        # print("set_dir_show ok")
-
-    def _apply_type_show(self, listWidget: QtWidgets.QListWidget):
-        not_show = []
-        for i in range(listWidget.count()):
-            item: QtWidgets.QListWidgetItem = listWidget.item(i)
-            if not item.isSelected():
-                not_show.append(item.text())
-
-        self.graph.setNotShowTypes(not_show)
+    def _apply_type_show(self):
+        """
+        由typeWidget的确定触发，修改运行图铺画。已知其他不变，只需要增减部分运行线，避免重新铺画。
+        调用前已经修改过数据中的isShow。
+        """
         self.trainWidget.updateShow()
-        self.GraphWidget.paintGraph()
-
-    def _setTypeList(self, listWidget: QtWidgets.QListWidget):
-        listWidget.clear()
-        for type in self.graph.typeList:
-            item = QtWidgets.QListWidgetItem(type)
-            listWidget.addItem(item)
-            if type not in self.graph.UIConfigData()["not_show_types"]:
-                item.setSelected(True)
+        for train in self.graph.trains():
+            self.GraphWidget.setTrainShow(train)
 
     def _initRulerDock(self):
         rulerDock = QtWidgets.QDockWidget()
@@ -1379,16 +1164,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage(note, seconds)
         except:
             traceback.print_exc()
-
-    def qustion(self, note: str, default=True):
-        flag = QtWidgets.QMessageBox.question(self, self.title, note,
-                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-        if flag == QtWidgets.QMessageBox.Yes:
-            return True
-        elif flag == QtWidgets.QMessageBox.No:
-            return False
-        else:
-            return default
 
     def on_focus_changed(self, train: Train):
         """
@@ -2596,6 +2371,16 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _dout(self, note: str):
         QtWidgets.QMessageBox.information(self, "提示", note)
+
+    def qustion(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self, self.title, note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default
 
 
 if __name__ == '__main__':

@@ -581,7 +581,6 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
     def _drawSingleHLine(self, textColor, textFont, y, name, pen, width, leftItems, rightItems, dir_,
                          label_start_x):
         """
-        TODO 还未完全封装
         """
         textFont.setBold(False)
         # print(name,dir_)
@@ -591,7 +590,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # name = dir_dict[dir_] + name
 
         self.scene.addLine(self.margins["left"], y, width + self.margins["left"], y, pen)
-        textItem: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(name) # todo
+        textItem: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(name)
         # textItem.setDefaultTextColor(textColor)
         # textItem.setPen(QtGui.QPen(textColor))
         textItem.setBrush(QtGui.QBrush(textColor))
@@ -602,22 +601,20 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         font = QtGui.QFont()
         font.setBold(textFont.bold())
         font.setRawName(textFont.rawName())
-        if textWidth > self.margins["label_width"]:
+        label_width = self.margins["label_width"] - 5  #左侧稍微多留出一点点边
+        if textWidth > label_width:
             # 超大的字
-            stretch = int(100*self.margins["label_width"] / textWidth+0.5)
+            stretch = int(100*label_width / textWidth+0.5)
             font.setStretch(stretch)
             textItem.setFont(font)
         textWidth = textItem.boundingRect().width()
         cnt = len(name)
-        if textWidth < self.margins['label_width'] and cnt>1:
+        if textWidth < label_width and cnt>1:
             # 两端对齐
-            font.setLetterSpacing(QtGui.QFont.AbsoluteSpacing,(self.margins["label_width"]-textWidth)/(cnt-1))
+            font.setLetterSpacing(QtGui.QFont.AbsoluteSpacing,(label_width-textWidth)/(cnt-1))
             textItem.setFont(font)
-        # self.scene.addRect(textItem.boundingRect())
 
-        textWidth = textItem.boundingRect().width()
-        # textItem.setX(self.margins["label_width"] + self.margins["left_white"] - textWidth+label_start_x)
-        textItem.setX(label_start_x+self.margins["left_white"])
+        textItem.setX(label_start_x+self.margins["left_white"]+5)
         leftItems.append(textItem)
 
         # 右侧
@@ -805,7 +802,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         if y is None or y == -1:
             return None
 
-        width = self.scene.width() - self.margins["left"] - self.margins["right"]
+        # width = self.scene.width() - self.margins["left"] - self.margins["right"]
         x = dt.seconds / self.graph.UIConfigData()["seconds_per_pix"] + self.margins["left"]
 
         point = QtCore.QPoint(int(x), int(y))
@@ -1169,6 +1166,26 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             if item in self.scene.items():  # 临时使用这种方法避免出错
                 self.scene.removeItem(item)
         forbid.clearItemList(down)
+
+    def setTrainShow(self,train:Train,show:bool=None):
+        """
+        涵盖各种情况的设置是否显示问题，包含数据变更和铺画调整。
+        凡修改是否显示运行线的问题只需要调用这个函数。2019.02.05新增。
+        """
+        if show is None:
+            show = train.isShow()
+        else:
+            train.setIsShow(show, affect_item=False)
+        if show:
+            item:TrainItem = train.item
+            if item is None:
+                self.addTrainLine(train)
+            elif not item.isVisible():
+                item.setVisible(True)
+        else:
+            item:TrainItem = train.item
+            if item is not None and item.isVisible():
+                item.setVisible(False)
 
 
 if __name__ == '__main__':

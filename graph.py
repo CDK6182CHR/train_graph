@@ -454,9 +454,7 @@ class Graph():
     def setDirShow(self,down,show):
         for train in self.trains():
             if train.isDown() == down:
-                # print(train.fullCheci())
-                train.setIsShow(show)
-                # print("ok")
+                train.setIsShow(show,affect_item=False)
 
     def trainExisted(self,train:Train,ignore:Train=None):
         """
