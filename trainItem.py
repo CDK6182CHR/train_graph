@@ -12,14 +12,17 @@ from train import Train
 from Timetable_new.utility import isKeche
 
 class TrainItem(QtWidgets.QGraphicsItem):
-    def __init__(self,train:Train,graph:Graph,graphWidget,showFullCheci=False,parent=None):
+    def __init__(self,train:Train,graph:Graph,graphWidget,validWidth = 1,showFullCheci=False,parent=None):
         super().__init__(parent)
         self.train = train
         self.graph = graph
         self.graphWidget = graphWidget
         self.showFullCheci=showFullCheci
+        self.validWidth = validWidth
+        self.down = None
 
         self.pathItem = None
+        self.expandItem = None
         self.startLabelItem = None
         self.startLabelText = None
         self.endLabelItem = None
@@ -39,59 +42,35 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.color = self._trainColor()
         self.setLine()
 
-
-
     def setLine(self):
+        """
+        2019.02.11新增逻辑：绘图过程中记录下每个车站的y_value。
+        """
         if not self.train.isShow():
             # 若设置为不显示，忽略此命令
             return
         train = self.train
         station_count = 0  # 本线站点数
-        path = QtGui.QPainterPath()
 
         pen = self._trainPen()
         lineColor = pen.color()
         labelPen = self._trainPen()
         labelPen.setWidth(1)
-        start_point = None
-        down = train.down  # 本线上下行判断
-        last_point = None
+
         span_left = []
         span_right = []
 
         width = self.graphWidget.scene.width() - self.graphWidget.margins['left'] - \
                 self.graphWidget.margins['right']
 
-        for station, ddsj, cfsj in train.station_infos():
-            # 计算并添加运行线，上下行判断
-            ddpoint = self.graphWidget.stationPosCalculate(station, ddsj)
-            cfpoint = self.graphWidget.stationPosCalculate(station, cfsj)
+        path,start_point,end_point = self._setPathItem(span_left,span_right)
+        down = self.down
 
-            if ddpoint is None:
-                continue
+        expand_path = None
+        if self.validWidth > 1:
+            expand_path,_,_ = self._setPathItem([],[])
 
-            station_count += 1
-
-            if station_count == 1:
-                path.moveTo(ddpoint)
-                start_point = ddpoint
-
-            else:
-                # path.lineTo(ddpoint)
-                self._incline_line(path, last_point, ddpoint, span_left, span_right)
-                # 上下行判别
-                if down is None:
-                    if station_count == 2:
-                        if ddpoint.y() - start_point.y() > 0:
-                            down = True
-                        else:
-                            down = False
-
-            self._H_line(path, ddpoint, cfpoint, span_left, span_right,
-                         self.graph.UIConfigData()["show_line_in_station"])
-
-            last_point = cfpoint
-
+        station_count = self.station_count
         if station_count < 2:
             return
 
@@ -101,8 +80,6 @@ class TrainItem(QtWidgets.QGraphicsItem):
         else:
             self.startPoint = start_point
 
-        end_point = path.currentPosition()
-        self.endPoint = end_point
         train.setIsDown(down)
         checi = train.fullCheci() if self.showFullCheci else train.localCheci()
 
@@ -191,9 +168,16 @@ class TrainItem(QtWidgets.QGraphicsItem):
         outpath = stroker.createStroke(path)
 
         if station_count >= 2:
-            item = QtWidgets.QGraphicsItem
+            # item = QtWidgets.QGraphicsItem
             pen.setJoinStyle(Qt.SvgMiterJoin)
             pen.setCapStyle(Qt.SquareCap)
+            if expand_path is not None:
+                outexpand = stroker.createStroke(expand_path)
+                expandItem = QtWidgets.QGraphicsPathItem(outexpand,self)
+                expandPen = QtGui.QPen(Qt.transparent,pen.width()*self.validWidth)
+                expandItem.setPen(expandPen)
+                expandItem.setZValue(-1)
+                self.expandItem = expandItem
             pathItem = QtWidgets.QGraphicsPathItem(outpath, self)
             pathItem.setPen(pen)
             self.pathItem = pathItem
@@ -206,6 +190,59 @@ class TrainItem(QtWidgets.QGraphicsItem):
             train.setItem(self)
         else:
             train.setItem(None)
+
+    def _setPathItem(self,
+            span_left:list,span_right:list,
+        )->(QtGui.QPainterPath,QtCore.QRectF,QtCore.QRectF,):
+        """
+        从setLine中抽离出来的绘制pathItem函数。返回：path,start_point,end_point
+        """
+        train = self.train
+        path = QtGui.QPainterPath()
+        station_count = 0
+        down = train.down  # 本线上下行判断
+        last_point = None
+        start_point = None
+        for dct in train.stationDicts():
+            # 计算并添加运行线，上下行判断
+            station, ddsj, cfsj = dct["zhanming"],dct["ddsj"],dct["cfsj"]
+            ddpoint = self.graphWidget.stationPosCalculate(station, ddsj)
+            cfpoint = self.graphWidget.stationPosCalculate(station, cfsj)
+
+            if ddpoint is None:
+                continue
+
+            if self.graph.stationDirection(station) == 0x0:
+                # 取消贪心策略，设置为不通过的站一律不画
+                continue
+
+            train.setTrainStationYValue(dct,ddpoint.y())
+
+            station_count += 1
+
+            if station_count == 1:
+                path.moveTo(ddpoint)
+                start_point = ddpoint
+
+            else:
+                # path.lineTo(ddpoint)
+                self._incline_line(path, last_point, ddpoint, span_left, span_right)
+                # 上下行判别
+                if down is None:
+                    if station_count == 2:
+                        if ddpoint.y() - start_point.y() > 0:
+                            down = True
+                        else:
+                            down = False
+
+            self._H_line(path, ddpoint, cfpoint, span_left, span_right,
+                         self.graph.UIConfigData()["show_line_in_station"])
+            last_point = cfpoint
+        end_point = path.currentPosition()
+        self.endPoint = end_point
+        self.down = down
+        self.station_count = station_count
+        return path,start_point,end_point
 
     def _trainColor(self):
         color_str = self.train.color()
@@ -506,11 +543,11 @@ class TrainItem(QtWidgets.QGraphicsItem):
         依次给出自身的所有非None子item
         """
         if containSpan:
-            for sub in [self.pathItem,self.startLabelItem,self.endLabelItem,self.startLabelText,self.endLabelText]\
+            for sub in [self.pathItem,self.startLabelItem,self.endLabelItem,self.startLabelText,self.endLabelText,self.expandItem]\
                        + self.spanItems:
                 if sub is not None:
                     yield sub
         else:
-            for sub in [self.pathItem,self.startLabelItem,self.endLabelItem,self.startLabelText,self.endLabelText]:
+            for sub in [self.pathItem,self.startLabelItem,self.endLabelItem,self.startLabelText,self.endLabelText,self.expandItem]:
                 if sub is not None:
                     yield sub

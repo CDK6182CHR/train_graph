@@ -28,6 +28,7 @@ from intervalWidget import IntervalWidget
 from detectWidget import DetectWidget
 from changeStationDialog import ChangeStationDialog
 from batchChangeStationDialog import BatchChangeStationDialog
+from trainComparator import TrainComparator
 import traceback
 import cgitb
 
@@ -39,8 +40,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.title = "运行图系统V1.3.3 2019新春特别版"  # 一次commit修改一次版本号
-        self.build = '20190204'
+        self.title = "运行图系统V1.3.4"  # 一次commit修改一次版本号
+        self.build = '20190211'
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         self.showMaximized()
@@ -822,15 +823,24 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         actionSaveAs.setShortcut('F12')
         m1.addAction(actionSaveAs)
 
+        actionToTrc = QtWidgets.QAction("导出为文本运行图（.trc）格式",self)
+        actionToTrc.triggered.connect(self._toTrc)
+        m1.addAction(actionToTrc)
+
         actionReset = QtWidgets.QAction("重新读取本运行图", self)
         actionReset.triggered.connect(self._reset_graph)
         m1.addAction(actionReset)
 
         actionRefresh = QtWidgets.QAction("刷新", self)
         actionRefresh.setShortcut('F5')
-        actionRefresh.triggered.connect(self.GraphWidget.paintGraph)
+        actionRefresh.triggered.connect(lambda :self.GraphWidget.paintGraph(force=True))
         actionRefresh.triggered.connect(self._refreshDockWidgets)
         m1.addAction(actionRefresh)
+
+        actionPaint = QtWidgets.QAction("立即铺画运行图",self)
+        actionPaint.setShortcut('shift+F5')
+        actionPaint.triggered.connect(lambda :self.GraphWidget.paintGraph(force=True))
+        m1.addAction(actionPaint)
 
         actionOutput = QtWidgets.QAction(QtGui.QIcon(), "导出运行图", self)
         actionOutput.setShortcut("ctrl+T")
@@ -892,8 +902,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._check_ruler_from_menu)
         menu.addAction(action)
 
-        action = QtWidgets.QAction("当前车次区间性质计算", self)
+        action = QtWidgets.QAction("两车次时分对照",self)
         action.setShortcut('ctrl+shift+W')
+        action.triggered.connect(self._train_compare)
+        menu.addAction(action)
+
+        action = QtWidgets.QAction("当前车次区间性质计算", self)
+        action.setShortcut('ctrl+shift+Q')
         action.triggered.connect(self._get_interval_info)
         menu.addAction(action)
 
@@ -1035,6 +1050,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _dock_visibility_changed(self, name, dock):
         # print("dock visibility changed! ", name)
+        self.GraphWidget._resetDistanceAxis()
+        self.GraphWidget._resetTimeAxis()
         action = None
         for ac in self.actionWindow_list:
             if ac.text() == name:
@@ -1123,7 +1140,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _saveGraphAs(self):
         """
         另存为
-        :return:
         """
         filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
                                                          filter='JSON运行图文件(*.json)\n所有文件(*.*)')[0]
@@ -1133,6 +1149,24 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("保存成功")
         self.GraphWidget.sysConfig["last_file"] = filename
         self.setWindowTitle(f"{self.title} {self.graph.filename if self.graph.filename else '新运行图'}")
+
+    def _toTrc(self):
+        """
+        先显示提示信息，然后导出为trc。
+        """
+        if self.graph.trainCount() > 600:
+            self._derr(f"无法导出文本运行图：trc格式运行图最多支持600个车次，本线有{self.graph.trainCount()}个车次。")
+            return
+        if self.graph.stationCount() > 100:
+            self._derr(f"无法导出文本运行图：trc格式运行图最多支持100个车站，本线有{self.graph.stationCount()}个车次。")
+
+        text = "注意：显著的信息丢失。由于文本运行图格式不支持本系统的部分功能，导出的.trc格式运行图包含的信息少于本系统的.json格式运行图。这就是说，若先导出.trc格式，再用本系统读取该文件，仍将造成显著的信息丢失。本功能不改变原运行图，只是导出一个副本。请确认知悉以上内容，并继续。"
+        self._dout(text)
+        filename,ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.trc',
+                                                         filter='文本运行图文件(*.trc)\n所有文件(*.*)')
+        if not ok:
+            return
+        self.graph.toTrc(filename)
 
     def _reset_graph(self):
         flag = self.qustion("重新从文件中读取本运行图，所有未保存数据都将丢失，未保存过的运行图将重置为空运行图！"
@@ -1719,7 +1753,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _multi_search_train(self):
         """
         模糊检索车次
-        :return:
         """
         name, ok = QtWidgets.QInputDialog.getText(self, "模糊检索", "请输入车次：")
         if not ok:
@@ -1822,6 +1855,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self._derr("当前没有选中车次！")
             return
         self._check_ruler(train)
+
+    def _train_compare(self):
+        """
+        两车次运行对照
+        """
+        dialog = TrainComparator(self.graph,self)
+        dialog.exec_()
 
     def _get_interval_info(self):
         """

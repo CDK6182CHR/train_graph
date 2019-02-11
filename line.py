@@ -17,6 +17,7 @@ class Line():
     NoVia = 0x0
     DownVia = 0x1
     UpVia = 0x2
+    BothVia = 0x3
 
     def __init__(self,name='',origin=None):
         #默认情况下构造空对象。从文件读取时，用dict构造。

@@ -13,7 +13,7 @@ config_file = 'config.json'
 import cgitb
 cgitb.enable(format='text')
 
-class Graph():
+class Graph:
     """
     运行图类，数据结构：
     Line line;
@@ -1101,6 +1101,52 @@ class Graph():
             train.updateLocalFirst(self)
             train.updateLocalLast(self)
 
+    def setMargin(self,ruler_label,mile_label,station_label,left_and_right,top_and_bottom)->bool:
+        """
+        用户设置页边距。注意参数含义与本系统内部使用的不同。返回是否变化。
+        """
+        left_white = 15
+        right_white = 10
+        margins = {
+            "left_white":left_white,
+            "right_white":right_white,
+            "left": ruler_label+mile_label+station_label+left_and_right+left_white,
+            "up": top_and_bottom,
+            "down": top_and_bottom,
+            "right": left_and_right+station_label+right_white,
+            "label_width": station_label,
+            "mile_label_width": mile_label,
+            "ruler_label_width": ruler_label,
+        }
+        changed = self.UIConfigData().get('margins',None) != margins
+        self.UIConfigData()["margins"] = margins
+        return changed
+
+    def toTrc(self,filename):
+        fp = open(filename,'w',encoding='utf-8',errors='ignore')
+        fp.write('***Circuit***\n')
+        fp.write(f"{self.lineName() if self.lineName() else '列车运行图'}\n")
+        fp.write(f"{int(self.lineLength())}\n")
+        for dct in self.stationDicts():
+            fp.write(f"{dct['zhanming']},{int(dct['licheng'])},{dct['dengji']},"
+                     f"{'false' if dct.get('show',True) else 'true'},,true\n")
+        for train in self.trains():
+            fp.write('===Train===\n')
+            fp.write(f"trf2,{train.fullCheci()},{train.downCheci()},{train.upCheci()}\n")
+            fp.write(f"{train.sfz if train.sfz else 'null'}\n")
+            fp.write(f"{train.zdz if train.zdz else 'null'}\n")
+            for name,ddsj,cfsj in train.station_infos():
+                fp.write(f"{name},{ddsj.strftime('%H:%M:%S')},{cfsj.strftime('%H:%M:%S')},true,NA\n")
+        fp.write('---Color---\n')
+        for train in self.trains():
+            color_str = train.color(self)
+            fp.write(f"{train.fullCheci()},{int(color_str[1:3],base=16)},"
+                     f"{int(color_str[3:5],base=16)},{int(color_str[5:7],base=16)}\n")
+        fp.write('---LineType---\n')
+        for train in self.trains():
+            if train.lineWidth() != 0:
+                fp.write(f"{train.fullCheci()},0,{train.lineWidth()}")
+        fp.close()
 
 if __name__ == '__main__':
     graph = Graph()

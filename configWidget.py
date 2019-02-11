@@ -96,13 +96,35 @@ class ConfigWidget(QtWidgets.QWidget):
         combo = QtWidgets.QComboBox()
         self.ordinateCombo = combo
         self.setOrdinateCombo()
-        self.ordinateCombo = combo#todo
+        self.ordinateCombo = combo
         layout.addRow(label10, combo)
+
+        spin = QtWidgets.QSpinBox()
+        spin.setRange(1,20)
+        spin.setValue(self.graph.UIConfigData().setdefault("valid_width",3))
+        text = """\
+        本功能解决运行线不容易选中的问题。当设置值大于1时，启用扩大选择范围功能，此时运行图铺画效率会有所降低，运行线周围，运行线宽度的设置值倍数被点击都可以选中运行线。
+        """
+        spin.setToolTip(text)
+        self.validWidthSpin = spin
+        layout.addRow("有效选择宽度",spin)
 
         check = QtWidgets.QCheckBox()
         check.setChecked(self.graph.UIConfigData().setdefault('showFullCheci', False))
         layout.addRow("显示完整车次", check)
         self.showFullCheciCheck = check
+
+        check = QtWidgets.QCheckBox()
+        check.setChecked(self.graph.UIConfigData().setdefault("auto_paint",True))
+        layout.addRow("自动铺画",check)
+        spin.setToolTip("若关闭，当运行图发生变更时不会自动铺画，只有手动选择刷新（F5）或者铺画运行图（shitf+F5）时才会重新铺画运行图。建议当运行图较大时关闭。")
+        self.autoPaintCheck = check
+
+        self.initGridDialog()
+        btnGrid = QtWidgets.QPushButton("设置")
+        btnGrid.setMaximumWidth(120)
+        btnGrid.clicked.connect(self.gridDialog.exec_)
+        layout.addRow('底图设置',btnGrid)
 
         vlayout.addLayout(layout)
 
@@ -114,9 +136,9 @@ class ConfigWidget(QtWidgets.QWidget):
         vlayout.addWidget(textEdit)
 
         btn1 = QtWidgets.QPushButton("确定")
-        btn1.clicked.connect(self._applyConfig)#todo
+        btn1.clicked.connect(self._applyConfig)
         btn2 = QtWidgets.QPushButton("默认")
-        btn2.clicked.connect(self._clearConfig)#todo
+        btn2.clicked.connect(self._clearConfig)
         btnlay = QtWidgets.QHBoxLayout()
         btnlay.addWidget(btn1)
         btnlay.addWidget(btn2)
@@ -150,7 +172,98 @@ class ConfigWidget(QtWidgets.QWidget):
         self.vertical_lines_per_hour_spin.setValue(60 / (UIDict["minutes_per_vertical_line"]) - 1)
         self.setOrdinateCombo()
         self.showFullCheciCheck.setChecked(UIDict["showFullCheci"])
+        self.validWidthSpin.setValue(UIDict.setdefault('valid_width',3))
+        self.autoPaintCheck.setChecked(UIDict.setdefault('auto_paint',True))
         self.noteEdit.setPlainText(self.graph.markdown())
+        self.setGridDialogData()
+
+
+    def initGridDialog(self):
+        """
+        self.margins = {
+            "left_white": 15,  # 左侧白边，不能有任何占用的区域
+            "right_white": 10,
+            "left": 325,
+            "up": 90,
+            "down": 90,
+            "right": 170,
+            "label_width": 100,
+            "mile_label_width": 50,
+            "ruler_label_width": 100,
+        }
+        """
+        UIDict = self.graph.UIConfigData()
+        self.gridDialog = QtWidgets.QDialog(self)
+        self.gridDialog.setWindowTitle('底图设置')
+        layout = QtWidgets.QVBoxLayout()
+        flayout = QtWidgets.QFormLayout()
+        label = QtWidgets.QLabel("本对话框可设置运行图边距、格线粗细，设置完毕后在“运行图设置”面板点击确定才会生效。")
+        label.setWordWrap(True)
+        layout.addWidget(label)
+
+        spin = QtWidgets.QDoubleSpinBox(self)
+        self.defaultWidthSpin = spin
+        spin.setRange(0.1,5)
+        spin.setSingleStep(0.5)
+        spin.setDecimals(1)
+        spin.setValue(UIDict.setdefault("default_grid_width",1))
+        flayout.addRow("细格线宽度",spin)
+
+        spin = QtWidgets.QDoubleSpinBox(self)
+        self.boldWidthSpin = spin
+        spin.setRange(0.1, 5)
+        spin.setSingleStep(0.5)
+        spin.setDecimals(1)
+        spin.setValue(UIDict.setdefault("bold_grid_width", 2.5))
+        flayout.addRow("粗格线宽度", spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        self.rulerLabelSpin = spin
+        spin.setRange(20,200)
+        spin.setValue(UIDict['margins']['ruler_label_width'])
+        flayout.addRow('排图标尺栏宽度',spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        self.mileLabelSpin = spin
+        spin.setRange(20,200)
+        spin.setValue(UIDict['margins']['mile_label_width'])
+        flayout.addRow('延长公里栏宽度',spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        self.stationLabelSpin = spin
+        spin.setRange(20, 200)
+        spin.setValue(UIDict['margins']['label_width'])
+        flayout.addRow('站名栏宽度', spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        self.topBottomLabelSpin = spin
+        spin.setRange(20, 200)
+        spin.setValue(UIDict['margins']['up'])
+        flayout.addRow('上下边距', spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        self.leftRightLabelSpin = spin
+        spin.setRange(20, 200)
+        spin.setValue(UIDict['margins']['right']-UIDict['margins']['right_white']-UIDict['margins']['label_width'])
+        flayout.addRow('左右图边至站名栏距离', spin)
+
+        layout.addLayout(flayout)
+        self.gridDialog.setLayout(layout)
+        btnClose = QtWidgets.QPushButton('关闭')
+        btnClose.clicked.connect(self.gridDialog.close)
+        layout.addWidget(btnClose)
+
+    def setGridDialogData(self):
+        """
+        """
+        UIDict = self.graph.UIConfigData()
+        self.defaultWidthSpin.setValue(UIDict.setdefault('default_grid_width',1))
+        self.boldWidthSpin.setValue(UIDict.setdefault('bold_grid_width',2))
+        self.rulerLabelSpin.setValue(UIDict['margins']['ruler_label_width'])
+        self.mileLabelSpin.setValue(UIDict['margins']['mile_label_width'])
+        self.stationLabelSpin.setValue(UIDict['margins']['label_width'])
+        self.topBottomLabelSpin.setValue(UIDict['margins']['up'])
+        self.leftRightLabelSpin.setValue(UIDict['margins']['right']-UIDict['margins']['right_white']-UIDict['margins']['label_width'])
 
     def _applyConfig(self):
         UIDict = self.graph.UIConfigData()
@@ -191,6 +304,11 @@ class ConfigWidget(QtWidgets.QWidget):
         if self.showFullCheciCheck.isChecked() != UIDict["showFullCheci"]:
             UIDict["showFullCheci"] = self.showFullCheciCheck.isChecked()
             repaint = True
+        UIDict['auto_paint'] = self.autoPaintCheck.isChecked()
+        if self.validWidthSpin.value() != UIDict['valid_width']:
+            UIDict['valid_width'] = self.validWidthSpin.value()
+            repaint = True
+        repaint = repaint or self._applyGridDialogConfig()
         self.graph.setMarkdown(self.noteEdit.toPlainText())
 
         dialog = QtWidgets.QMessageBox()
@@ -204,6 +322,27 @@ class ConfigWidget(QtWidgets.QWidget):
         dialog.exec_()
         if repaint:
             self.RepaintGraph.emit()
+
+    def _applyGridDialogConfig(self)->bool:
+        """
+        应用对话框数据，返回是否要重新铺画
+        """
+        repaint = False
+        UIDict = self.graph.UIConfigData()
+        if self.defaultWidthSpin.value() != UIDict['default_grid_width']:
+            UIDict['default_grid_width'] = self.defaultWidthSpin.value()
+            repaint = True
+        if self.boldWidthSpin.value() != UIDict['bold_grid_width']:
+            UIDict['bold_grid_width'] = self.boldWidthSpin.value()
+            repaint = True
+        repaint = repaint or self.graph.setMargin(
+            self.rulerLabelSpin.value(),
+            self.mileLabelSpin.value(),
+            self.stationLabelSpin.value(),
+            self.leftRightLabelSpin.value(),
+            self.topBottomLabelSpin.value()
+        )
+        return repaint
 
     def _clearConfig(self):
         """

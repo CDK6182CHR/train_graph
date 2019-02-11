@@ -5,7 +5,7 @@
 from Timetable_new.checi3 import Checi
 from datetime import datetime,timedelta
 from Timetable_new.utility import judge_type,stationEqual,strToTime
-import re
+import re,bisect
 
 import cgitb
 cgitb.enable(format='text')
@@ -35,6 +35,7 @@ class Train():
         self.shown = True  #是否显示运行线
         self._localFirst=None
         self._localLast=None
+        self._yToStationMap = []  # 数据结构：List<tuple<float,dict>>
         if origin is not None:
             #从既有字典读取数据
             self.loadTrain(origin)
@@ -264,6 +265,8 @@ class Train():
 
     def setItem(self,item):
         self.item = item
+        if self.item is None:
+            self.resetYValueMap()
 
     def getItem(self):
         return self.item
@@ -297,9 +300,6 @@ class Train():
     def gapBetweenStation(self,st1,st2,graph=None):
         """
         返回两站间的运行时间
-        :param st1:
-        :param st2:
-        :param assure_postive:
         :param graph:依赖的线路。不为None表示允许向前后推断邻近站。
         :return: seconds:int
         """
@@ -848,6 +848,22 @@ class Train():
         else:
             return '通过'
 
+    def stationStopBehaviour_single(self,station:str,pre:bool):
+        """
+        返回单字的本站起停标注。pre=True表示为区间前一个站，否则为后一个站。
+        """
+        dct = self.stationDict(station)
+        if not dct:
+            return '-'
+        elif (dct['ddsj'] - dct['cfsj']).seconds != 0:
+            return '起' if pre else '停'
+        elif self.isSfz(station):
+            return '始'
+        elif self.isZdz(station):
+            return '终'
+        else:
+            return ''
+
     def stationBefore(self,st1,st2):
         """
         返回st1是否在st2之前。
@@ -914,9 +930,69 @@ class Train():
         if self.item is not None:
             self.item.setColor()
 
+    def stationDicts(self):
+        for dct in self.timetable:
+            yield dct
+
+
+    def setTrainStationYValue(self,st:dict,y:float):
+        """
+        维护y_value查找表。查找表是有序的对象。
+        """
+        new_value = StationMap(y,st)
+        bisect.insort(self._yToStationMap,new_value)
+
+    def resetYValueMap(self):
+        self._yToStationMap = []
+
+    def yToStationInterval(self,y:float)->(dict,dict):
+        """
+        返回区间的y值较小者，较大者。
+        """
+        if not self._yToStationMap:
+            return None,None
+        idx_left = bisect.bisect_right(self._yToStationMap,StationMap(y,None))
+        if y < self._yToStationMap[0][0] or y > self._yToStationMap[-1][0]:
+            return None,None
+        if idx_left >= len(self._yToStationMap):
+            return None,None
+        if abs(self._yToStationMap[idx_left][0] - y) <= 2:
+            # 站内事件
+            return self._yToStationMap[idx_left][1],None
+        if idx_left == 0:
+            # 第一个站
+            return self._yToStationMap[idx_left][1],None
+        return self._yToStationMap[idx_left-1][1],self._yToStationMap[idx_left][1]
+
     def __str__(self):
         return f"Train object at <0x{id(self):X}> {self.fullCheci()}  {self.sfz}->{self.zdz}"
 
+class StationMap:
+    def __init__(self,y,dct):
+        self._y = y
+        self._dct = dct
+
+    def __getitem__(self, item):
+        if item == 0:
+            return self._y
+        else:
+            return self._dct
+
+    def __gt__(self, other):
+        """
+        大于比较
+        """
+        if self._y > other._y:
+            return True
+        return False
+
+    def __lt__(self, other):
+        if self._y < other._y:
+            return True
+        return False
+
+    def __str__(self):
+        return f"{self._y} {self._dct['zhanming']}"
 
 if __name__ == '__main__':
     #debug only
