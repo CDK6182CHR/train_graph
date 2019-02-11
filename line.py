@@ -335,7 +335,11 @@ class Line():
         修改站名时调用，修改映射查找表。调用时已经修改完毕。
         """
         print(self.nameMap)
-        dct = self.nameMap[old]
+        try:
+            dct = self.nameMap[old]
+        except KeyError:
+            # 表明原站名不在站名表中，不用修改
+            return
         del self.nameMap[old]
         self.nameMap[new] = dct
         self.delFieldMap(old)
