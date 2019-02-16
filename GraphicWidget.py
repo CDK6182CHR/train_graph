@@ -149,8 +149,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         """
         self.scene.clear()
         self.selectedTrain = None
-        if self.graph.isEmpty():
-            return
+        # if self.graph.isEmpty():
+        #     return
         if not force and not self.graph.UIConfigData().get('auto_paint',True):
             return
         self.showNewStatus.emit("正在铺画运行图：{}".format(self.graph.lineName()))

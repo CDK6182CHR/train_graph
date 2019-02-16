@@ -294,6 +294,8 @@ class Train():
         """
         检查并改正可能存在的顺序排错问题。
         """
+        if self.empty():
+            return
         changed = False
         timelist = list(self.timetable.items())
         for i in range(len(timelist)-1):

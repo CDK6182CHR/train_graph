@@ -1155,10 +1155,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         先显示提示信息，然后导出为trc。
         """
         if self.graph.trainCount() > 600:
-            self._derr(f"无法导出文本运行图：trc格式运行图最多支持600个车次，本线有{self.graph.trainCount()}个车次。")
-            return
+            self._derr(f"提示：运行图可能无法打开。trc格式运行图目前最多支持600个车次，本线有{self.graph.trainCount()}个车次。")
+
         if self.graph.stationCount() > 100:
-            self._derr(f"无法导出文本运行图：trc格式运行图最多支持100个车站，本线有{self.graph.stationCount()}个车次。")
+            self._dout(f"提示：运行图可能无法打开。trc格式运行图目前最多支持100个车站，本线有{self.graph.stationCount()}个车次。")
 
         text = "注意：显著的信息丢失。由于文本运行图格式不支持本系统的部分功能，导出的.trc格式运行图包含的信息少于本系统的.json格式运行图。这就是说，若先导出.trc格式，再用本系统读取该文件，仍将造成显著的信息丢失。本功能不改变原运行图，只是导出一个副本。请确认知悉以上内容，并继续。"
         self._dout(text)

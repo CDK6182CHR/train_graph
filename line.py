@@ -3,6 +3,7 @@
 """
 from ruler import Ruler
 from forbid import Forbid
+from typing import Union
 
 class Line():
     """
@@ -169,9 +170,9 @@ class Line():
         else:
             return bool(self.findStation(station))
 
-    def rulerByName(self,name:str):
+    def rulerByName(self,name:str)->Ruler:
         for ruler in self.rulers:
-            if ruler._name == name:
+            if ruler._name == name or set(ruler._name.split('*')) == set(name.split('*')):
                 return ruler
         return None
 
@@ -211,9 +212,6 @@ class Line():
     def isDownGap(self,st1:str,st2:str):
         """
         判断给定的区间是否为下行区间
-        :param st1:
-        :param st2:
-        :return:
         """
         from utility import stationEqual
         s1 = None
@@ -322,6 +320,11 @@ class Line():
     def addRuler(self,ruler:Ruler):
         self.rulers.append(ruler)
 
+    def addEmptyRuler(self,name:str,different:bool=False)->Ruler:
+        ruler = Ruler(name=name,different=different,line=self)
+        self.rulers.append(ruler)
+        return ruler
+
     def setStationYValue(self,name,y):
         """
         设置某个站的纵坐标值。
@@ -350,6 +353,12 @@ class Line():
             return self.stations[idx]
         except IndexError:
             return None
+
+    def lineLength(self)->float:
+        try:
+            return self.stations[-1]["licheng"]
+        except IndexError:
+            return 0
 
 
 if __name__ == '__main__':
