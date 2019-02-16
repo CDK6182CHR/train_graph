@@ -1,11 +1,11 @@
 """
 运行图类
 """
-from line import Line
-from ruler import Ruler
-from train import Train
+from .line import Line
+from .ruler import Ruler
+from .train import Train
 from copy import copy
-from utility import stationEqual
+from Timetable_new.utility import stationEqual
 import json
 
 config_file = 'config.json'

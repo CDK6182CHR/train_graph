@@ -4,8 +4,8 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from graph import Graph
-from train import Train
+from .graph import Graph
+from .train import Train
 import re
 
 class TrainFilter(QtCore.QObject):

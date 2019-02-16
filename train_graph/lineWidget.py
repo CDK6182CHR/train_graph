@@ -3,9 +3,7 @@
 2018.12.14修改：不再依赖于main模块。
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
-from PyQt5.QtCore import Qt
-import sys
-from line import Line
+from .line import Line
 
 class LineWidget(QtWidgets.QWidget):
     showStatus = QtCore.pyqtSignal(str)

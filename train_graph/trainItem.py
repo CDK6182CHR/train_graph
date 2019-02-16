@@ -7,8 +7,8 @@
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 
-from graph import Graph
-from train import Train
+from .graph import Graph
+from .train import Train
 from Timetable_new.utility import isKeche
 
 class TrainItem(QtWidgets.QGraphicsItem):

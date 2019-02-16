@@ -4,12 +4,11 @@
 2018.11.24重构为QWidget+QStackedWidget实现。
 """
 
-from GraphicWidget import GraphicsWidget
-from ruler import Ruler
-from train import Train
-from graph import Graph
+from .GraphicWidget import GraphicsWidget
+from .ruler import Ruler
+from .train import Train
+from .graph import Graph
 from PyQt5 import QtWidgets,QtGui,QtCore
-from PyQt5.QtCore import Qt
 from datetime import datetime,timedelta
 import cgitb
 cgitb.enable(format='text')

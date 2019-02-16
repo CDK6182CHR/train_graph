@@ -3,7 +3,7 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from graph import Graph
+from .graph import Graph
 
 class ConfigWidget(QtWidgets.QWidget):
     RepaintGraph = QtCore.pyqtSignal()

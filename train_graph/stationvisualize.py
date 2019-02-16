@@ -6,7 +6,7 @@
 import sys
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from graph import Graph
+from .graph import Graph
 from datetime import datetime,timedelta
 
 class StationGraphWidget(QtWidgets.QGraphicsView):

@@ -2,7 +2,7 @@
 2019.02.05抽离typeWidget
 """
 from PyQt5 import QtWidgets, QtGui, QtCore
-from graph import Graph
+from .graph import Graph
 
 
 class TypeWidget(QtWidgets.QWidget):

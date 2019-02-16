@@ -1,8 +1,8 @@
 """
 线路类
 """
-from ruler import Ruler
-from forbid import Forbid
+from .ruler import Ruler
+from .forbid import Forbid
 from typing import Union
 
 class Line():

@@ -5,30 +5,30 @@ copyright (c) mxy 2018
 import sys
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt
-from graph import Graph
-from ruler import Ruler
-from line import Line
-from train import Train
+from .graph import Graph
+from .ruler import Ruler
+from .line import Line
+from .train import Train
 from datetime import datetime, timedelta
-from forbidWidget import ForbidWidget
-from rulerWidget import RulerWidget
-from currentWidget import CurrentWidget
-from lineWidget import LineWidget
-from trainWidget import TrainWidget
-from trainFilter import TrainFilter
-from configWidget import ConfigWidget
-from typeWidget import TypeWidget
-from colorWidget import ColorWidget
+from .forbidWidget import ForbidWidget
+from .rulerWidget import RulerWidget
+from .currentWidget import CurrentWidget
+from .lineWidget import LineWidget
+from .trainWidget import TrainWidget
+from .trainFilter import TrainFilter
+from .configWidget import ConfigWidget
+from .typeWidget import TypeWidget
+from .colorWidget import ColorWidget
 import json
-from GraphicWidget import GraphicsWidget, TrainEventType, config_file
-from rulerPaint import rulerPainter
-from stationvisualize import StationGraphWidget
-from lineDB import LineDB
-from intervalWidget import IntervalWidget
-from detectWidget import DetectWidget
-from changeStationDialog import ChangeStationDialog
-from batchChangeStationDialog import BatchChangeStationDialog
-from trainComparator import TrainComparator
+from .GraphicWidget import GraphicsWidget, TrainEventType, config_file
+from .rulerPaint import rulerPainter
+from .stationvisualize import StationGraphWidget
+from .lineDB import LineDB
+from .intervalWidget import IntervalWidget
+from .detectWidget import DetectWidget
+from .changeStationDialog import ChangeStationDialog
+from .batchChangeStationDialog import BatchChangeStationDialog
+from .trainComparator import TrainComparator
 import traceback
 import cgitb
 

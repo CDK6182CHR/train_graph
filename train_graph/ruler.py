@@ -3,7 +3,7 @@
 """
 from datetime import datetime,timedelta
 from copy import copy
-from utility import stationEqual
+from Timetable_new.utility import stationEqual
 
 class Ruler():
     """

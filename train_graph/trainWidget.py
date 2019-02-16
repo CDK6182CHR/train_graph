@@ -3,9 +3,9 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from graph import Graph
-from train import Train
-from trainFilter import TrainFilter
+from .graph import Graph
+from .train import Train
+from .trainFilter import TrainFilter
 
 class TrainWidget(QtWidgets.QWidget):
     search_train = QtCore.pyqtSignal(str)

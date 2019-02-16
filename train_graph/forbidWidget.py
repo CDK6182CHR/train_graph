@@ -1,10 +1,9 @@
 """
 天窗编辑的窗口，可仿照标尺编辑。
 """
-from forbid import Forbid
-from PyQt5 import QtWidgets,QtGui,QtCore
-from PyQt5.QtCore import Qt
-from datetime import datetime,timedelta
+from .forbid import Forbid
+from PyQt5 import QtWidgets,QtCore
+from datetime import datetime
 
 class ForbidWidget(QtWidgets.QWidget):
     okClicked = QtCore.pyqtSignal()

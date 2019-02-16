@@ -3,7 +3,7 @@
 """
 
 from PyQt5 import QtWidgets,QtCore,QtGui
-from graph import Graph
+from .graph import Graph
 import json
 
 class BatchChangeStationDialog(QtWidgets.QDialog):

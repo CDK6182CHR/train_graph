@@ -11,15 +11,15 @@ import sys
 import json
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
-from graph import Graph, config_file
-from train import Train
+from .graph import Graph, config_file
+from .train import Train
 from datetime import timedelta, datetime
 from Timetable_new.utility import isKeche
-from ruler import Ruler
-from line import Line
+from .ruler import Ruler
+from .line import Line
 from enum import Enum
 from forbid import Forbid
-from trainItem import TrainItem
+from .trainItem import TrainItem
 
 
 class TrainEventType(Enum):

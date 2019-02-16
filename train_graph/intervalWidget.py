@@ -11,9 +11,7 @@ sample:
         技术速度：117.83km/h
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
-from train import Train
-from line import Line
-from graph import Graph
+from .train import Train
 
 class IntervalWidget(QtWidgets.QDialog):
     def __init__(self,graph,parent=None):

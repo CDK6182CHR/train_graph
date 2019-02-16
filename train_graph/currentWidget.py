@@ -3,12 +3,12 @@
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from ruler import Ruler
-from line import Line
-from train import Train
+from .ruler import Ruler
+from .line import Line
+from .train import Train
 from datetime import datetime,timedelta
 from Timetable_new.checi3 import Checi
-from utility import judge_type
+from Timetable_new.utility import judge_type
 
 class CurrentWidget(QtWidgets.QWidget):
     def __init__(self,main):

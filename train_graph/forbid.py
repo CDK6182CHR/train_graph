@@ -1,10 +1,8 @@
 """
 天窗或禁行时段数据结构。此数据集成在line内。
 """
-import sys
-sys.path.append("../Timetable_new")
 from datetime import datetime,timedelta
-from utility import stationEqual
+from Timetable_new.utility import stationEqual
 
 class Forbid:
     """
