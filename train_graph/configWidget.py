@@ -7,7 +7,6 @@ from .graph import Graph
 
 class ConfigWidget(QtWidgets.QWidget):
     RepaintGraph = QtCore.pyqtSignal()
-    SaveSystemConfig = QtCore.pyqtSignal()
     def __init__(self,graph:Graph,parent=None):
         super(ConfigWidget, self).__init__(parent)
         self.setWindowTitle('运行图设置')
@@ -311,15 +310,6 @@ class ConfigWidget(QtWidgets.QWidget):
         repaint = repaint or self._applyGridDialogConfig()
         self.graph.setMarkdown(self.noteEdit.toPlainText())
 
-        dialog = QtWidgets.QMessageBox()
-        btnOk = QtWidgets.QPushButton("保存默认(&D)")
-        btnOk.clicked.connect(self.SaveSystemConfig.emit)
-        btnCancel = QtWidgets.QPushButton("仅运行图(&G)")
-        dialog.addButton(btnOk, dialog.AcceptRole)
-        dialog.addButton(btnCancel, dialog.RejectRole)
-        dialog.setText("请选择将以上设置保存为系统默认设置，还是仅应用到本运行图？")
-        dialog.setWindowTitle(self.windowTitle())
-        dialog.exec_()
         if repaint:
             self.RepaintGraph.emit()
 
@@ -346,7 +336,7 @@ class ConfigWidget(QtWidgets.QWidget):
 
     def _clearConfig(self):
         """
-        将所有设置恢复为默认设置
+        将所有设置恢复为默认设置.
         """
         r = QtWidgets.QMessageBox.question(self, "提示",
                                            "确定将所有设置恢复为系统默认？当前运行图的有关设置将丢失。",
@@ -356,19 +346,20 @@ class ConfigWidget(QtWidgets.QWidget):
         if r == QtWidgets.QMessageBox.Rejected or r == QtWidgets.QMessageBox.NoButton:
             return
 
-        keys = (
-            "seconds_per_pix",
-            "seconds_per_pix_y",
-            "pixes_per_km",
-            "default_keche_width",
-            "default_huoche_width",
-            "start_hour",
-            "end_hour",
-            "minutes_per_vertical_line",
-            "bold_line_level",
-        )
-
-        buff = self.graph.readSystemConfig()
-        for key in keys:
-            self.graph.UIConfigData()[key] = buff[key]
+        # keys = (
+        #     "seconds_per_pix",
+        #     "seconds_per_pix_y",
+        #     "pixes_per_km",
+        #     "default_keche_width",
+        #     "default_huoche_width",
+        #     "start_hour",
+        #     "end_hour",
+        #     "minutes_per_vertical_line",
+        #     "bold_line_level",
+        # )
+        #
+        # buff = self.graph.readSystemConfig()
+        # for key in keys:
+        #     self.graph.UIConfigData()[key] = buff[key]
+        self.graph.resetGraphConfigFromConfigWidget()
         self.setData()

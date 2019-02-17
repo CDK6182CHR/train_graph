@@ -1,6 +1,16 @@
 """
 拟使用的正式mainwindow.不用Designer.
 copyright (c) mxy 2018
+1.4版本config架构修改方案：
+1. 系统设置改由数据域的graph模块负责管理，system.json由mainGraphWindow负责管理，GraphicsWidget不再管理。
+2. 将Margin集成进入默认的系统设置。
+3. 新增默认系统设置停靠面板（sysWidget），负责管理默认系统设置，不再允许通过configWidget修改默认系统设置。
+4. 系统配置文件分裂为config.json和system.json。system.json目前仅负责记录last_file, default_file两项参数；config.json接管老版本config.json的其他功能。
+5. 新增系统内置的默认系统设置，用于兼容老版本，补全settings.json中所缺数据。当settings.json文件发生错误时，调用本函数初始化，而不是抛出异常。
+
+1.4版本系统初始化修改方案：
+1. 初始化打开文件由mainGraphWindow负责管理，GraphicsWidget不再管理。
+2. 允许初始化时直接打开文件。
 """
 import sys
 from PyQt5 import QtGui, QtWidgets, QtCore
@@ -20,7 +30,7 @@ from .configWidget import ConfigWidget
 from .typeWidget import TypeWidget
 from .colorWidget import ColorWidget
 import json
-from .GraphicWidget import GraphicsWidget, TrainEventType, config_file
+from .GraphicWidget import GraphicsWidget, TrainEventType
 from .rulerPaint import rulerPainter
 from .stationvisualize import StationGraphWidget
 from .lineDB import LineDB
@@ -34,29 +44,33 @@ import cgitb
 
 cgitb.enable(format='text')
 
+system_file = "system.json"
 
 class mainGraphWindow(QtWidgets.QMainWindow):
     stationVisualSizeChanged = QtCore.pyqtSignal(int)
 
-    def __init__(self):
+    def __init__(self,filename=None):
         super().__init__()
-        self.title = "运行图系统V1.3.4"  # 一次commit修改一次版本号
-        self.build = '20190211'
+        self.title = "运行图系统V1.4.0"  # 一次commit修改一次版本号
+        self.build = '20190216'
+        self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         self.showMaximized()
-        try:
-            fp = open(config_file, encoding='utf-8', errors='ignore')
-            json.load(fp)
-        except:
-            self._derr(f"配置文件{config_file}错误，请检查！")
-            sys.exit(1)
-        else:
-            fp.close()
+        self._readSystemSetting()
+        # try:
+        #     fp = open(config_file, encoding='utf-8', errors='ignore')
+        #     json.load(fp)
+        # except:
+        #     self._derr(f"配置文件{config_file}错误，请检查！")
+        #     sys.exit(1)
+        # else:
+        #     fp.close()
 
-        self.GraphWidget = GraphicsWidget(self)
+        self.graph = Graph()
+        self._initGraph(filename)
+        self.GraphWidget = GraphicsWidget(self.graph,self)
 
-        self.graph = self.GraphWidget.graph
         self.setWindowTitle(f"{self.title}   {self.graph.filename if self.graph.filename else '新运行图'}")
 
         self.showFilter = TrainFilter(self.graph, self)
@@ -90,6 +104,48 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         self._initUI()
         self.rulerPainter = None
+
+    def _readSystemSetting(self):
+        """
+        1.4版本新增函数。
+        """
+        try:
+            with open(system_file,encoding='utf-8',errors='ignore') as fp:
+                self._system = json.load(fp)
+        except:
+            self._system={}
+        self._checkSystemSetting()
+
+    def _checkSystemSetting(self):
+        """
+        1.4版本新增函数。
+        """
+        system_default = {
+            "last_file":'',
+            "default_file":'sample.json',
+        }
+        self._system.update(system_default)
+
+    def _saveSystemSetting(self):
+        """
+        1.4版本新增函数
+        """
+        with open(system_file,'w',encoding='utf-8',errors='ignore') as fp:
+            json.dump(self._system,fp,ensure_ascii=False)
+
+    def _initGraph(self,filename=None):
+        """
+        1.4版本新增函数。按照给定文件、上次打开的文件、默认文件的顺序，初始化系统内置graph。
+        """
+        for n in (filename,self._system["last_file"],self._system["default_file"]):
+            if not n:
+                continue
+            try:
+                self.graph.loadGraph(n)
+            except:
+                pass
+            else:
+                return
 
     def _initUI(self):
         self.statusBar().showMessage("系统正在初始化……")
@@ -184,7 +240,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _initColorWidget(self):
         colorWidget = ColorWidget(self.graph,self)
         self.colorWidget = colorWidget
-        self.colorWidget.SaveSysConfig.connect(lambda:self.GraphWidget.saveSysConfig(Copy=True))
         self.colorWidget.RepaintGraph.connect(self.GraphWidget.paintGraph)
         self.colorDockWidget.setWidget(colorWidget)
 
@@ -765,7 +820,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         configWidget = ConfigWidget(self.graph,self)
         self.configWidget = configWidget
         configWidget.RepaintGraph.connect(self._apply_config_repaint)
-        configWidget.SaveSystemConfig.connect(lambda :self.GraphWidget.saveSysConfig(Copy=True))
 
         self.configDockWidget.setWidget(configWidget)
 
@@ -1099,7 +1153,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         try:
             self.graph.loadGraph(filename)
             self.GraphWidget.setGraph(self.graph)
-            self.GraphWidget.sysConfig["last_file"] = filename
+            self._system["last_file"] = filename
             # print("last file changed")
         except:
             self._derr("文件错误！请检查")
@@ -1147,7 +1201,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.graph.save(filename)
         self.graph.setGraphFileName(filename)
         self.statusBar().showMessage("保存成功")
-        self.GraphWidget.sysConfig["last_file"] = filename
+        self._system["last_file"] = filename
         self.setWindowTitle(f"{self.title} {self.graph.filename if self.graph.filename else '新运行图'}")
 
     def _toTrc(self):
@@ -1783,7 +1837,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget._line_selected(train.item, ensure_visible=True)
 
     def closeEvent(self, event):
-        self.GraphWidget.saveSysConfig()
+        """
+        """
+        self._saveSystemSetting()
         flag = QtWidgets.QMessageBox.question(self, self.title, "是否保存对运行图的修改？",
                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No |
                                               QtWidgets.QMessageBox.Cancel)

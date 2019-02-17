@@ -148,7 +148,7 @@ class ColorWidget(QtWidgets.QWidget):
 
         keys = ("grid_color", "default_colors", "text_color")
         for key in keys:
-            self.graph.UIConfigData()[key] = self.GraphWidget.sysConfig[key]
+            self.graph.UIConfigData()[key] = self.graph.sysConfigData()[key]
 
         self.setData()
 
@@ -166,7 +166,6 @@ class ColorWidget(QtWidgets.QWidget):
         table = self.tableWidget
         table.removeRow(table.currentRow())
 
-    SaveSysConfig = QtCore.pyqtSignal()
     RepaintGraph = QtCore.pyqtSignal()
     def _apply_color(self):
         repaint = False
@@ -191,12 +190,7 @@ class ColorWidget(QtWidgets.QWidget):
                 self._derr(f"类型名称重复：{key}，请重新编辑！")
                 return
 
-        flag = self.question("是否将数据保存为系统默认？\n选择是（Yes）保存系统默认，选择“否（No）”仅应用到本运行图")
-
         self.graph.UIConfigData().update(UIDict)
-
-        if flag:
-            self.SaveSysConfig.emit()
 
         if repaint:
             self.RepaintGraph.emit()

@@ -8,17 +8,16 @@ import traceback
 cgitb.enable(format='text')
 
 import sys
-import json
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph, config_file
+from .graph import Graph
 from .train import Train
 from datetime import timedelta, datetime
 from Timetable_new.utility import isKeche
 from .ruler import Ruler
 from .line import Line
 from enum import Enum
-from forbid import Forbid
+from .forbid import Forbid
 from .trainItem import TrainItem
 
 
@@ -38,17 +37,16 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
     rulerChanged = QtCore.pyqtSignal(Ruler)
     showNewStatus = QtCore.pyqtSignal([str], [str, int])  # 显示状态栏信息
 
-    def __init__(self, parent=None):
-        super(GraphicsWidget, self).__init__(parent)
+    def __init__(self, graph:Graph, parent=None):
+        super().__init__(parent)
 
         self.setWindowTitle("GraphicsViewsTestWindow")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         self.setGeometry(200, 200, 1200, 600)
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
-        self.graph = Graph()
+        self.graph = graph
 
-        self.sysConfig = self.readSysConfig()
         self.appendix_margins = {
             "title_row_height":40,  # 左侧表格的表头高度
             "first_row_append":15,  # 第一行表格附加的高度
@@ -60,35 +58,35 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             "right": None
         }
 
-        if True:
-            graphUse = 0  # 0 for last, 1 for default, 2 for empty
-            if graphUse == 0 and self.sysConfig["last_file"] is None:
-                graphUse = 1
-
-            if graphUse == 0:
-                print("open last file")
-                try:
-                    self.graph.loadGraph(self.sysConfig["last_file"])
-                    self.setMargin()
-                    self.setGraph(self.graph)
-                except:
-                    graphUse = 1
-
-            if graphUse == 1:
-                print("open default file")
-                try:
-                    self.graph.loadGraph(self.sysConfig["default_file"])
-                    self.setMargin()
-                    self.setGraph(self.graph)
-                except:
-                    graphUse = 2
-                    self.showNewStatus.emit("默认运行图错误，使用空运行图")
-
-            if graphUse == 2:
-                print("open empty file")
-                self.graph = Graph()
-                self.setMargin()
-                self.setGraph(self.graph)
+        # if True:
+        #     graphUse = 0  # 0 for last, 1 for default, 2 for empty
+        #     if graphUse == 0 and self.sysConfig["last_file"] is None:
+        #         graphUse = 1
+        #
+        #     if graphUse == 0:
+        #         print("open last file")
+        #         try:
+        #             self.graph.loadGraph(self.sysConfig["last_file"])
+        #             self.setMargin()
+        #             self.setGraph(self.graph)
+        #         except:
+        #             graphUse = 1
+        #
+        #     if graphUse == 1:
+        #         print("open default file")
+        #         try:
+        #             self.graph.loadGraph(self.sysConfig["default_file"])
+        #             self.setMargin()
+        #             self.setGraph(self.graph)
+        #         except:
+        #             graphUse = 2
+        #             self.showNewStatus.emit("默认运行图错误，使用空运行图")
+        #
+        #     if graphUse == 2:
+        #         print("open empty file")
+        #         self.graph = Graph()
+        #         self.setMargin()
+        #         self.setGraph(self.graph)
 
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
 
@@ -98,37 +96,40 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.tempRect = None
         self.tempRect2 = None
 
-        self.setGraph(self.graph, paint=False)
+        self.setGraph(self.graph)
 
     def readSysConfig(self):
-        fp = open(config_file, encoding='utf-8', errors='ignore')
-        data = json.load(fp)
-        return data
+        raise Exception("取消定义的函数：GraphicWidget::readSysConfig")
+        # fp = open(config_file, encoding='utf-8', errors='ignore')
+        # data = json.load(fp)
+        # return data
 
     def saveSysConfig(self, Copy=False):
-        if Copy:
-            from copy import copy
-            self.sysConfig = copy(self.graph.UIConfigData())
-            if self.sysConfig["ordinate"] is not None:
-                self.sysConfig["ordinate"] = self.sysConfig["ordinate"].name()
-        fp = open(config_file, 'w', encoding='utf-8', errors='ignore')
-        json.dump(self.sysConfig, fp, ensure_ascii=False)
-        fp.close()
+        raise Exception("取消定义的函数：GraphicWidget::saveSysConfig")
+        # if Copy:
+        #     from copy import copy
+        #     self.sysConfig = copy(self.graph.UIConfigData())
+        #     if self.sysConfig["ordinate"] is not None:
+        #         self.sysConfig["ordinate"] = self.sysConfig["ordinate"].name()
+        # fp = open(config_file, 'w', encoding='utf-8', errors='ignore')
+        # json.dump(self.sysConfig, fp, ensure_ascii=False)
+        # fp.close()
 
     def defaultMargin(self):
-        print("defaultMargin")
-        self.margins = {
-            "left_white": 15,  # 左侧白边，不能有任何占用的区域
-            "right_white": 10,
-            "left": 325,
-            "up": 90,
-            "down": 90,
-            "right": 170,
-            "label_width": 100,
-            "mile_label_width": 50,
-            "ruler_label_width": 100,
-        }
-        self.graph.UIConfigData()['margins'] = self.margins
+        raise Exception("取消定义的函数：GraphicWidget::defaultMargin")
+        # print("defaultMargin")
+        # self.margins = {
+        #     "left_white": 15,  # 左侧白边，不能有任何占用的区域
+        #     "right_white": 10,
+        #     "left": 325,
+        #     "up": 90,
+        #     "down": 90,
+        #     "right": 170,
+        #     "label_width": 100,
+        #     "mile_label_width": 50,
+        #     "ruler_label_width": 100,
+        # }
+        # self.graph.UIConfigData()['margins'] = self.margins
 
     def setMargin(self):
         self.margins = self.graph.UIConfigData().get("margins",None)

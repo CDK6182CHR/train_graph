@@ -1,5 +1,6 @@
 """
-运行图类
+运行图类.
+同时管理self._config和self._sysConfig两套设置系统，两套系统完全分离。
 """
 from .line import Line
 from .ruler import Ruler
@@ -34,12 +35,100 @@ class Graph:
         self.line = Line()
         self._trains = []
         self._circuits = []
-        self._config = {}
+        self._config = None
+        self._sysConfig = None
+        self.readSysConfig()  # 初始化并校验系统默认配置文件
         self.typeList = [] # public data
-        self.readConfig()
+        self.initGraphConfig()
         self._markdown = ''
         self.fullCheciMap = {} # 全车次查找表 str|->Train
         self.singleCheciMap = {} # 单车次查找表str|->list<Train>
+
+    def readSysConfig(self):
+        """
+        1.4新定义函数。读取并检查系统默认设置。
+        """
+        try:
+            with open(config_file,encoding='utf-8',errors='ignore') as fp:
+                self._sysConfig = json.load(fp)
+        except:
+            print("配置文件config.json加载失败，使用系统默认设置。")
+            self._sysConfig={}
+        self.checkSysConfig()
+
+    def checkSysConfig(self):
+        """
+        1.4版本新增函数。每次在系统设置中增加新的字段时，要修改本函数。
+        """
+        default_config = {
+            "seconds_per_pix": 15.0,
+            "seconds_per_pix_y": 8.0,
+            "pixes_per_km": 4.0,
+            "grid_color": "#00FF00",
+            "text_color": "#0000FF",
+            "default_keche_width": 1.5,
+            "default_huoche_width": 0.75,
+            "start_hour": 0,
+            "end_hour": 24,
+            "minutes_per_vertical_line": 10.0,
+            "bold_line_level": 2,
+            "show_line_in_station": True,
+            "default_colors": {"快速": "#FF0000", "特快": "#0000FF",
+                               "直达特快": "#FF00FF", "动车组": "#804000", "动车": "#804000",
+                               "高速": "#FF00BE", "城际": "#FF33CC", "default": "#008000"
+            },
+            "margins":{
+                "left_white": 15,  # 左侧白边，不能有任何占用的区域
+                "right_white": 10,
+                "left": 325,
+                "up": 90,
+                "down": 90,
+                "right": 170,
+                "label_width": 100,
+                "mile_label_width": 50,
+                "ruler_label_width": 100,
+            }
+        }
+        default_config.update(self._sysConfig)
+        self._sysConfig = default_config
+
+    def saveSysConfig(self):
+        """
+        1.4版本新增函数。保证进入本函数时系统设置是有效的。
+        """
+        with open(config_file,'w',encoding='utf-8',errors='ignore') as fp:
+            json.dump(self._sysConfig,fp,ensure_ascii=False)
+
+    def initGraphConfig(self):
+        """
+        1.4新增函数。在不考虑读文件的前提下，增加单个运行图设置应该比系统运行图设置多的东西。
+        precondition: sysConfig已经读取并校验完毕。
+        """
+        self._config = {
+            "ordinate":None,
+            "not_show_types":[],
+        }
+        self._config.update(self._sysConfig)
+
+    def checkGraphConfig(self):
+        """
+        1.4新增函数，由loadGraph调用（初始化时可以用更加暴力的方法）。
+        检查并更新graphConfig。precondition: self._config存在且是dict；sysConfig已经初始化并检查完毕。
+        """
+        self._config.setdefault("ordinate",None)
+        self._config.setdefault("not_show_types",[])
+        for key,value in self._sysConfig.items():
+            self._config.setdefault(key,value)
+
+    def resetGraphConfigFromConfigWidget(self):
+        """
+        1.4版本新增函数。提供给configWidget调用的重置接口，此调用不改变颜色设置。
+        precondition: self._config和self._sysConfig都是合法的。
+        """
+        for key,value in self._sysConfig:
+            if 'color' not in key:
+                self._config[key]=value
+
 
     def setFullCheciMap(self):
         """
@@ -69,6 +158,10 @@ class Graph:
                     del self.singleCheciMap[cc]
 
     def readConfig(self):
+        """
+        初步确定没有调用。
+        """
+        raise Exception("取消定义的函数：graph::readConfig")
         fp = open(config_file,encoding='utf-8',errors='ignore')
         buff = json.load(fp)
         if buff["ordinate"] is not None:
@@ -77,11 +170,19 @@ class Graph:
         self._config=buff
 
     def readSystemConfig(self):
+        """
+        初步确定没有调用
+        """
+        raise Exception("取消定义的函数：graph::readSystemConfig")
         fp = open(config_file, encoding='utf-8', errors='ignore')
         buff = json.load(fp)
         return buff
 
     def saveConfig(self):
+        """
+        初步确定没有调用
+        """
+        raise Exception("取消定义的函数：graph::saveConfig")
         print("=============saveConfig")
         print(self._config)
         if self._config is None or not self._config:
@@ -113,27 +214,17 @@ class Graph:
             return
 
         self.line.loadLine(info["line"])
-        self.circuits = info["circuits"]
+        self.circuits = info.get("circuits",None)
         for dict_train in info["trains"]:
             newtrain = Train(origin=dict_train)
             self._trains.append(newtrain)
-        try:
-            self._config = info["config"]
-            try:
-                if self._config["ordinate"] is not None:
-                    self._config["ordinate"] = self.line.rulerByName(self._config["ordinate"])
-            except:
-                pass
-        except KeyError:
-            self.readConfig()
-        else:
-            if self._config is None or not self._config:
-                self.readConfig()
 
-        try:
-            self._markdown = info["markdown"]
-        except KeyError:
-            self._markdown = ''
+        self._config = info.get("config",{})
+        if self._config.get('ordinate') is not None:
+            self._config["ordinate"] = self.line.rulerByName(self._config["ordinate"])
+        self.checkGraphConfig()
+
+        self._markdown = info.get("markdown",'')
 
         fp.close()
         self.setFullCheciMap()
@@ -220,6 +311,12 @@ class Graph:
 
     def UIConfigData(self):
         return self._config
+
+    def sysConfigData(self):
+        """
+        1.4版本新增函数，专用返回系统默认设置。
+        """
+        return self._sysConfig
 
     def line_station_mileages(self):
         """
