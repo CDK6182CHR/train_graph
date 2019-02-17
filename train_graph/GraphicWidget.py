@@ -58,36 +58,6 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             "right": None
         }
 
-        # if True:
-        #     graphUse = 0  # 0 for last, 1 for default, 2 for empty
-        #     if graphUse == 0 and self.sysConfig["last_file"] is None:
-        #         graphUse = 1
-        #
-        #     if graphUse == 0:
-        #         print("open last file")
-        #         try:
-        #             self.graph.loadGraph(self.sysConfig["last_file"])
-        #             self.setMargin()
-        #             self.setGraph(self.graph)
-        #         except:
-        #             graphUse = 1
-        #
-        #     if graphUse == 1:
-        #         print("open default file")
-        #         try:
-        #             self.graph.loadGraph(self.sysConfig["default_file"])
-        #             self.setMargin()
-        #             self.setGraph(self.graph)
-        #         except:
-        #             graphUse = 2
-        #             self.showNewStatus.emit("默认运行图错误，使用空运行图")
-        #
-        #     if graphUse == 2:
-        #         print("open empty file")
-        #         self.graph = Graph()
-        #         self.setMargin()
-        #         self.setGraph(self.graph)
-
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
 
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -98,43 +68,12 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         self.setGraph(self.graph)
 
-    def readSysConfig(self):
-        raise Exception("取消定义的函数：GraphicWidget::readSysConfig")
-        # fp = open(config_file, encoding='utf-8', errors='ignore')
-        # data = json.load(fp)
-        # return data
-
-    def saveSysConfig(self, Copy=False):
-        raise Exception("取消定义的函数：GraphicWidget::saveSysConfig")
-        # if Copy:
-        #     from copy import copy
-        #     self.sysConfig = copy(self.graph.UIConfigData())
-        #     if self.sysConfig["ordinate"] is not None:
-        #         self.sysConfig["ordinate"] = self.sysConfig["ordinate"].name()
-        # fp = open(config_file, 'w', encoding='utf-8', errors='ignore')
-        # json.dump(self.sysConfig, fp, ensure_ascii=False)
-        # fp.close()
-
-    def defaultMargin(self):
-        raise Exception("取消定义的函数：GraphicWidget::defaultMargin")
-        # print("defaultMargin")
-        # self.margins = {
-        #     "left_white": 15,  # 左侧白边，不能有任何占用的区域
-        #     "right_white": 10,
-        #     "left": 325,
-        #     "up": 90,
-        #     "down": 90,
-        #     "right": 170,
-        #     "label_width": 100,
-        #     "mile_label_width": 50,
-        #     "ruler_label_width": 100,
-        # }
-        # self.graph.UIConfigData()['margins'] = self.margins
 
     def setMargin(self):
+        """
+        1.4版本修改：新增precondition：已知进入本函数时graph._config中的margins已经初始化完毕。
+        """
         self.margins = self.graph.UIConfigData().get("margins",None)
-        if self.margins is None:
-            self.defaultMargin()
 
     def setGraph(self, graph: Graph, paint=True):
         self.selectedTrain = None

@@ -4,14 +4,23 @@
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from .graph import Graph
+from .colorWidget import ColorWidget
 
 class ConfigWidget(QtWidgets.QWidget):
     RepaintGraph = QtCore.pyqtSignal()
-    def __init__(self,graph:Graph,parent=None):
+    def __init__(self,graph:Graph,system:bool=False,parent=None):
         super(ConfigWidget, self).__init__(parent)
-        self.setWindowTitle('运行图设置')
+        self.system = system
+        self.repaint = False
+        self.setWindowTitle('运行图设置' if not system else '系统默认设置')
         self.graph = graph
+        self.UIDict = self.graph.UIConfigData() if not self.system else self.graph.sysConfigData()
+        self.colorWidget = ColorWidget(self.graph, system, self)
         self.initWidget()
+        self.colorWidget.RepaintGraph.connect(self.setRepaintTrue)
+
+    def setRepaintTrue(self):
+        self.repaint=True
 
     def initWidget(self):
         """
@@ -25,7 +34,7 @@ class ConfigWidget(QtWidgets.QWidget):
         spin1 = QtWidgets.QSpinBox()
         spin1.setSingleStep(1)
         spin1.setRange(0, 24)
-        spin1.setValue(self.graph.UIConfigData()["start_hour"])
+        spin1.setValue(self.UIDict["start_hour"])
         layout.addRow(label1, spin1)
         self.startTimeSpin = spin1
 
@@ -33,21 +42,21 @@ class ConfigWidget(QtWidgets.QWidget):
         spin2 = QtWidgets.QSpinBox()
         spin2.setSingleStep(1)
         spin2.setRange(0, 24)
-        spin2.setValue(self.graph.UIConfigData()["end_hour"])
+        spin2.setValue(self.UIDict["end_hour"])
         layout.addRow(label2, spin2)
         self.endTimeSpin = spin2
 
         label3 = QtWidgets.QLabel("默认客车线宽")
         spin3 = QtWidgets.QDoubleSpinBox()
         spin3.setSingleStep(0.5)
-        spin3.setValue(self.graph.UIConfigData()["default_keche_width"])
+        spin3.setValue(self.UIDict["default_keche_width"])
         layout.addRow(label3, spin3)
         self.kecheWidthSpin=spin3
 
         label4 = QtWidgets.QLabel("默认货车线宽")
         spin4 = QtWidgets.QDoubleSpinBox()
         spin4.setSingleStep(0.5)
-        spin4.setValue(self.graph.UIConfigData()["default_huoche_width"])
+        spin4.setValue(self.UIDict["default_huoche_width"])
         layout.addRow(label4, spin4)
         self.huocheWidthSpin = spin4
 
@@ -55,7 +64,7 @@ class ConfigWidget(QtWidgets.QWidget):
         spin7 = QtWidgets.QDoubleSpinBox()
         spin7.setSingleStep(1)
         spin7.setRange(0, 240)
-        spin7.setValue(self.graph.UIConfigData()["seconds_per_pix"])
+        spin7.setValue(self.UIDict["seconds_per_pix"])
         layout.addRow(label7, spin7)
         self.seconds_per_pix_spin=spin7
 
@@ -63,7 +72,7 @@ class ConfigWidget(QtWidgets.QWidget):
         spin8 = QtWidgets.QDoubleSpinBox()
         spin8.setSingleStep(1)
         spin8.setRange(0, 240)
-        spin8.setValue(self.graph.UIConfigData()["seconds_per_pix_y"])
+        spin8.setValue(self.UIDict["seconds_per_pix_y"])
         layout.addRow(label8, spin8)
         self.seconds_per_pix_y_spin = spin8
 
@@ -71,7 +80,7 @@ class ConfigWidget(QtWidgets.QWidget):
         spin9 = QtWidgets.QDoubleSpinBox()
         spin9.setSingleStep(1)
         spin9.setRange(0, 20)
-        spin9.setValue(self.graph.UIConfigData()["pixes_per_km"])
+        spin9.setValue(self.UIDict["pixes_per_km"])
         layout.addRow(label9, spin9)
         self.pixes_per_km_spin = spin9
 
@@ -79,7 +88,7 @@ class ConfigWidget(QtWidgets.QWidget):
         spin9 = QtWidgets.QSpinBox()
         spin9.setSingleStep(1)
         spin9.setRange(0, 20)
-        spin9.setValue(self.graph.UIConfigData()["bold_line_level"])
+        spin9.setValue(self.UIDict["bold_line_level"])
         layout.addRow(label9, spin9)
         self.bold_line_level_spin = spin9
 
@@ -87,20 +96,21 @@ class ConfigWidget(QtWidgets.QWidget):
         spin9 = QtWidgets.QSpinBox()
         spin9.setSingleStep(1)
         spin9.setRange(1, 20)
-        spin9.setValue(60 / (self.graph.UIConfigData()["minutes_per_vertical_line"]) - 1)
+        spin9.setValue(60 / (self.UIDict["minutes_per_vertical_line"]) - 1)
         layout.addRow(label9, spin9)
         self.vertical_lines_per_hour_spin = spin9
 
-        label10 = QtWidgets.QLabel("纵坐标标尺")
-        combo = QtWidgets.QComboBox()
-        self.ordinateCombo = combo
-        self.setOrdinateCombo()
-        self.ordinateCombo = combo
-        layout.addRow(label10, combo)
+        if not self.system:
+            label10 = QtWidgets.QLabel("纵坐标标尺")
+            combo = QtWidgets.QComboBox()
+            self.ordinateCombo = combo
+            self.setOrdinateCombo()
+            self.ordinateCombo = combo
+            layout.addRow(label10, combo)
 
         spin = QtWidgets.QSpinBox()
         spin.setRange(1,20)
-        spin.setValue(self.graph.UIConfigData().setdefault("valid_width",3))
+        spin.setValue(self.UIDict.setdefault("valid_width",3))
         text = """\
         本功能解决运行线不容易选中的问题。当设置值大于1时，启用扩大选择范围功能，此时运行图铺画效率会有所降低，运行线周围，运行线宽度的设置值倍数被点击都可以选中运行线。
         """
@@ -109,12 +119,12 @@ class ConfigWidget(QtWidgets.QWidget):
         layout.addRow("有效选择宽度",spin)
 
         check = QtWidgets.QCheckBox()
-        check.setChecked(self.graph.UIConfigData().setdefault('showFullCheci', False))
+        check.setChecked(self.UIDict.setdefault('showFullCheci', False))
         layout.addRow("显示完整车次", check)
         self.showFullCheciCheck = check
 
         check = QtWidgets.QCheckBox()
-        check.setChecked(self.graph.UIConfigData().setdefault("auto_paint",True))
+        check.setChecked(self.UIDict.setdefault("auto_paint",True))
         layout.addRow("自动铺画",check)
         spin.setToolTip("若关闭，当运行图发生变更时不会自动铺画，只有手动选择刷新（F5）或者铺画运行图（shitf+F5）时才会重新铺画运行图。建议当运行图较大时关闭。")
         self.autoPaintCheck = check
@@ -125,14 +135,20 @@ class ConfigWidget(QtWidgets.QWidget):
         btnGrid.clicked.connect(self.gridDialog.exec_)
         layout.addRow('底图设置',btnGrid)
 
+        btnColor = QtWidgets.QPushButton("设置")
+        btnColor.clicked.connect(self.colorWidget.exec_)
+        btnColor.setMaximumWidth(120)
+        layout.addRow('默认颜色设置',btnColor)
+
         vlayout.addLayout(layout)
 
-        label = QtWidgets.QLabel("运行图说明或备注")
-        vlayout.addWidget(label)
-        textEdit = QtWidgets.QTextEdit()
-        textEdit.setText(self.graph.markdown())
-        self.noteEdit = textEdit
-        vlayout.addWidget(textEdit)
+        if not self.system:
+            label = QtWidgets.QLabel("运行图说明或备注")
+            vlayout.addWidget(label)
+            textEdit = QtWidgets.QTextEdit()
+            textEdit.setText(self.graph.markdown())
+            self.noteEdit = textEdit
+            vlayout.addWidget(textEdit)
 
         btn1 = QtWidgets.QPushButton("确定")
         btn1.clicked.connect(self._applyConfig)
@@ -159,7 +175,7 @@ class ConfigWidget(QtWidgets.QWidget):
             combo.setCurrentText(ordinate.name())
 
     def setData(self):
-        UIDict = self.graph.UIConfigData()
+        UIDict = self.UIDict
         self.startTimeSpin.setValue(UIDict["start_hour"])
         self.endTimeSpin.setValue(UIDict["end_hour"])
         self.kecheWidthSpin.setValue(UIDict["default_keche_width"])
@@ -169,13 +185,15 @@ class ConfigWidget(QtWidgets.QWidget):
         self.pixes_per_km_spin.setValue(UIDict["pixes_per_km"])
         self.bold_line_level_spin.setValue(UIDict["bold_line_level"])
         self.vertical_lines_per_hour_spin.setValue(60 / (UIDict["minutes_per_vertical_line"]) - 1)
-        self.setOrdinateCombo()
+        if not self.system:
+            self.setOrdinateCombo()
         self.showFullCheciCheck.setChecked(UIDict["showFullCheci"])
         self.validWidthSpin.setValue(UIDict.setdefault('valid_width',3))
         self.autoPaintCheck.setChecked(UIDict.setdefault('auto_paint',True))
-        self.noteEdit.setPlainText(self.graph.markdown())
+        if not self.system:
+            self.noteEdit.setPlainText(self.graph.markdown())
         self.setGridDialogData()
-
+        self.colorWidget.setData()
 
     def initGridDialog(self):
         """
@@ -191,7 +209,7 @@ class ConfigWidget(QtWidgets.QWidget):
             "ruler_label_width": 100,
         }
         """
-        UIDict = self.graph.UIConfigData()
+        UIDict = self.UIDict
         self.gridDialog = QtWidgets.QDialog(self)
         self.gridDialog.setWindowTitle('底图设置')
         layout = QtWidgets.QVBoxLayout()
@@ -255,7 +273,7 @@ class ConfigWidget(QtWidgets.QWidget):
     def setGridDialogData(self):
         """
         """
-        UIDict = self.graph.UIConfigData()
+        UIDict = self.UIDict
         self.defaultWidthSpin.setValue(UIDict.setdefault('default_grid_width',1))
         self.boldWidthSpin.setValue(UIDict.setdefault('bold_grid_width',2))
         self.rulerLabelSpin.setValue(UIDict['margins']['ruler_label_width'])
@@ -265,7 +283,7 @@ class ConfigWidget(QtWidgets.QWidget):
         self.leftRightLabelSpin.setValue(UIDict['margins']['right']-UIDict['margins']['right_white']-UIDict['margins']['label_width'])
 
     def _applyConfig(self):
-        UIDict = self.graph.UIConfigData()
+        UIDict = self.UIDict
 
         repaint = False
 
@@ -293,13 +311,14 @@ class ConfigWidget(QtWidgets.QWidget):
         if minutes_per_vertical_line != UIDict["minutes_per_vertical_line"]:
             UIDict["minutes_per_vertical_line"] = minutes_per_vertical_line
             repaint = True
-        if self.ordinateCombo.currentIndex() == 0:
-            ruler = None
-        else:
-            ruler = self.graph.line.rulerByName(self.ordinateCombo.currentText())
-        if ruler is not self.graph.ordinateRuler():
-            self.graph.setOrdinateRuler(ruler)
-            repaint = True
+        if not self.system:
+            if self.ordinateCombo.currentIndex() == 0:
+                ruler = None
+            else:
+                ruler = self.graph.line.rulerByName(self.ordinateCombo.currentText())
+            if ruler is not self.graph.ordinateRuler():
+                self.graph.setOrdinateRuler(ruler)
+                repaint = True
         if self.showFullCheciCheck.isChecked() != UIDict["showFullCheci"]:
             UIDict["showFullCheci"] = self.showFullCheciCheck.isChecked()
             repaint = True
@@ -308,17 +327,23 @@ class ConfigWidget(QtWidgets.QWidget):
             UIDict['valid_width'] = self.validWidthSpin.value()
             repaint = True
         repaint = repaint or self._applyGridDialogConfig()
-        self.graph.setMarkdown(self.noteEdit.toPlainText())
+        if not self.system:
+            self.graph.setMarkdown(self.noteEdit.toPlainText())
+        self.repaint = repaint
+        self.colorWidget.apply_color()
 
-        if repaint:
+        if self.repaint:
             self.RepaintGraph.emit()
+
+        if self.system:
+            self.graph.saveSysConfig()
 
     def _applyGridDialogConfig(self)->bool:
         """
         应用对话框数据，返回是否要重新铺画
         """
         repaint = False
-        UIDict = self.graph.UIConfigData()
+        UIDict = self.UIDict
         if self.defaultWidthSpin.value() != UIDict['default_grid_width']:
             UIDict['default_grid_width'] = self.defaultWidthSpin.value()
             repaint = True
@@ -330,7 +355,8 @@ class ConfigWidget(QtWidgets.QWidget):
             self.mileLabelSpin.value(),
             self.stationLabelSpin.value(),
             self.leftRightLabelSpin.value(),
-            self.topBottomLabelSpin.value()
+            self.topBottomLabelSpin.value(),
+            system=self.system
         )
         return repaint
 
@@ -346,20 +372,5 @@ class ConfigWidget(QtWidgets.QWidget):
         if r == QtWidgets.QMessageBox.Rejected or r == QtWidgets.QMessageBox.NoButton:
             return
 
-        # keys = (
-        #     "seconds_per_pix",
-        #     "seconds_per_pix_y",
-        #     "pixes_per_km",
-        #     "default_keche_width",
-        #     "default_huoche_width",
-        #     "start_hour",
-        #     "end_hour",
-        #     "minutes_per_vertical_line",
-        #     "bold_line_level",
-        # )
-        #
-        # buff = self.graph.readSystemConfig()
-        # for key in keys:
-        #     self.graph.UIConfigData()[key] = buff[key]
         self.graph.resetGraphConfigFromConfigWidget()
         self.setData()

@@ -122,13 +122,13 @@ class Graph:
 
     def resetGraphConfigFromConfigWidget(self):
         """
-        1.4版本新增函数。提供给configWidget调用的重置接口，此调用不改变颜色设置。
+        1.4版本新增函数。提供给configWidget调用的重置接口。
         precondition: self._config和self._sysConfig都是合法的。
         """
-        for key,value in self._sysConfig:
-            if 'color' not in key:
-                self._config[key]=value
-
+        # for key,value in self._sysConfig:
+        #     if 'color' not in key:
+        #         self._config[key]=value
+        self._config.update(self._sysConfig)
 
     def setFullCheciMap(self):
         """
@@ -156,49 +156,6 @@ class Graph:
                     lst.remove(train)
                 else:
                     del self.singleCheciMap[cc]
-
-    def readConfig(self):
-        """
-        初步确定没有调用。
-        """
-        raise Exception("取消定义的函数：graph::readConfig")
-        fp = open(config_file,encoding='utf-8',errors='ignore')
-        buff = json.load(fp)
-        if buff["ordinate"] is not None:
-            buff["ordinate"] = self.line.rulerByName(buff["ordinate"])
-        fp.close()
-        self._config=buff
-
-    def readSystemConfig(self):
-        """
-        初步确定没有调用
-        """
-        raise Exception("取消定义的函数：graph::readSystemConfig")
-        fp = open(config_file, encoding='utf-8', errors='ignore')
-        buff = json.load(fp)
-        return buff
-
-    def saveConfig(self):
-        """
-        初步确定没有调用
-        """
-        raise Exception("取消定义的函数：graph::saveConfig")
-        print("=============saveConfig")
-        print(self._config)
-        if self._config is None or not self._config:
-            raise Exception("Cannot save empty config data")
-        data = copy(self._config)
-        try:
-            data["ordinate"]
-        except KeyError:
-            pass
-        else:
-            if data["ordinate"] is not None:
-                data["ordinate"] = data["ordinate"].name()
-
-        fp = open(config_file,'w',encoding='utf-8',errors='ignore')
-        json.dump(data,fp,ensure_ascii=False)
-        fp.close()
 
     def loadGraph(self,filename:str):
         """
@@ -1198,8 +1155,9 @@ class Graph:
             train.updateLocalFirst(self)
             train.updateLocalLast(self)
 
-    def setMargin(self,ruler_label,mile_label,station_label,left_and_right,top_and_bottom)->bool:
+    def setMargin(self,ruler_label,mile_label,station_label,left_and_right,top_and_bottom,system=False)->bool:
         """
+        1.4版本修改
         用户设置页边距。注意参数含义与本系统内部使用的不同。返回是否变化。
         """
         left_white = 15
@@ -1215,8 +1173,9 @@ class Graph:
             "mile_label_width": mile_label,
             "ruler_label_width": ruler_label,
         }
-        changed = self.UIConfigData().get('margins',None) != margins
-        self.UIConfigData()["margins"] = margins
+        UIDict = self.UIConfigData() if not system else self.sysConfigData()
+        changed = UIDict.get('margins',None) != margins
+        UIDict["margins"] = margins
         return changed
 
     def toTrc(self,filename):

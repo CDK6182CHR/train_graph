@@ -28,7 +28,6 @@ from .trainWidget import TrainWidget
 from .trainFilter import TrainFilter
 from .configWidget import ConfigWidget
 from .typeWidget import TypeWidget
-from .colorWidget import ColorWidget
 import json
 from .GraphicWidget import GraphicsWidget, TrainEventType
 from .rulerPaint import rulerPainter
@@ -52,20 +51,12 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.title = "运行图系统V1.4.0"  # 一次commit修改一次版本号
-        self.build = '20190216'
+        self.build = '20190217'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         self.showMaximized()
         self._readSystemSetting()
-        # try:
-        #     fp = open(config_file, encoding='utf-8', errors='ignore')
-        #     json.load(fp)
-        # except:
-        #     self._derr(f"配置文件{config_file}错误，请检查！")
-        #     sys.exit(1)
-        # else:
-        #     fp.close()
 
         self.graph = Graph()
         self._initGraph(filename)
@@ -81,8 +72,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         self.lineDockWidget = None
         self.configDockWidget = None
+        self.sysDockWidget = None
         self.currentDockWidget = None  # 当前选中车次信息
-        self.colorDockWidget = None
         self.typeDockWidget = None
         self.trainDockWidget = None
         self.rulerDockWidget = None
@@ -90,17 +81,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.forbidDockWidget = None
         self.to_repaint = False
 
-        self.action_widget_dict = {
-            '线路编辑': self.lineDockWidget,
-            '车次编辑': self.trainDockWidget,
-            '选中车次设置': self.currentDockWidget,
-            '运行图设置': self.configDockWidget,
-            '颜色设置': self.colorDockWidget,
-            '显示类型设置': self.typeDockWidget,
-            '标尺编辑': self.rulerDockWidget,
-            '标尺排图向导': self.guideDockWidget,
-            '天窗编辑': self.forbidDockWidget,
-        }
+        self.action_widget_dict = {}
 
         self._initUI()
         self.rulerPainter = None
@@ -123,8 +104,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         system_default = {
             "last_file":'',
             "default_file":'sample.json',
+            "dock_show":{}
         }
-        self._system.update(system_default)
+        system_default.update(self._system)
+        self._system = system_default
 
     def _saveSystemSetting(self):
         """
@@ -164,8 +147,18 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initRulerDock()
         self._initTypeDock()
         self._initCurrentDock()
-        self._initColorDock()
+        self._initSysDock()
         self._initForbidDock()
+        self.action_widget_dict = {
+            '线路编辑': self.lineDockWidget,
+            '车次编辑': self.trainDockWidget,
+            '选中车次设置': self.currentDockWidget,
+            '运行图设置': self.configDockWidget,
+            '系统默认设置': self.sysDockWidget,
+            '显示类型设置': self.typeDockWidget,
+            '标尺编辑': self.rulerDockWidget,
+            '天窗编辑': self.forbidDockWidget,
+        }
 
     def _initDockWidgetContents(self):
         self._initTrainWidget()
@@ -174,8 +167,18 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initRulerWidget()
         self._initTypeWidget()
         self._initCurrentWidget()
-        self._initColorWidget()
+        self._initSysWidget()
         self._initForbidWidget()
+        self._initDockShow()
+
+    def _initDockShow(self):
+        """
+        1.4版本新增，初始化停靠面板是否显示。
+        """
+        for key,dock in self.action_widget_dict.items():
+            if self._system['dock_show'][key]:
+                print("show True",key)
+            dock.setVisible(self._system['dock_show'].setdefault(key,False))
 
     def _refreshDockWidgets(self):
         """
@@ -195,8 +198,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut('类型面板刷新完毕')
         self.currentWidget.setData()
         self.statusOut('当前车次面板刷新完毕')
-        self.colorWidget.setData()
-        self.statusOut('颜色面板刷新完毕')
+        self.sysWidget.setData()
+        self.statusOut('默认面板刷新完毕')
         self.forbidWidget.setData()
         self.statusOut('所有停靠面板刷新完毕')
 
@@ -228,20 +231,19 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         widget.trainOK.connect(self.currentWidget.setData)
         self.guideDockWidget.setWidget(widget)
 
-    def _initColorDock(self):
+    def _initSysDock(self):
         colorDock = QtWidgets.QDockWidget()
-        self.colorDockWidget = colorDock
-        colorDock.setWindowTitle("默认颜色设置")
-        colorDock.visibilityChanged.connect(lambda: self._dock_visibility_changed("颜色设置", colorDock))
+        self.sysDockWidget = colorDock
+        colorDock.setWindowTitle("系统默认设置")
+        colorDock.visibilityChanged.connect(lambda: self._dock_visibility_changed("系统默认设置", colorDock))
 
         self.addDockWidget(Qt.LeftDockWidgetArea, colorDock)
         colorDock.setVisible(False)
 
-    def _initColorWidget(self):
-        colorWidget = ColorWidget(self.graph,self)
-        self.colorWidget = colorWidget
-        self.colorWidget.RepaintGraph.connect(self.GraphWidget.paintGraph)
-        self.colorDockWidget.setWidget(colorWidget)
+    def _initSysWidget(self):
+        sysWidget = ConfigWidget(self.graph,True,self)
+        self.sysWidget = sysWidget
+        self.sysDockWidget.setWidget(sysWidget)
 
     def _initCurrentDock(self):
         currentDock = QtWidgets.QDockWidget()
@@ -817,7 +819,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, configDock)
 
     def _initConfigWidget(self):
-        configWidget = ConfigWidget(self.graph,self)
+        configWidget = ConfigWidget(self.graph,False,self)
         self.configWidget = configWidget
         configWidget.RepaintGraph.connect(self._apply_config_repaint)
 
@@ -1055,11 +1057,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         menu: QtWidgets.QMenu = menubar.addMenu("窗口(&W)")
         self.actionWindow_list = []
         actions = (
-            '线路编辑', '车次编辑', '标尺编辑', '选中车次设置', '运行图设置', '颜色设置', '显示类型设置',
-            '天窗编辑'
+            '线路编辑', '车次编辑', '标尺编辑', '选中车次设置', '运行图设置', '系统默认设置',
+            '显示类型设置', '天窗编辑'
         )
         shorcuts = (
-            'X', 'C', 'B', 'I', 'G', 'Y', 'L', '1'
+            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1'
         )
         for a, s in zip(actions, shorcuts):
             action = QtWidgets.QAction(a, self)
@@ -1080,17 +1082,16 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         menu.addAction(action)
 
     def _window_menu_triggered(self, action: QtWidgets.QAction):
-        # print("_window_triggered")
         widgets = {
             '线路编辑': self.lineDockWidget,
             '车次编辑': self.trainDockWidget,
             '选中车次设置': self.currentDockWidget,
             '运行图设置': self.configDockWidget,
-            '颜色设置': self.colorDockWidget,
             '显示类型设置': self.typeDockWidget,
             '标尺编辑': self.rulerDockWidget,
             '标尺排图向导': self.guideDockWidget,
             '天窗编辑': self.forbidDockWidget,
+            '系统默认设置':self.sysDockWidget,
         }
         dock = widgets[action.text()]
         if dock is None:
@@ -1103,7 +1104,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             action.setChecked(True)
 
     def _dock_visibility_changed(self, name, dock):
-        # print("dock visibility changed! ", name)
         self.GraphWidget._resetDistanceAxis()
         self.GraphWidget._resetTimeAxis()
         action = None
@@ -1839,7 +1839,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         """
         """
-        self._saveSystemSetting()
         flag = QtWidgets.QMessageBox.question(self, self.title, "是否保存对运行图的修改？",
                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No |
                                               QtWidgets.QMessageBox.Cancel)
@@ -1854,6 +1853,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         if self.rulerPainter is not None:
             self.rulerPainter._cancel()
+        # 记录各个dock的状态
+        for name,dock in self.action_widget_dict.items():
+            self._system.setdefault("dock_show",{})[name]=dock.isVisible()
+        self._saveSystemSetting()
 
     def _train_info(self):
         train: Train = self.GraphWidget.selectedTrain

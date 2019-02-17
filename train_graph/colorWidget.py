@@ -1,19 +1,21 @@
 """
-2019.02.05抽离颜色面板
+2019.02.05抽离颜色面板。2019.2.17，将此面板合入configWidget。取消单独的确认和恢复功能。
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 from .graph import Graph
 
-class ColorWidget(QtWidgets.QWidget):
-    def __init__(self,graph:Graph,parent=None):
+class ColorWidget(QtWidgets.QDialog):
+    def __init__(self,graph:Graph,system:bool=False,parent=None):
         super(ColorWidget, self).__init__(parent)
+        self.system = system
         self.setWindowTitle("颜色编辑")
         self.graph = graph
+        self.UIDict = self.graph.UIConfigData() if not self.system else self.graph.sysConfigData()
         self.initWidget()
 
     def initWidget(self):
-        UIDict = self.graph.UIConfigData()
+        UIDict = self.UIDict
 
         layout = QtWidgets.QVBoxLayout()
         flayout = QtWidgets.QFormLayout()
@@ -67,19 +69,15 @@ class ColorWidget(QtWidgets.QWidget):
         btnAdd.setMinimumWidth(90)
         btnDel = QtWidgets.QPushButton("删除类型")
         btnDel.setMinimumWidth(90)
-        btnOk = QtWidgets.QPushButton("确定")
+        btnOk = QtWidgets.QPushButton("关闭")
         btnOk.setMinimumWidth(60)
-        btnCancel = QtWidgets.QPushButton("还原")
-        btnCancel.setMinimumWidth(60)
         hlayout.addWidget(btnAdd)
         hlayout.addWidget(btnDel)
         hlayout.addWidget(btnOk)
-        hlayout.addWidget(btnCancel)
 
         btnAdd.clicked.connect(self._add_color_row)
         btnDel.clicked.connect(self._del_color_row)
-        btnOk.clicked.connect(self._apply_color)
-        btnCancel.clicked.connect(self._default_color)
+        btnOk.clicked.connect(self.close)
 
         layout.addLayout(hlayout)
         self.setLayout(layout)
@@ -89,7 +87,7 @@ class ColorWidget(QtWidgets.QWidget):
         代价不大，暂定每次都重新创建所有单元格
         """
         tableWidget = self.tableWidget
-        UIDict = self.graph.UIConfigData()
+        UIDict = self.UIDict
         tableWidget.setRowCount(len(UIDict["default_colors"]) - 1)
         row = 0
         for key, value in UIDict["default_colors"].items():
@@ -108,10 +106,11 @@ class ColorWidget(QtWidgets.QWidget):
             row += 1
 
     def setData(self):
-        UIDict = self.graph.UIConfigData()
+        UIDict = self.UIDict
         self._setButtonColorText(self.gridBtn,UIDict["grid_color"])
         self._setButtonColorText(self.defaultBtn,UIDict["default_colors"]["default"])
         self._setButtonColorText(self.textBtn,UIDict["text_color"])
+        self._setTable()
 
     @staticmethod
     def _setButtonColorText(btn:QtWidgets.QPushButton,color_str:str):
@@ -135,7 +134,7 @@ class ColorWidget(QtWidgets.QWidget):
         """
         slot。colorDock中的表格双击进入。
         """
-        table: QtWidgets.QTableWidget = self.sender()
+        table: QtWidgets.QTableWidget = self.tableWidget
         initColor = QtGui.QColor(table.item(row, 1).text())
         color = QtWidgets.QColorDialog.getColor(initColor, title=f"默认颜色: {table.item(row,0).text()}")
         table.item(row, 1).setBackground(QtGui.QBrush(color))
@@ -167,7 +166,7 @@ class ColorWidget(QtWidgets.QWidget):
         table.removeRow(table.currentRow())
 
     RepaintGraph = QtCore.pyqtSignal()
-    def _apply_color(self):
+    def apply_color(self):
         repaint = False
         rawDict = self.graph.UIConfigData()
         UIDict = {}
@@ -190,7 +189,7 @@ class ColorWidget(QtWidgets.QWidget):
                 self._derr(f"类型名称重复：{key}，请重新编辑！")
                 return
 
-        self.graph.UIConfigData().update(UIDict)
+        self.UIDict.update(UIDict)
 
         if repaint:
             self.RepaintGraph.emit()

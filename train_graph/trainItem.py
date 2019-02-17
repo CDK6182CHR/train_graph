@@ -538,16 +538,16 @@ class TrainItem(QtWidgets.QGraphicsItem):
         return result
 
 
-    def validItems(self,containSpan=True):
+    def validItems(self,containSpan=True,containExpand=False):
         """
         依次给出自身的所有非None子item
         """
+        valids = [self.pathItem,self.startLabelItem,self.endLabelItem,
+                  self.startLabelText,self.endLabelText]
         if containSpan:
-            for sub in [self.pathItem,self.startLabelItem,self.endLabelItem,self.startLabelText,self.endLabelText,self.expandItem]\
-                       + self.spanItems:
-                if sub is not None:
-                    yield sub
-        else:
-            for sub in [self.pathItem,self.startLabelItem,self.endLabelItem,self.startLabelText,self.endLabelText,self.expandItem]:
-                if sub is not None:
-                    yield sub
+            valids += self.spanItems
+        if containExpand:
+            valids.append(self.expandItem)
+        for sub in valids:
+            if sub is not None:
+                yield sub
