@@ -624,7 +624,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         timeItems.append(nowItem)
         self.nowItem = nowItem
         nowItem.setDefaultTextColor(QtGui.QColor(UIDict["text_color"]))
-        nowItem.setZValue(4)
+        nowItem.setZValue(10)
         timeItems.append(rectItem)
         timeItems.append(lineItem)
 
@@ -655,14 +655,14 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             textItem1: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(str(hour))
             textItem2: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(str(hour))
             textItem1.setFont(font)
-            textItem1.setX(x - 12)
+            textItem1.setX(x - textItem1.boundingRect().width()/2)
             textItem1.setBrush(QtGui.QBrush(gridColor))
             # textItem1.setDefaultTextColor(gridColor)
             timeItems.append(textItem1)
 
             # 下时间坐标
             textItem2.setFont(font)
-            textItem2.setX(x - 12)
+            textItem2.setX(x - textItem2.boundingRect().width()/2)
             textItem2.setY(self.scene.height() - 30)
             textItem2.setBrush(QtGui.QBrush(gridColor))
             # textItem2.setDefaultTextColor(gridColor)
@@ -683,11 +683,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     self.scene.addLine(x, self.margins["up"], x, self.margins["up"] + height, pen_other)
 
         group1 = self.scene.createItemGroup(timeItems)
-        group1.setZValue(2)
+        group1.setZValue(3)
         self.marginItemGroups["up"] = group1
 
         group2 = self.scene.createItemGroup(downItems)
-        group2.setZValue(2)
+        group2.setZValue(3)
         # print("y is: ",group2.y())
         self.marginItemGroups["down"] = group2
 
@@ -894,6 +894,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 text += f"区间里程{mile} km，技术速度{speed_str}"
             self.setToolTip(text)
 
+    def resizeEvent(self, event: QtGui.QResizeEvent):
+        super().resizeEvent(event)
+        self._resetTimeAxis()
+        self._resetDistanceAxis()
 
     def save(self, filename: str = 'output/test.png'):
         """
@@ -1216,8 +1220,3 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 item.setVisible(False)
 
 
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    window = GraphicsWidget()
-    window.showMaximized()
-    sys.exit(app.exec_())

@@ -94,7 +94,7 @@ class ColorWidget(QtWidgets.QDialog):
             if key == "default":
                 continue
 
-            tableWidget.setRowHeight(row, 30)
+            tableWidget.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
             item = QtWidgets.QTableWidgetItem(key)
             tableWidget.setItem(row, 0, item)
 
@@ -155,7 +155,7 @@ class ColorWidget(QtWidgets.QDialog):
         table = self.tableWidget
         row = table.rowCount()
         table.insertRow(table.rowCount())
-        table.setRowHeight(row, 30)
+        table.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
         item = QtWidgets.QTableWidgetItem('#FFFFFF')
         item.setFlags(Qt.NoItemFlags)

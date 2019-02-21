@@ -118,7 +118,7 @@ class TrainComparator(QtWidgets.QDialog):
 
             row = self.tableWidget.rowCount()
             self.tableWidget.insertRow(row)
-            self.tableWidget.setRowHeight(row,30)
+            self.tableWidget.setRowHeight(row,self.graph.UIConfigData()['table_row_height'])
 
             self.tableWidget.setItem(row,0,
                 QtWidgets.QTableWidgetItem(f"{previous['zhanming']}->{st_dict['zhanming']}"))

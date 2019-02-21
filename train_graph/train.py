@@ -689,7 +689,7 @@ class Train():
         except ZeroDivisionError:
             return 0.0
 
-    def detectPassStation(self,graph,ruler,toStart,toEnd):
+    def detectPassStation(self,graph,ruler,toStart,toEnd,precision:int):
         """
         按标尺推定通过站的时刻。保证非本线站已经删除。
         """
@@ -752,7 +752,7 @@ class Train():
                     continue
                 for name in interval_queue:
                     ruler_node=ruler.getInfo(last_tudy_dict['zhanming'],name,allow_multi=True)
-                    new_dict=self.makeStationDict(name,rate,last_tudy_dict,ruler_node)
+                    new_dict=self.makeStationDict(name,rate,last_tudy_dict,ruler_node,precision)
                     new_timetable.append(new_dict)
                 new_timetable.append(this_dict)
                 last_tudy_dict = this_dict
@@ -784,7 +784,7 @@ class Train():
         if toEnd and interval_queue:
             for name in interval_queue:
                 ruler_node = ruler.getInfo(last_tudy_dict['zhanming'], name, allow_multi=True)
-                new_dict = self.makeStationDict(name, 1.0, last_tudy_dict, ruler_node)
+                new_dict = self.makeStationDict(name, 1.0, last_tudy_dict, ruler_node,precision)
                 new_timetable.append(new_dict)
         self.timetable=new_timetable
 
@@ -798,12 +798,16 @@ class Train():
         """
         return bool((station['ddsj']-station['cfsj']).seconds)
 
-    def makeStationDict(self,name,rate:float,reference:dict,ruler_node:dict):
+    def makeStationDict(self,name,rate:float,reference:dict,ruler_node:dict,precision:int):
         """
         从参考点开始，移动interval_sec秒作为新车站的通过时刻。
         """
         # print("detect",self.fullCheci(),"station",name,'reference',reference)
         interval_sec = int(rate*ruler_node['interval'])
+        if interval_sec % precision >= precision/2:
+            interval_sec = interval_sec - interval_sec% precision + precision
+        else:
+            interval_sec = interval_sec - interval_sec%precision
         if interval_sec > 0:
             #从参考车站开始往【后】推定时间
             nextStopped_bool = self.stationStopped(reference)

@@ -145,7 +145,8 @@ class RulerWidget(QtWidgets.QTabWidget):
                      mile):
         tableWidget.insertRow(tableWidget.rowCount())
         now_line = tableWidget.rowCount() - 1
-        tableWidget.setRowHeight(now_line, 30)
+        tableWidget.setRowHeight(now_line, self.main.graph.UIConfigData()['table_row_height']
+            if self.main is not None else 30)
 
         interval = fazhan + blocker + daozhan
         item = QtWidgets.QTableWidgetItem(interval)

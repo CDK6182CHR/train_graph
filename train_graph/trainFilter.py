@@ -186,7 +186,7 @@ class TrainFilter(QtCore.QObject):
         row = self.includeTable.rowCount()
         self.includeTable.insertRow(row)
         self.includeTable.setCellWidget(row,0,combo)
-        self.includeTable.setRowHeight(row, 30)
+        self.includeTable.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
     def _del_includeTable_row(self):
         self.includeTable.removeRow(self.includeTable.currentRow())
@@ -249,7 +249,7 @@ class TrainFilter(QtCore.QObject):
         row = self.excludeTable.rowCount()
         self.excludeTable.insertRow(row)
         self.excludeTable.setCellWidget(row,0,combo)
-        self.excludeTable.setRowHeight(row,30)
+        self.excludeTable.setRowHeight(row,self.graph.UIConfigData()['table_row_height'])
 
     def _del_excludeTable_row(self):
         self.excludeTable.removeRow(self.excludeTable.currentRow())

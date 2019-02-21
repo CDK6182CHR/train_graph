@@ -34,7 +34,7 @@ class BatchChangeStationDialog(QtWidgets.QDialog):
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
 
         for row, st_dict in enumerate(map_list):
-            tableWidget.setRowHeight(row, 30)
+            tableWidget.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
             item = QtWidgets.QTableWidgetItem(st_dict["origin"])
             tableWidget.setItem(row, 0, item)

@@ -157,7 +157,7 @@ class LineWidget(QtWidgets.QWidget):
             combo.setStyleSheet("QComboBox{margin:3px}")
             tableWidget.setCellWidget(now_line, 4, combo)
 
-            tableWidget.setRowHeight(now_line, 30)
+            tableWidget.setRowHeight(now_line, 30)  # cannot infer to graph
             now_line += 1
 
 
@@ -190,7 +190,7 @@ class LineWidget(QtWidgets.QWidget):
         combo.setStyleSheet("QComboBox{margin:3px}")
         tableWidget.setCellWidget(num, 4, combo)
 
-        tableWidget.setRowHeight(num, 30)
+        tableWidget.setRowHeight(num, 30)  # cannot infer to graph
 
     def _del_station(self, tableWidget: QtWidgets.QTableWidget):
         tableWidget.removeRow(tableWidget.currentIndex().row())

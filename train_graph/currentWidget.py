@@ -216,7 +216,7 @@ class CurrentWidget(QtWidgets.QWidget):
             station, ddsj, cfsj = st_dict['zhanming'],st_dict['ddsj'],st_dict['cfsj']
             ddsj: datetime
 
-            timeTable.setRowHeight(num, 30)
+            timeTable.setRowHeight(num, self.graph.UIConfigData()['table_row_height'])
             item = QtWidgets.QTableWidgetItem(station)
             timeTable.setItem(num, 0, item)
 
@@ -312,7 +312,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
     def _add_timetable_row(self, row: int, timeTable: QtWidgets.QTableWidget, name: str = ""):
         timeTable.insertRow(row)
-        timeTable.setRowHeight(row, 30)
+        timeTable.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
         item = QtWidgets.QTableWidgetItem(name)
         timeTable.setItem(row, 0, item)

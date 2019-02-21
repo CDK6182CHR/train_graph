@@ -294,7 +294,7 @@ class rulerPainter(QtWidgets.QWidget):
         num = self.timeTable.rowCount()
         timeTable = self.timeTable
         timeTable.insertRow(num)
-        timeTable.setRowHeight(num,30)
+        timeTable.setRowHeight(num,self.graph.UIConfigData()['table_row_height'])
 
         item = QtWidgets.QTableWidgetItem(name)
         timeTable.setItem(num,0,item)

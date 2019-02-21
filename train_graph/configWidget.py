@@ -133,7 +133,7 @@ class ConfigWidget(QtWidgets.QWidget):
         btnGrid = QtWidgets.QPushButton("设置")
         btnGrid.setMaximumWidth(120)
         btnGrid.clicked.connect(self.gridDialog.exec_)
-        layout.addRow('底图设置',btnGrid)
+        layout.addRow('详细尺寸设置',btnGrid)
 
         btnColor = QtWidgets.QPushButton("设置")
         btnColor.clicked.connect(self.colorWidget.exec_)
@@ -264,6 +264,24 @@ class ConfigWidget(QtWidgets.QWidget):
         spin.setValue(UIDict['margins']['right']-UIDict['margins']['right_white']-UIDict['margins']['label_width'])
         flayout.addRow('左右图边至站名栏距离', spin)
 
+        spin = QtWidgets.QSpinBox(self)
+        self.startLabelSpin = spin
+        spin.setRange(0,100)
+        spin.setValue(UIDict.setdefault('start_label_height',30))
+        flayout.addRow('开始标签高度',spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        self.endLabelSpin = spin
+        spin.setRange(0,100)
+        spin.setValue(UIDict.setdefault('end_label_height',18))
+        flayout.addRow('结束标签高度',spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        self.tableRowSpin = spin
+        spin.setRange(15,60)
+        spin.setValue(UIDict.setdefault('table_row_height',30))
+        flayout.addRow('默认表格行高',spin)
+
         layout.addLayout(flayout)
         self.gridDialog.setLayout(layout)
         btnClose = QtWidgets.QPushButton('关闭')
@@ -281,6 +299,10 @@ class ConfigWidget(QtWidgets.QWidget):
         self.stationLabelSpin.setValue(UIDict['margins']['label_width'])
         self.topBottomLabelSpin.setValue(UIDict['margins']['up'])
         self.leftRightLabelSpin.setValue(UIDict['margins']['right']-UIDict['margins']['right_white']-UIDict['margins']['label_width'])
+        self.startLabelSpin.setValue(UIDict['start_label_height'])
+        self.endLabelSpin.setValue(UIDict['end_label_height'])
+        self.tableRowSpin.setValue(UIDict['table_row_height'])
+
 
     def _applyConfig(self):
         UIDict = self.UIDict
@@ -350,6 +372,13 @@ class ConfigWidget(QtWidgets.QWidget):
         if self.boldWidthSpin.value() != UIDict['bold_grid_width']:
             UIDict['bold_grid_width'] = self.boldWidthSpin.value()
             repaint = True
+        if self.startLabelSpin.value() != UIDict['start_label_height']:
+            UIDict['start_label_height'] = self.startLabelSpin.value()
+            repaint = True
+        if self.endLabelSpin.value() != UIDict['end_label_height']:
+            UIDict['end_label_height'] = self.endLabelSpin.value()
+            repaint = True
+        UIDict['table_row_height'] = self.tableRowSpin.value()
         repaint = repaint or self.graph.setMargin(
             self.rulerLabelSpin.value(),
             self.mileLabelSpin.value(),

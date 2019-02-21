@@ -26,6 +26,7 @@ class DetectWidget(QtWidgets.QDialog):
         #是否推定到结尾
         self.toStart=False
         self.toEnd=False
+        self.precision=1  # 推定精度，单位为秒
         self.ruler=None
 
         self.stackedWidget=QtWidgets.QStackedWidget(self)
@@ -87,6 +88,13 @@ class DetectWidget(QtWidgets.QDialog):
         checkEnd=QtWidgets.QCheckBox()
         checkEnd.toggled.connect(self._to_end_changed)
         flayout.addRow("推定到本线终点",checkEnd)
+
+        comboPrecision = QtWidgets.QComboBox(self)
+        comboPrecision.setMaximumWidth(150)
+        comboPrecision.addItems(('1秒','5秒','10秒','30秒','1分钟'))
+        comboPrecision.currentTextChanged.connect(self._precision_changed)
+        flayout.addRow("时刻精度",comboPrecision)
+
         vlayout.addLayout(flayout)
 
         label=QtWidgets.QLabel("请在下表中【点击选择】要推定时刻的车次所在行，按住ctrl或shift可多选。")
@@ -116,7 +124,7 @@ class DetectWidget(QtWidgets.QDialog):
         tableWidget=self.chooseTable
         row=tableWidget.rowCount()
         tableWidget.insertRow(row)
-        tableWidget.setRowHeight(row,30)
+        tableWidget.setRowHeight(row,self.graph.UIConfigData()['table_row_height'])
 
         item=QtWidgets.QTableWidgetItem(train.fullCheci())
         item.setData(-1,train)
@@ -168,7 +176,7 @@ class DetectWidget(QtWidgets.QDialog):
         row=self.confirmTable.rowCount()
         tableWidget=self.confirmTable
         tableWidget.insertRow(row)
-        tableWidget.setRowHeight(row,30)
+        tableWidget.setRowHeight(row,self.graph.UIConfigData()['table_row_height'])
 
         item=QtWidgets.QTableWidgetItem(train.fullCheci())
         tableWidget.setItem(row,0,item)
@@ -218,9 +226,19 @@ class DetectWidget(QtWidgets.QDialog):
     def _to_end_changed(self,status:bool):
         self.toEnd=status
 
+    def _precision_changed(self,pre_str:str):
+        pre_dict = {
+            '1秒':1,
+            '5秒':5,
+            '10秒':10,
+            '30秒':30,
+            '1分钟':60,
+        }
+        self.precision = pre_dict[pre_str]
+
     def _ok_clicked(self):
         for train in self._getSelectedTrains():
-            train.detectPassStation(self.graph,self.ruler,self.toStart,self.toEnd)
+            train.detectPassStation(self.graph,self.ruler,self.toStart,self.toEnd,self.precision)
             print("计算通过站完毕",train.fullCheci())
         self.okClicked.emit()
         self.mainWindow._dout("计算完毕！刷新运行图以显示新运行图。")

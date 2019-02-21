@@ -110,7 +110,7 @@ class TrainWidget(QtWidgets.QWidget):
 
         now_line = tableWidget.rowCount()
         tableWidget.insertRow(now_line)
-        tableWidget.setRowHeight(now_line, 30)
+        tableWidget.setRowHeight(now_line, self.graph.UIConfigData()['table_row_height'])
 
         item = QtWidgets.QTableWidgetItem(train.fullCheci())
         item.setData(-1, train)

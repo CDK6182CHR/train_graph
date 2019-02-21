@@ -73,6 +73,9 @@ class Graph:
             "minutes_per_vertical_line": 10.0,
             "bold_line_level": 2,
             "show_line_in_station": True,
+            "start_label_height":30,
+            "end_label_height":15,
+            "table_row_height":30,
             "default_colors": {"快速": "#FF0000", "特快": "#0000FF",
                                "直达特快": "#FF00FF", "动车组": "#804000", "动车": "#804000",
                                "高速": "#FF00BE", "城际": "#FF33CC", "default": "#008000"

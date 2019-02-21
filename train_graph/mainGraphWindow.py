@@ -38,6 +38,8 @@ from .detectWidget import DetectWidget
 from .changeStationDialog import ChangeStationDialog
 from .batchChangeStationDialog import BatchChangeStationDialog
 from .trainComparator import TrainComparator
+import time
+from .thread import ThreadDialog
 import traceback
 import cgitb
 
@@ -50,8 +52,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def __init__(self,filename=None):
         super().__init__()
-        self.title = "运行图系统V1.4.0"  # 一次commit修改一次版本号
-        self.build = '20190217'
+        self.title = "运行图系统V1.4.1"  # 一次commit修改一次版本号
+        self.build = '20190221'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -176,8 +178,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         1.4版本新增，初始化停靠面板是否显示。
         """
         for key,dock in self.action_widget_dict.items():
-            if self._system['dock_show'][key]:
-                print("show True",key)
             dock.setVisible(self._system['dock_show'].setdefault(key,False))
 
     def _refreshDockWidgets(self):
@@ -321,7 +321,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
             row = tableWidget.rowCount()
             tableWidget.insertRow(tableWidget.rowCount())
-            tableWidget.setRowHeight(row, 30)
+            tableWidget.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
             interval_str = f"{former}->{name}"
             item = QtWidgets.QTableWidgetItem(interval_str)
@@ -453,8 +453,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         pass_settled = 5
         pass_calculated = 6
         """
-        import time
-        from thread import ThreadDialog
         train: Train = self.GraphWidget.selectedTrain
         if train is None:
             self._derr("当前车次事件时刻表：当前没有选中车次！")
@@ -508,7 +506,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             tableWidget.setColumnWidth(i, s)
 
         for row, event in enumerate(events):
-            tableWidget.setRowHeight(row, 30)
+            tableWidget.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
             item = QtWidgets.QTableWidgetItem(event["time"].strftime('%H:%M:%S'))
             tableWidget.setItem(row, 0, item)
 
@@ -1402,7 +1400,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
             row += 1
             tableWidget.insertRow(row)
-            tableWidget.setRowHeight(row, 30)
+            tableWidget.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
             item = QtWidgets.QTableWidgetItem(train.fullCheci())
             tableWidget.setItem(row, 0, item)
@@ -1646,7 +1644,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         count_list = self.graph.getIntervalCount(station, startView, dialog.filter)
         for i, s in enumerate(count_list):
             tableWidget.insertRow(i)
-            tableWidget.setRowHeight(i, 30)
+            tableWidget.setRowHeight(i, self.graph.UIConfigData()['table_row_height'])
             tableWidget.setItem(i, 0, QtWidgets.QTableWidgetItem(s['from']))
             tableWidget.setItem(i, 1, QtWidgets.QTableWidgetItem(s['to']))
             tableWidget.setItem(i, 2, QtWidgets.QTableWidgetItem(str(s['count']) if s['count'] else '-'))
@@ -1769,7 +1767,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         for i, tr in enumerate(info_dicts):
             train: Train = tr['train']
             tb.insertRow(i)
-            tb.setRowHeight(i, 30)
+            tb.setRowHeight(i, self.graph.UIConfigData()['table_row_height'])
 
             tb.setItem(i, 0, IT(train.fullCheci()))
             tb.setItem(i, 1, IT(train.type))
@@ -2423,7 +2421,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         row = tableWidget.rowCount()
         tableWidget.insertRow(row)
 
-        tableWidget.setRowHeight(row, 30)
+        tableWidget.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
         timeEdit = QtWidgets.QTimeEdit()
         timeEdit.setDisplayFormat('hh:mm:ss')
         timeEdit.setMinimumSize(1, 1)

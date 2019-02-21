@@ -93,35 +93,37 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.spanItemHeight = endLabelText.boundingRect().height()
         endLabel = QtGui.QPainterPath()
         self.endLabelText = endLabelText
+        end_height = self.graph.UIConfigData()['end_label_height']
         if down:
             endLabel.moveTo(end_point)
-            endLabel.lineTo(end_point.x(), end_point.y() + 18)
-            endLabel.moveTo(end_point.x() - self.spanItemWidth/2, end_point.y() + 18)
+            endLabel.lineTo(end_point.x(), end_point.y() + end_height)
+            endLabel.moveTo(end_point.x() - self.spanItemWidth/2, end_point.y() + end_height)
             endLabelText.setX(end_point.x() - self.spanItemWidth/2)
-            endLabelText.setY(end_point.y()+18-self.spanItemHeight*0.15)
+            endLabelText.setY(end_point.y()+end_height-self.spanItemHeight*0.15)
             # endLabel.addText(end_point.x() - (len(checi) * 9) / 2,
             #                  end_point.y() + 20 + 12, QtGui.QFont(), checi)
             # endLabel.moveTo(end_point.x() - 30, end_point.y() + 18)
-            endLabel.lineTo(end_point.x() + self.spanItemWidth/2, end_point.y() + 18)
+            endLabel.lineTo(end_point.x() + self.spanItemWidth/2, end_point.y() + end_height)
 
         else:
             endLabel.moveTo(end_point)
-            endLabel.lineTo(end_point.x(), end_point.y() - 18)
-            endLabel.moveTo(end_point.x() - self.spanItemWidth/2, end_point.y() - 18)
+            endLabel.lineTo(end_point.x(), end_point.y() - end_height)
+            endLabel.moveTo(end_point.x() - self.spanItemWidth/2, end_point.y() - end_height)
             # endLabel.addText(end_point.x() - (len(checi) * 9) / 2, end_point.y() - 18, QtGui.QFont(),
             #                  checi)
             endLabelText.setX(self.endPoint.x()-self.spanItemWidth/2)
-            endLabelText.setY(self.endPoint.y()-self.spanItemHeight*0.8-18)
+            endLabelText.setY(self.endPoint.y()-self.spanItemHeight*0.8-end_height)
             # endLabel.moveTo(end_point.x() - 30, end_point.y() - 18)
-            endLabel.lineTo(end_point.x() + self.spanItemWidth/2, end_point.y() - 18)
+            endLabel.lineTo(end_point.x() + self.spanItemWidth/2, end_point.y() - end_height)
 
         # 起点标签
         startLabelText = QtWidgets.QGraphicsTextItem(checi, self)
         startLabelText.setDefaultTextColor(pen.color())
         self.startLabelText = startLabelText
+        start_height = self.graph.UIConfigData()['start_label_height']
         if down:
             label.moveTo(start_point)
-            next_point = QtCore.QPoint(start_point.x(), start_point.y() - 30)
+            next_point = QtCore.QPoint(start_point.x(), start_point.y() - start_height)
             label.lineTo(next_point)
             next_point.setX(next_point.x() - self.spanItemWidth/2)
             label.moveTo(next_point)
@@ -134,7 +136,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             label.lineTo(next_point)
 
         else:
-            next_point = QtCore.QPoint(start_point.x(), start_point.y() + 30)
+            next_point = QtCore.QPoint(start_point.x(), start_point.y() + start_height)
             label.lineTo(next_point)
             next_point.setX(next_point.x() - self.spanItemWidth/2)
             next_point.setY(next_point.y())

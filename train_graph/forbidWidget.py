@@ -114,7 +114,7 @@ class ForbidWidget(QtWidgets.QWidget):
         tableWidget:QtWidgets.QTableWidget = self.tableWidget
         row = tableWidget.rowCount()
         tableWidget.insertRow(row)
-        tableWidget.setRowHeight(row,30)
+        tableWidget.setRowHeight(row,30)  # cannot infer to graph
 
         item = QtWidgets.QTableWidgetItem(f'{fazhan}{blocker}{daozhan}')
         item.setData(-1,[fazhan,daozhan])
