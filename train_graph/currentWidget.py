@@ -38,7 +38,7 @@ class CurrentWidget(QtWidgets.QWidget):
         hlayout.addWidget(splitter)
         hlayout.addWidget(checiUp)
         # layout.addLayout(hlayout)
-        flayout.addRow("上下行", hlayout)
+        flayout.addRow("上下行车次", hlayout)
         self.checiDown = checiDown
         self.checiUp = checiUp
 

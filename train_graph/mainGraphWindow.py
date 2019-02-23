@@ -476,6 +476,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             i += 1
             QtCore.QCoreApplication.processEvents()
             if dialog.wasCanceled():
+                thread.terminate()
                 return
         return
 
@@ -535,6 +536,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                 event_str = '越行'
             elif type == TrainEventType.meet:
                 event_str = '交会'
+            elif type == TrainEventType.origination:
+                event_str = '始发'
+            elif type == TrainEventType.destination:
+                event_str = '终到'
             else:
                 event_str = '未知'
             item = QtWidgets.QTableWidgetItem(event_str)
@@ -549,7 +554,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             if event["type"] == TrainEventType.pass_calculated:
                 add = '推定'
             else:
-                add = ''
+                add = event.get("note",'')
             item = QtWidgets.QTableWidgetItem(add)
             tableWidget.setItem(row, 5, item)
 
@@ -1356,8 +1361,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         layout.addWidget(label)
 
         tableWidget = QtWidgets.QTableWidget()
-        tableWidget.setColumnCount(9)
-        tableWidget.setHorizontalHeaderLabels(['车次', '站名', '到点', '开点', '类型', '停站', '方向', '始发', '终到'])
+        tableWidget.setColumnCount(10)
+        tableWidget.setHorizontalHeaderLabels(['车次', '站名', '到点', '开点',
+                                               '类型', '停站', '方向', '始发', '终到','备注'])
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
 
         header: QtWidgets.QHeaderView = tableWidget.horizontalHeader()
@@ -1366,7 +1372,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         header.setSectionsClickable(True)
         header.sectionClicked.connect(tableWidget.sortByColumn)
 
-        column_width = (80, 100, 100, 100, 80, 80, 80, 90, 90)
+        column_width = (80, 100, 100, 100, 80, 80, 80, 90, 90,90)
         for i, s in enumerate(column_width):
             tableWidget.setColumnWidth(i, s)
 
@@ -1430,6 +1436,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             text = train.zdz
             item = QtWidgets.QTableWidgetItem(text)
             tableWidget.setItem(row, 8, item)
+
+            text = node['note']
+            item = QtWidgets.QTableWidgetItem(text)
+            tableWidget.setItem(row, 9, item)
+
 
     def _station_timetable_stop_only_changed(self, timetable_dicts, tableWidget, station_name,
                                              stopOnly: bool):

@@ -736,9 +736,9 @@ class rulerPainter(QtWidgets.QWidget):
         none_text = ""
 
         for event in events:
-            text = f"{event['time'].strftime('%H:%M:%S')} {event['checi']}次 {event['type']}\n"
-            if abs((event['time']-ddsj).seconds)<360 or abs((event['time']-cfsj).seconds)<360:
-                #text = f'<span style=" font-weight:600; color:#ff0000;">{text}</span>'
+            text = f"{event['time'].strftime('%H:%M:%S')} {event['checi']}次 {event['type']}<br>"
+            if abs((event['time']-ddsj).seconds)<600 or abs((event['time']-cfsj).seconds)<600:
+                text = f'<span style="color:#ff0000;">{text}</span>'
                 pass
             if event["down"] is True:
                 down_text += text
@@ -748,17 +748,17 @@ class rulerPainter(QtWidgets.QWidget):
                 none_text += text
 
         text = f"""\
-下行：
-{down_text if down_text else '下行无冲突列车'}
-        
-上行：
-{up_text if up_text else '上行无冲突列车'}\
+下行：<br>
+{down_text if down_text else '下行无冲突列车'}<br>
+        <br>
+上行：<br>
+{up_text if up_text else '上行无冲突列车'}<br>\
         """
         if none_text:
-            text += f"\n\n{'未知方向（通常是未排图列车）：' if none_text else ''}\n"
-        f"{none_text if none_text else ''}"
+            text += f"\n\n{'未知方向（通常是未排图列车）：' if none_text else ''}<br>"
+        f"{none_text if none_text else ''}<br>"
 
-        textEdit.setText(text)
+        textEdit.setHtml(text)
         layout.addWidget(textEdit)
 
         dialog.setLayout(layout)

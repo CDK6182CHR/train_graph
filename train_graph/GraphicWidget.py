@@ -30,6 +30,8 @@ class TrainEventType(Enum):
     pass_settled = 5
     pass_calculated = 6
     unknown = -1
+    origination = 7  # 始发
+    destination = 8  # 终到
 
 
 class GraphicsWidget(QtWidgets.QGraphicsView):
@@ -961,7 +963,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         for name, mile, y in self.graph.stationMileYValues():
             if y is None:
                 continue
-            if abs(y - event_y) < 1:
+            if abs(y - event_y) < 2:  # 2019.02.23  1改为2
                 return name, None, mile  # 在本站内发生的事件
             if y > event_y:
                 try:
@@ -1005,17 +1007,25 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         events = []
         # 图定到开时间
-        for name, ddsj, cfsj in self.selectedTrain.station_infos():
+        train = self.selectedTrain
+        for dct in train.stationDicts():
+            name,ddsj,cfsj = dct['zhanming'],dct['ddsj'],dct['cfsj']
             if not self.graph.stationInLine(name):
                 continue
             if ddsj == cfsj:
+                typ = TrainEventType.pass_settled
+                if train.isSfz(name):
+                    typ = TrainEventType.origination
+                elif train.isZdz(name):
+                    typ = TrainEventType.destination
                 dict = {
-                    "type": TrainEventType.pass_settled,
+                    "type": typ,
                     "time": ddsj,
                     "former_station": name,
                     "later_station": None,
                     "another": None,
-                    "mile": self.graph.stationMile(name)
+                    "mile": self.graph.stationMile(name),
+                    "note":dct.get("note",''),
                 }
                 events.append(dict)
 
@@ -1068,11 +1078,14 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         按列车时刻表的【车站】出现顺序排序。
         TODO 这个排序可能不大靠谱
         """
-        # 先按时间排序
-        event_source.sort(key=lambda x: x["time"])
-        # 按里程排序
-        train: Train = self.selectedTrain
-        event_source.sort(key=lambda x: x["mile"])
+        # # 先按时间排序
+        # event_source.sort(key=lambda x: x["time"])
+        # # 按里程排序
+        # train: Train = self.selectedTrain
+        # event_source.sort(key=lambda x: x["mile"])
+        # 2019.02.23修改：按里程优先，时间次之的顺序排序。
+        train:Train = self.selectedTrain
+        event_source.sort(key=lambda x:(x["mile"],x["time"]))
         if not train.isDown():
             event_source.reverse()
 

@@ -297,7 +297,7 @@ class Train():
             raise Exception("No such station in timetable.")
         return st["ddsj"],st["cfsj"]
 
-    def gapBetweenStation(self,st1,st2,graph=None):
+    def gapBetweenStation(self,st1,st2,graph=None)->int:
         """
         返回两站间的运行时间
         :param graph:依赖的线路。不为None表示允许向前后推断邻近站。
@@ -309,7 +309,7 @@ class Train():
                 st_dict1 = dict
             elif stationEqual(st2,dict['zhanming']):
                 st_dict2 = dict
-
+        print("detect",self.fullCheci(),st1,st2)
         if st_dict1 is None or st_dict2 is None:
             if graph is None:
                 raise Exception("No such station gap.",st1,st2)
@@ -318,18 +318,23 @@ class Train():
                 station = st1
                 while st_dict1 is None:
                     station = graph.adjacentStation(station,ignore_f)
+                    print("adjacent found",station,ignore_f)
                     ignore_f.append(station)
                     if station is None:
                         break
                     st_dict1 = self.stationDict(station)
+                print("st_dict1 found",st_dict1)
 
                 ignore_l = [st1,st2]
                 station = st2
                 while st_dict2 is None:
                     station = graph.adjacentStation(station,ignore_l)
                     ignore_l.append(station)
+                    if station is None:
+                        break
                     st_dict2 = self.stationDict(station)
-
+        if st_dict1 is None or st_dict2 is None:
+            return -1 # no such gap
 
         dt = st_dict2["ddsj"]-st_dict1["cfsj"]
         return dt.seconds

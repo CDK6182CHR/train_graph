@@ -16,7 +16,6 @@ class ThreadDialog(QtCore.QThread):
         self.GraphicWidget=GraphicWidget
 
     def run(self):
-        #0.5秒前进1%
         """
         self.dialog.show()
         value=self.dialog.value()

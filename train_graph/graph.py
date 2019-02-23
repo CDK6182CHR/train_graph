@@ -561,6 +561,7 @@ class Graph:
                     "cfsj":st_dict["cfsj"],
                     "station_name":st_dict["zhanming"],
                     "down":train.isDown(auto_guess=True,graph=self),
+                    "note":st_dict.get("note",''),
                     "train":train,
                 }
                 timeTable.append(node)
@@ -732,8 +733,9 @@ class Graph:
     def stationMile(self,name:str):
         """
         返回车站的里程数据，若不存在返回-1.不支持域解析符。2019.02.03删除线性算法。
+        2019.02.23改为：支持域解析符。
         """
-        st = self.line.stationDictByName(name,strict=True)
+        st = self.line.stationDictByName(name)
         if st is None:
             return -1
         return st["licheng"]
@@ -741,12 +743,15 @@ class Graph:
     def adjacentStation(self,name:str,ignore:list):
         index = self.stationIndex(name)
         if index>0:
-            if self.line.stations[index-1] not in ignore:
+            if self.line.stations[index-1]['zhanming'] not in ignore:
+                # 2019.02.23修改，条件少了zhanming，not in的判断相当于没用
                 return self.line.stations[index-1]["zhanming"]
 
         if index<len(self.line.stations)-1:
-            if self.line.stations[index+1] not in ignore:
+            if self.line.stations[index+1]['zhanming'] not in ignore:
                 return self.line.stations[index+1]["zhanming"]
+        print("no adj")
+        return None
 
     def stationIndex(self,name:str):
         for i,st in enumerate(self.line.stations):
