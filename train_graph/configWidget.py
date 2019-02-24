@@ -28,7 +28,6 @@ class ConfigWidget(QtWidgets.QWidget):
         """
         vlayout = QtWidgets.QVBoxLayout()
         layout = QtWidgets.QFormLayout()
-        vlayout.addLayout(layout)
 
         label1 = QtWidgets.QLabel("起始时刻")
         spin1 = QtWidgets.QSpinBox()

@@ -62,8 +62,6 @@ class CurrentWidget(QtWidgets.QWidget):
         flayout.addRow("列车种类", comboType)
         comboType.setCurrentText("")
 
-        layout.addLayout(flayout)
-
         checkDown = QtWidgets.QCheckBox()
         checkDown.setChecked(True)
         checkDown.setText("本线下行运行")
@@ -103,7 +101,7 @@ class CurrentWidget(QtWidgets.QWidget):
         flayout.addRow("运行线宽度", spinWidth)
         spinWidth.setToolTip("设置本次车运行线宽度。使用0代表使用系统默认。")
 
-        layout.addLayout(hlayout)
+        layout.addLayout(flayout)
 
         timeTable = QtWidgets.QTableWidget()
         timeTable.setToolTip("按Alt+D将当前行到达时间复制为出发时间。")

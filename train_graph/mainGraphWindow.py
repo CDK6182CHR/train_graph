@@ -52,8 +52,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def __init__(self,filename=None):
         super().__init__()
-        self.title = "运行图系统V1.4.1"  # 一次commit修改一次版本号
-        self.build = '20190221'
+        self.title = "运行图系统V1.4.2"  # 一次commit修改一次版本号
+        self.build = '20190223'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -892,8 +892,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         actionRefresh = QtWidgets.QAction("刷新", self)
         actionRefresh.setShortcut('F5')
-        actionRefresh.triggered.connect(lambda :self.GraphWidget.paintGraph(force=True))
-        actionRefresh.triggered.connect(self._refreshDockWidgets)
+        actionRefresh.triggered.connect(self._refresh_graph)
         m1.addAction(actionRefresh)
 
         actionPaint = QtWidgets.QAction("立即铺画运行图",self)
@@ -1243,6 +1242,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget.scene.clear()
         self.GraphWidget.paintGraph()
         self._initDockWidgetContents()
+
+    def _refresh_graph(self):
+        self.statusOut("正在刷新数据")
+        self.graph.refreshData()
+        self.GraphWidget.paintGraph(force=True)
+        self._refreshDockWidgets()
+        self.statusOut('就绪')
 
     def _about(self):
         text = f"{self.title}  {self.build}\n六方车迷会谈 马兴越  保留一切权利\n"

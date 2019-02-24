@@ -389,14 +389,15 @@ class TrainItem(QtWidgets.QGraphicsItem):
         brush = QtGui.QBrush(pen.color())
         # 起点
         startPoint = self.startPoint
+        UIDict = self.graph.UIConfigData()
         if self.train.isDown():
             Rect = QtCore.QRectF(startPoint.x()-self.spanItemWidth/2,
-                                          startPoint.y()-self.spanItemHeight*0.75-30,
+                                          startPoint.y()-self.spanItemHeight*0.75-UIDict['start_label_height'],
                                           self.spanItemWidth,
                                           self.spanItemHeight*0.7)
         else:
             Rect = QtCore.QRectF(startPoint.x() - self.spanItemWidth / 2,
-                                          startPoint.y()+30,
+                                          startPoint.y()+UIDict['start_label_height'],
                                           self.spanItemWidth,
                                           self.spanItemHeight*0.7)
         self.tempRect = QtWidgets.QGraphicsRectItem(Rect,self)
@@ -416,13 +417,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
         endPoint = self.endPoint
         if train.isDown():
             rect = QtCore.QRectF(endPoint.x()-self.spanItemWidth/2,
-                                 endPoint.y()+18,
+                                 endPoint.y()+UIDict['end_label_height'],
                                  self.spanItemWidth,
                                  self.spanItemHeight*0.7
             )
         else:
             rect = QtCore.QRectF(endPoint.x() - self.spanItemWidth / 2,
-                                 endPoint.y() - 18 - self.spanItemHeight*0.7,
+                                 endPoint.y() - UIDict['end_label_height'] - self.spanItemHeight*0.7,
                                  self.spanItemWidth,
                                  self.spanItemHeight * 0.7
                                  )

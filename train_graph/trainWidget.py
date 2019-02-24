@@ -195,7 +195,7 @@ class TrainWidget(QtWidgets.QWidget):
         for train in self.graph._trains[-count:]:
             self.addTrain(train)
 
-    def trainByRow(self,row):
+    def trainByRow(self,row:int)->Train:
         item = self.trainTable.item(row, 0)
         if item is None:
             return None
@@ -224,11 +224,11 @@ class TrainWidget(QtWidgets.QWidget):
             return
         self.current_train_changed.emit(train)
 
-    def _train_table_doubleClicked(self,row):
+    def _train_table_doubleClicked(self,idx:QtCore.QModelIndex):
         """
         双击表中的行触发。计算出列车对象，然后返回
         """
-        train = self.trainByRow(row)
+        train = self.trainByRow(idx.row())
         if train is None:
             return
         self.train_double_clicked.emit(train)

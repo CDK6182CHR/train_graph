@@ -160,6 +160,31 @@ class Graph:
                 else:
                     del self.singleCheciMap[cc]
 
+    def changeTrainCheci(self,train:Train,full:str,down:str,up:str):
+        """
+        2019.02.24新增加，更新车次，并更新查找表。
+        """
+        f,d,u = train.checi
+        if full != f and self.fullCheciMap.get(f,None) is not None:
+            del self.fullCheciMap[f]
+            self.fullCheciMap[full]=train
+        reset = False
+        if d != down or u != up:
+            self.delSingleCheciMap(train)
+            reset = True
+        train.setCheci(full,down,up)
+        if reset:
+            self.addSingleCheciMap(train)
+
+    def refreshData(self):
+        """
+        2019.02.24新增。系统刷新时强制刷新所有映射表数据，保证正常工作。
+        """
+        self.setFullCheciMap()
+        self.setSingleCheciMap()
+        self.line.setNameMap()
+        self.line.setFieldMap()
+
     def loadGraph(self,filename:str):
         """
         暂定直接打开json文件读
