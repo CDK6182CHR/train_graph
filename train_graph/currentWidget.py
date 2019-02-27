@@ -333,8 +333,6 @@ class CurrentWidget(QtWidgets.QWidget):
     def _load_station_list(self, timeTable):
         """
         导入本线车站表。按上下行
-        :param timeTable:
-        :return:
         """
         flag = self.main.qustion("删除本车次时刻表信息，从本线车站表导入，是否继续？")
         if not flag:
@@ -346,7 +344,7 @@ class CurrentWidget(QtWidgets.QWidget):
         dialog.setWindowTitle("本线车站导入")
         layout = QtWidgets.QVBoxLayout()
 
-        label = QtWidgets.QLabel(f"本车次当前方向为{'下行'if down else '上行'}，已自动选中本方向车站")
+        label = QtWidgets.QLabel(f"本车次当前方向为【{'下行'if down else '上行'}】，已自动选中本方向车站")
         label.setWordWrap(True)
         layout.addWidget(label)
 
@@ -363,7 +361,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
         listWidget.setSelectionMode(listWidget.MultiSelection)
 
-        for st in self.main.graph.stationDicts():
+        for st in self.main.graph.stationDicts(reverse=not down):
             try:
                 st["direction"]
             except KeyError:

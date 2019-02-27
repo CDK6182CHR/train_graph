@@ -5,14 +5,14 @@ PyQt5（本项目使用5.10版本开发，对其他版本兼容情况未知）
 xlwt
 xlrd
 xpinyin
+Timetable_new （本人开发的另一个库。请在https://github.com/CDK6182CHR/Timetable_new获取源代码，然后执行其中的install.bat进行安装。install.bat适用于windows操作系统，如果是其他操作系统，可自行调整具体代码。）
 
 ************************
 本项目目前可直接运行的文件
-mainGraphWindow.py （主程序文件）
-lineDB.py （独立运行线路数据库维护功能）
+main.py  （主程序文件）
 
 ************************
-项目模块说明：
+项目模块说明：本项目代码皆见train_graph子文件夹。
 1. 命名为*Widget.py的模块都是某一部分子窗口，往往是停靠面板的类定义。
 2. train, line, ruler, graph, forbid是本项目的数据类，用于保存运行图的数据。
 3. mainGraphWindow.py是主程序；GraphicWidget.py是程序的核心绘图部分的实现。

@@ -777,6 +777,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.currentWidget.setData()
         self.currentDockWidget.setVisible(True)
         self.currentDockWidget.setFocus(True)
+        self.currentWidget.checiEdit.setFocus(True)
 
     def _initLineDock(self):
         dockLine = QtWidgets.QDockWidget()

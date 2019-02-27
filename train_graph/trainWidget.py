@@ -56,7 +56,7 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.setColumnWidth(6, 90)
 
         tableWidget.setViewportMargins(0, 0, 0, 0)
-        tableWidget.doubleClicked.connect(self._train_table_doubleClicked)
+        tableWidget.doubleClicked.connect(lambda idx:self._train_table_doubleClicked(idx.row()))
 
         self.trainTable = tableWidget
 
@@ -224,11 +224,11 @@ class TrainWidget(QtWidgets.QWidget):
             return
         self.current_train_changed.emit(train)
 
-    def _train_table_doubleClicked(self,idx:QtCore.QModelIndex):
+    def _train_table_doubleClicked(self,row):
         """
         双击表中的行触发。计算出列车对象，然后返回
         """
-        train = self.trainByRow(idx.row())
+        train = self.trainByRow(row)
         if train is None:
             return
         self.train_double_clicked.emit(train)
