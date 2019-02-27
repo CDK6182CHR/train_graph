@@ -439,7 +439,6 @@ class CurrentWidget(QtWidgets.QWidget):
         isShow = self.checkShow.isChecked()
         train.setIsDown(isDown)
         train.setIsShow(isShow)
-        print("line 442 current widget set is show ok")
 
         train.setUI(color=self.color, width=self.spinWidth.value())
 

@@ -66,17 +66,21 @@ class TrainWidget(QtWidgets.QWidget):
 
         btnEdit = QtWidgets.QPushButton("编辑")
         btnEdit.setMinimumWidth(80)
+        btnChange = QtWidgets.QPushButton("批量调整")
+        btnChange.setMaximumWidth(80)
         btnAdd = QtWidgets.QPushButton("添加")
         btnAdd.setMinimumWidth(80)
         btnDel = QtWidgets.QPushButton("删除")
         btnDel.setMinimumWidth(80)
 
         btnEdit.clicked.connect(lambda: self._train_table_doubleClicked(self.trainTable.currentRow()))
-        btnAdd.clicked.connect(lambda:self.addNewTrain.emit())
+        btnAdd.clicked.connect(self.addNewTrain.emit)
+        btnChange.clicked.connect(self._batch_change_ui)
         btnDel.clicked.connect(self._del_train)
 
         hlayout = QtWidgets.QHBoxLayout()
         hlayout.addWidget(btnEdit)
+        hlayout.addWidget(btnChange)
         hlayout.addWidget(btnAdd)
         hlayout.addWidget(btnDel)
         vlayout.addLayout(hlayout)
@@ -241,6 +245,87 @@ class TrainWidget(QtWidgets.QWidget):
         train.setIsShow(sender.isChecked())
         self.trainShowChanged.emit(train,sender.isChecked())
 
+    def _batch_change_ui(self):
+        """
+        2019.02.27新增。批量修改【被选中车次】的运行线宽度、颜色。
+        """
+        tableWidget = self.trainTable
+        rows = []
+        for idx in tableWidget.selectedIndexes():
+            row = idx.row()
+            if row not in rows:
+                rows.append(row)
+        self.batchRows = rows
+
+        if not self.qustion(f"请在上表中选择车次来批量调整线宽、颜色，"
+                            f"可用本停靠面板顶上的“筛选”来选择具有指定特征的车次。"
+                            f"当前选择的车次个数为*{len(rows)}*，是否继续？"):
+            return
+
+        dialog = QtWidgets.QDialog(self)
+        self.batchDialog = dialog
+        dialog.setWindowTitle('批量调整车次')
+        vlayout = QtWidgets.QVBoxLayout()
+        flayout = QtWidgets.QFormLayout()
+
+        # 颜色
+        hlayout = QtWidgets.QHBoxLayout()
+        btnColor = QtWidgets.QPushButton('系统默认')
+        self.btnColor = btnColor
+        btnColor.clicked.connect(self._select_color)
+        btnDefaultColor = QtWidgets.QPushButton('使用默认')
+        btnDefaultColor.clicked.connect(self._default_color)
+        self.btnDefaultColor = btnDefaultColor
+        btnDefaultColor.setEnabled(False)
+        hlayout.addWidget(btnColor)
+        hlayout.addWidget(btnDefaultColor)
+        flayout.addRow('运行线颜色',hlayout)
+
+        # 运行线宽度
+        spinWidth = QtWidgets.QDoubleSpinBox()
+        spinWidth.setDecimals(2)
+        spinWidth.setSingleStep(0.5)
+        self.spinWidth = spinWidth
+        spinWidth.setMaximumWidth(100)
+        flayout.addRow('运行线宽度',spinWidth)
+
+        vlayout.addLayout(flayout)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton("确定")
+        btnCancel = QtWidgets.QPushButton("取消")
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnCancel)
+        btnOk.clicked.connect(self._batch_change_ok)
+        btnCancel.clicked.connect(dialog.close)
+
+        vlayout.addLayout(hlayout)
+        dialog.setLayout(vlayout)
+        dialog.exec_()
+
+    def _select_color(self):
+        color:QtGui.QColor = QtWidgets.QColorDialog.getColor()
+        color_str = "#%02X%02X%02X" % (color.red(), color.green(), color.blue())
+        self.btnColor.setStyleSheet(f"color:rgb({color.red()},{color.green()},{color.blue()})")
+        self.btnColor.setText(color_str)
+        self.btnDefaultColor.setEnabled(True)
+
+    def _default_color(self):
+        self.btnColor.setStyleSheet("default")
+        self.btnColor.setText('系统默认')
+        self.btnDefaultColor.setEnabled(False)
+
+    def _batch_change_ok(self):
+        for row in self.batchRows:
+            train = self.trainByRow(row)
+            color_str = self.btnColor.text()
+            if color_str == '系统默认':
+                color_str = ''
+            train.setUI(color=color_str,width=self.spinWidth.value())
+            train.updateUI()
+        self.batchDialog.close()
+        self.showStatus.emit(f'批量修改完成，共修改{len(self.batchRows)}个车次')
+
     def _del_train(self):
         tableWidget = self.trainTable
         rows = []
@@ -265,6 +350,7 @@ class TrainWidget(QtWidgets.QWidget):
             train = tableWidget.item(row, 0).data(-1)
             self.graph.delTrain(train)
             tableWidget.removeRow(row)
+            del self.trainMapToRow[train]
             if self.main:
                 self.main.GraphWidget.delTrainLine(train)
                 progressDialog.setLabelText(f'正在删除车次({i+1}/{len(rows)}): {train.fullCheci()} ')
@@ -277,4 +363,17 @@ class TrainWidget(QtWidgets.QWidget):
 
         if count:
             self.showStatus.emit(f"成功删除{count}个车次")
+
+    def _dout(self, note: str):
+        QtWidgets.QMessageBox.information(self, "提示", note)
+
+    def qustion(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self, '车次编辑', note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default
 

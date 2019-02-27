@@ -53,7 +53,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.title = "运行图系统V1.4.2"  # 一次commit修改一次版本号
-        self.build = '20190223'
+        self.build = '20190227'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))

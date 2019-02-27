@@ -939,6 +939,10 @@ class Train():
         if self.item is not None:
             self.item.setColor()
 
+    def updateUI(self):
+        if self.item is not None:
+            self.item.resetUI()
+
     def stationDicts(self):
         for dct in self.timetable:
             yield dct

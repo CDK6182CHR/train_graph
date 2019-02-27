@@ -257,7 +257,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         color = QtGui.QColor(color_str)
         return color
 
-    def _trainPen(self):
+    def _trainPen(self)->QtGui.QPen:
         """
         Decide QPen used to draw path.
         """
@@ -501,6 +501,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 sub.setDefaultTextColor(color)
         self.color = color
 
+    def resetUI(self):
+        """
+        2019.02.27添加，由trainWidget批量修改调用。已知train对象数据已经修改好，更新item的颜色和宽度。
+        """
+        self.setColor()
+        pen:QtGui.QPen = self._trainPen()
+        self.pathItem.setPen(pen)
 
     def paint(self, QPainter, QStyleOptionGraphicsItem, widget=None):
         return

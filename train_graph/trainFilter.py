@@ -6,6 +6,7 @@ from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from .graph import Graph
 from .train import Train
+from Timetable_new.utility import stationEqual
 import re
 
 class TrainFilter(QtCore.QObject):
@@ -28,6 +29,13 @@ class TrainFilter(QtCore.QObject):
         self.useType = False
         self.showOnly = False
         self.direction = self.DownAndUp
+        self.startStations = []
+        self.endStations = []
+        self.useStart = False
+        self.useEnd = False
+        self.startCache = [] # 全程不允许创建空对象
+        self.endCache = []
+        self.reverse = False
 
     def setFilter(self):
         dialog = QtWidgets.QDialog(self.parent)
@@ -60,6 +68,22 @@ class TrainFilter(QtCore.QObject):
         btnExclude.setMaximumWidth(120)
         flayout.addRow(excludeCheck,btnExclude)
 
+        startCheck = QtWidgets.QCheckBox('在选定站始发')
+        self.startCheck = startCheck
+        startCheck.setChecked(self.useStart)
+        btnStart = QtWidgets.QPushButton('设置始发站')
+        btnStart.clicked.connect(lambda:self._select_start_or_end(self.startStations,self.startCache,'始发站'))
+        btnStart.setMaximumWidth(120)
+        flayout.addRow(startCheck,btnStart)
+
+        endCheck = QtWidgets.QCheckBox('在选定站终到')
+        self.endCheck = endCheck
+        endCheck.setChecked(self.useEnd)
+        btnEnd = QtWidgets.QPushButton('设置终到站')
+        btnEnd.clicked.connect(lambda:self._select_start_or_end(self.endStations,self.endCache,'终到站'))
+        btnEnd.setMaximumWidth(120)
+        flayout.addRow(endCheck,btnEnd)
+
         radioDown = QtWidgets.QRadioButton('下行')
         radioUp = QtWidgets.QRadioButton('上行')
         radioAll = QtWidgets.QRadioButton("全部")
@@ -86,6 +110,11 @@ class TrainFilter(QtCore.QObject):
         self.checkShowOnly = checkShowOnly
         flayout.addRow('只包括当前显示车次',checkShowOnly)
 
+        checkReverse = QtWidgets.QCheckBox()
+        checkReverse.setChecked(self.reverse)
+        self.checkReverse = checkReverse
+        flayout.addRow('反向选择',checkReverse)
+
         hlayout = QtWidgets.QHBoxLayout()
         btnOk = QtWidgets.QPushButton("确定")
         btnClear = QtWidgets.QPushButton("清空")
@@ -108,13 +137,15 @@ class TrainFilter(QtCore.QObject):
         dialog.setWindowTitle('列车类型选择')
         layout = QtWidgets.QVBoxLayout()
 
+        if self.typesCache is None:
+            self.typesCache = self.types[:]
         typeList = QtWidgets.QListWidget()
         self.typeList = typeList
         self.typeList.setSelectionMode(typeList.MultiSelection)
         for t in self.graph.typeList:
             item = QtWidgets.QListWidgetItem(t)
             typeList.addItem(item)
-            if t in self.types:
+            if t in self.typesCache:
                 item.setSelected(True)
         layout.addWidget(typeList)
 
@@ -150,7 +181,9 @@ class TrainFilter(QtCore.QObject):
         includeTable.setColumnCount(1)
         includeTable.setHorizontalHeaderLabels(('车次',))
         includeTable.setColumnWidth(0,200)
-        for c in self.includes:
+        if self.includesCache is None:
+            self.includesCache=self.includes[:]
+        for c in self.includesCache:
             self._add_includeTable_row(c)
         layout.addWidget(includeTable)
 
@@ -213,7 +246,10 @@ class TrainFilter(QtCore.QObject):
         excludeTable.setColumnCount(1)
         excludeTable.setHorizontalHeaderLabels(('车次',))
         excludeTable.setColumnWidth(0,200)
-        for c in self.excludes:
+
+        if self.excludesCache is None:
+            self.excludesCache = self.excludes[:]
+        for c in self.excludesCache:
             self._add_excludeTable_row(c)
         layout.addWidget(excludeTable)
 
@@ -262,6 +298,113 @@ class TrainFilter(QtCore.QObject):
                 self.excludesCache.append(checi)
         self.excludeDialog.close()
 
+    # 按始发终到站筛选
+    def _select_start_or_end(self,data:list,cache:list,title):
+        """
+        选择始发站和终到站的操作合并到一个函数
+        """
+        if not cache:
+            cache.extend(data)
+        dialog = QtWidgets.QDialog(self.dialog)
+        dialog.setWindowTitle(title)
+        vlayout = QtWidgets.QVBoxLayout()
+
+        btnImport = QtWidgets.QPushButton("导入本线站表")
+        vlayout.addWidget(btnImport)
+
+        tableWidget = QtWidgets.QTableWidget()
+        tableWidget.setColumnCount(1)
+        tableWidget.setHorizontalHeaderLabels(('站名',))
+        tableWidget.setColumnWidth(0,120)
+        tableWidget.setEditTriggers(tableWidget.CurrentChanged)
+        vlayout.addWidget(tableWidget)
+
+        for name in cache:
+            self._add_start_end_row(tableWidget,name)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnAdd = QtWidgets.QPushButton('添加')
+        btnDel = QtWidgets.QPushButton('删除')
+        hlayout.addWidget(btnAdd)
+        hlayout.addWidget(btnDel)
+        btnAdd.clicked.connect(lambda:self._add_start_end_row(tableWidget))
+        btnDel.clicked.connect(lambda:self._del_start_end_row(tableWidget))
+        vlayout.addLayout(hlayout)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton('确定')
+        btnCancel = QtWidgets.QPushButton('取消')
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnCancel)
+        vlayout.addLayout(hlayout)
+        btnOk.clicked.connect(lambda:self._start_or_end_ok(tableWidget,dialog,data,cache))
+        btnCancel.clicked.connect(dialog.close)
+
+        btnImport.clicked.connect(lambda:self._import_local_stations(tableWidget,dialog))
+        dialog.setLayout(vlayout)
+        dialog.exec_()
+
+    def _import_local_stations(self,tableWidget:QtWidgets.QTableWidget,pardialog:QtWidgets.QDialog):
+        """
+        导入站表。pardialog只用来设置parent。
+        """
+        dialog = QtWidgets.QDialog(pardialog)
+        dialog.setWindowTitle('导入本线站表')
+        label = QtWidgets.QLabel("请在列表中选择选择需要导入的本线站名，或直接点击下方的全选按钮。")
+        label.setWordWrap(True)
+        vlayout = QtWidgets.QVBoxLayout()
+        vlayout.addWidget(label)
+
+        listWidget = QtWidgets.QListWidget()
+        listWidget.setSelectionMode(listWidget.MultiSelection)
+        for name in self.graph.stations():
+            listWidget.addItem(name)
+        vlayout.addWidget(listWidget)
+        dialog.setLayout(vlayout)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton("确定")
+        btnAll = QtWidgets.QPushButton("全选")
+        btnCancel = QtWidgets.QPushButton("取消")
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnAll)
+        hlayout.addWidget(btnCancel)
+        btnOk.clicked.connect(lambda:self._import_ok(dialog,tableWidget,listWidget))
+        btnAll.clicked.connect(lambda:self._import_all(dialog,tableWidget))
+        btnCancel.clicked.connect(dialog.close)
+        vlayout.addLayout(hlayout)
+        dialog.exec_()
+
+    def _import_ok(self,dialog,tableWidget:QtWidgets.QTableWidget,listWidget:QtWidgets.QListWidget):
+        for item in listWidget.selectedItems():
+            self._add_start_end_row(tableWidget,item.text())
+        dialog.close()
+
+    def _import_all(self,dialog,tableWidget:QtWidgets.QTableWidget):
+        for st in self.graph.stations():
+            self._add_start_end_row(tableWidget,st)
+        dialog.close()
+
+    def _add_start_end_row(self,tableWidget:QtWidgets.QTableWidget,name=None):
+        row = tableWidget.rowCount()
+        tableWidget.insertRow(row)
+        if name is None:
+            name = ''
+        tableWidget.setItem(row,0,QtWidgets.QTableWidgetItem(name))
+        tableWidget.setRowHeight(row,30)
+
+    def _del_start_end_row(self,tableWidget:QtWidgets.QTableWidget):
+        tableWidget.removeRow(tableWidget.currentRow())
+
+    def _start_or_end_ok(self,tableWidget:QtWidgets.QTableWidget,dialog:QtWidgets.QDialog,
+                         data:list,cache:list):
+        cache.clear()
+        for row in range(tableWidget.rowCount()):
+            txt = tableWidget.item(row,0).text()
+            if txt not in cache:
+                cache.append(txt)
+        dialog.close()
+
     def _ok_cliecked(self):
         if self.includesCache is not None:
             self.includes = self.includesCache
@@ -272,11 +415,18 @@ class TrainFilter(QtCore.QObject):
         if self.typesCache is not None:
             self.types = self.typesCache
             self.typesCache = None
+        self.startStations = self.startCache[:]
+        self.endStations = self.endCache[:]
+        self.startCache.clear()
+        self.endCache.clear()
 
         self.useExclude = self.excludeCheck.isChecked()
         self.useInclude = self.includeCheck.isChecked()
         self.useType = self.typeCheck.isChecked()
+        self.useStart = self.startCheck.isChecked()
+        self.useEnd = self.endCheck.isChecked()
         self.showOnly = self.checkShowOnly.isChecked()
+        self.reverse = self.checkReverse.isChecked()
 
         if self.radioDown.isChecked():
             self.direction = self.DownOnly
@@ -302,6 +452,12 @@ class TrainFilter(QtCore.QObject):
         self.excludes = []
         self.direction = self.DownAndUp
         self.showOnly = False
+        self.startStations.clear()
+        self.startCache.clear()
+        self.useStart = False
+        self.endStations.clear()
+        self.endCache.clear()
+        self.useEnd = False
         self.dialog.close()
         self.FilterChanged.emit()
 
@@ -320,8 +476,6 @@ class TrainFilter(QtCore.QObject):
     def checkExclude(self,train:Train):
         """
         检查是否被排除。被排除返回True
-        :param train:
-        :return:
         """
         if not self.useExclude:
             return False
@@ -358,9 +512,30 @@ class TrainFilter(QtCore.QObject):
             return True
         return False
 
+    def checkStartEnd(self,train):
+        # 返回False，True保留到最后
+        if self.useStart:
+            for st in self.startStations:
+                if stationEqual(train.sfz,st):
+                    break
+            else:
+                return False
+        if self.useEnd:
+            for st in self.endStations:
+                if stationEqual(train.zdz,st):
+                    break
+            else:
+                return False
+        return True
+
+
     def check(self,train):
-        return (self.checkShow(train) and self.checkDir(train) and self.checkType(train) \
-               and not self.checkExclude(train)) or self.checkInclude(train)
+        result = (self.checkShow(train) and self.checkDir(train) and self.checkType(train) \
+               and (not self.checkExclude(train)) and self.checkStartEnd(train)) \
+               or self.checkInclude(train)
+        if self.reverse:
+            return not result
+        return result
 
     def setGraph(self,graph):
         self.graph = graph
