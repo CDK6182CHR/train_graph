@@ -234,8 +234,10 @@ class Line():
         """
         返回name指向车站的direction参数，若无此key，设为0x3；若无此车站，返回None.
         2019.02.02 删除线性算法。
+        2019.02.28 增加域解析符支持。
         """
-        dct = self.nameMap.get(name,None)
+        lst = self.fieldMap.get(name.split('::')[0],None)
+        dct = self.nameMap.get(lst[0],None) if lst else None
         if dct is None:
             return None
         return dct.setdefault('direction',0x3)

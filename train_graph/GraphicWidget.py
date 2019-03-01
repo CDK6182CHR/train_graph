@@ -8,7 +8,7 @@ import traceback
 cgitb.enable(format='text')
 
 import sys
-from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5 import QtWidgets, QtGui, QtCore, QtPrintSupport
 from PyQt5.QtCore import Qt
 from .graph import Graph
 from .train import Train
@@ -928,10 +928,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         font.setBold(True)
         font.setUnderline(True)
         painter.setFont(font)
-        painter.drawText(self.margins["left"], 80, "{}{}-{}间列车运行图  {}km".format(self.graph.lineName(),
+        painter.drawText(self.margins["left"], 80, "{}{}-{}间列车运行图".format(self.graph.lineName(),
                                                                                 self.graph.firstStation(),
                                                                                 self.graph.lastStation(),
-                                                                                self.graph.lineLength()),
+                                                                               ),
                          )
         if self.graph.markdown():
             font.setPixelSize(20)
@@ -951,6 +951,59 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         painter.end()
         print(flag)
         print("save ok")
+        self._resetDistanceAxis()
+        self._resetTimeAxis()
+
+    def savePdf(self,filename:str='output/0.pdf'):
+        self.marginItemGroups["left"].setX(0)
+        self.marginItemGroups["right"].setX(0)
+        self.marginItemGroups["up"].setY(0)
+        self.marginItemGroups["down"].setY(0)
+        self.nowItem.setX(0)
+        self.nowItem.setY(0)
+
+        printer = QtPrintSupport.QPrinter(QtPrintSupport.QPrinter.HighResolution)
+        # printer.setResolution(300)
+        printer.setOutputFormat(QtPrintSupport.QPrinter.PdfFormat)
+        printer.setOutputFileName(filename)
+        note_apdx = 0
+        if self.graph.markdown():
+            note_apdx = 80
+        size = QtCore.QSize(self.scene.width(),self.scene.height()+100+note_apdx)
+        pageSize = QtGui.QPageSize(size)
+        printer.setPageSize(pageSize)
+
+        # printer = QtGui.QPdfWriter(filename)
+        # size = QtCore.QSize(self.scene.width(),self.scene.height()+200)
+        # pageSize = QtGui.QPageSize(size)
+        # pageSize = QtGui.QPagedPaintDevice.PageSize()
+        # printer.setPageSize(pageSize)
+
+        painter = QtGui.QPainter()
+        painter.begin(printer)
+        painter.scale(printer.width()/self.scene.width(),printer.width()/self.scene.width())
+        painter.setPen(QtGui.QPen(QtGui.QColor(self.graph.UIConfigData()["text_color"])))
+        font = QtGui.QFont()
+        font.setPixelSize(50)
+        font.setBold(False)
+        font.setUnderline(True)
+        painter.setFont(font)
+        painter.drawText(self.margins["left"], 80, "{}{}-{}间列车运行图".format(self.graph.lineName(),
+                                                                                self.graph.firstStation(),
+                                                                                self.graph.lastStation(),
+                                                                                ),
+                         )
+        if self.graph.markdown():
+            font.setPixelSize(20)
+            font.setBold(False)
+            font.setUnderline(False)
+            painter.setFont(font)
+            nnn = '\n'
+            painter.drawText(self.margins["left"], self.scene.height() + 100 + 40,
+                             f"备注：{self.graph.markdown().replace(nnn,' ')}"
+                             )
+        self.scene.render(painter, target=QtCore.QRectF(0, 100, self.scene.width(), self.scene.height()))
+        painter.end()
         self._resetDistanceAxis()
         self._resetTimeAxis()
 

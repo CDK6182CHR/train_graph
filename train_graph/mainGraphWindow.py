@@ -52,8 +52,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def __init__(self,filename=None):
         super().__init__()
-        self.title = "运行图系统V1.4.2"  # 一次commit修改一次版本号
-        self.build = '20190227'
+        self.title = "运行图系统V1.4.3"  # 一次commit修改一次版本号
+        self.build = '20190301'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -907,8 +907,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         m1.addAction(actionOutput)
         # self.actionOutput=actionOutput
 
+        actionOutPdf = QtWidgets.QAction(QtGui.QIcon(),"导出矢量pdf运行图",self)
+        actionOutPdf.setShortcut("ctrl+shift+T")
+        actionOutPdf.triggered.connect(self._outputPdf)
+        m1.addAction(actionOutPdf)
+
         actionOutExcel = QtWidgets.QAction('导出点单', self)
-        actionOutExcel.setShortcut('ctrl+Shift+T')
+        actionOutExcel.setShortcut('ctrl+alt+T')
         actionOutExcel.triggered.connect(self._outExcel)
         self.addAction(actionOutExcel)
 
@@ -1175,8 +1180,18 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget.save(filename)
         self._dout("导出成功！")
 
+    def _outputPdf(self):
+        filename, ok = QtWidgets.QFileDialog.getSaveFileName(self,
+                                                             caption='导出pdf运行图',
+                                                             directory=self.graph.lineName(),
+                                                             filter="PDF图像(*.pdf)")
+        if not filename or not ok:
+            return
+        self.GraphWidget.savePdf(filename)
+        self._dout("导出PDF成功！")
+
     def _outExcel(self):
-        filename = QtWidgets.QFileDialog.getSaveFileName(self, caption='导出运行图', filter="图像(*.xlsx)")[0]
+        filename = QtWidgets.QFileDialog.getSaveFileName(self, caption='导出运行图', filter="Excel文件(*.xlsx)")[0]
         if not filename:
             return
         self.graph.save_excel(filename)
