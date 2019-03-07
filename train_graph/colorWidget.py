@@ -26,7 +26,7 @@ class ColorWidget(QtWidgets.QDialog):
         self.gridBtn = gridBtn
         gridBtn.setStyleSheet(f"background-color:rgb({gridColor.red()},{gridColor.green()},{gridColor.blue()})")
         gridBtn.setMaximumWidth(150)
-        gridBtn.clicked.connect(lambda: self._choose_color(gridColor))
+        gridBtn.clicked.connect(lambda: self._choose_color(gridColor,gridBtn))
         flayout.addRow("运行线格颜色", gridBtn)
 
         textBtn = QtWidgets.QPushButton(UIDict["text_color"])
@@ -35,7 +35,7 @@ class ColorWidget(QtWidgets.QDialog):
         self.textBtn = textBtn
         textBtn.setStyleSheet(f"background-color:rgb({textColor.red()},{textColor.green()},{textColor.blue()})")
         textBtn.setMaximumWidth(150)
-        textBtn.clicked.connect(lambda: self._choose_color(textColor))
+        textBtn.clicked.connect(lambda: self._choose_color(textColor,textBtn))
         flayout.addRow("文字颜色", textBtn)
 
         defaultBtn = QtWidgets.QPushButton(UIDict["default_colors"]["default"])
@@ -45,7 +45,7 @@ class ColorWidget(QtWidgets.QDialog):
         defaultBtn.setStyleSheet(
             f"background-color:rgb({defaultColor.red()},{defaultColor.green()},{defaultColor.blue()})")
         defaultBtn.setMaximumWidth(150)
-        defaultBtn.clicked.connect(lambda: self._choose_color(defaultColor))
+        defaultBtn.clicked.connect(lambda: self._choose_color(defaultColor,defaultBtn))
         flayout.addRow("默认运行线颜色", defaultBtn)
 
         layout.addLayout(flayout)
@@ -118,8 +118,7 @@ class ColorWidget(QtWidgets.QDialog):
         color = QtGui.QColor(color_str)
         btn.setStyleSheet(f"background-color:rgb({color.red()},{color.green()},{color.blue()})")
 
-    def _choose_color(self, initColor: QtGui.QColor):
-        btn: QtWidgets.QPushButton = self.sender()
+    def _choose_color(self, initColor: QtGui.QColor,btn:QtWidgets.QPushButton):
         color: QtGui.QColor = QtWidgets.QColorDialog.getColor(initColor, title=btn.text())
         btn.setText("#%02X%02X%02X" % (color.red(), color.green(), color.blue()))
         btn.setStyleSheet(f"background-color:rgb({color.red()},{color.green()},{color.blue()})")

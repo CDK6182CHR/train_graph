@@ -52,8 +52,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def __init__(self,filename=None):
         super().__init__()
-        self.title = "运行图系统V1.4.3"  # 一次commit修改一次版本号
-        self.build = '20190301'
+        self.name = "pyETRC列车运行图系统"
+        self.version = "V1.5.1"
+        self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
+        self.build = '20190307'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -136,6 +138,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("系统正在初始化……")
         self.setCentralWidget(self.GraphWidget)
         self._initMenuBar()
+        self._initToolBar()
 
         self._initDockFrames()
         self._initDockWidgetContents()
@@ -1123,6 +1126,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             raise Exception("No action name {}, add or check it.".format(name))
         action.setChecked(dock.isVisible())
 
+    def _initToolBar(self):
+        pass
+        # toolBar=QtWidgets.QToolBar()
+        # actionTrain = QtWidgets.QAction('车次编辑',self)
+        # toolBar.addAction(actionTrain)
+        # self.addToolBar(Qt.TopToolBarArea,toolBar)
+
     def _newGraph(self):
         flag = QtWidgets.QMessageBox.question(self, self.title, "是否保存对运行图的修改？",
                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No |
@@ -1177,7 +1187,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                                                              filter="图像(*.png)")
         if not filename or not ok:
             return
-        self.GraphWidget.save(filename)
+        self.GraphWidget.save(filename,f"由{self.name}{self.version}导出")
         self._dout("导出成功！")
 
     def _outputPdf(self):
@@ -1187,8 +1197,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                                                              filter="PDF图像(*.pdf)")
         if not filename or not ok:
             return
-        self.GraphWidget.savePdf(filename)
-        self._dout("导出PDF成功！")
+        if self.GraphWidget.savePdf(filename,f"由{self.name}{self.version}导出"):
+            self._dout("导出PDF成功！")
 
     def _outExcel(self):
         filename = QtWidgets.QFileDialog.getSaveFileName(self, caption='导出运行图', filter="Excel文件(*.xlsx)")[0]

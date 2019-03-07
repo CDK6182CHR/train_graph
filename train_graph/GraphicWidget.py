@@ -704,7 +704,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         except KeyError:
             self.graph.UIConfigData()["showFullCheci"] = False
         item = TrainItem(train, self.graph, self,self.graph.UIConfigData().setdefault('valid_width',3),
-                         self.graph.UIConfigData()['showFullCheci'])
+                         showFullCheci=self.graph.UIConfigData()['showFullCheci'],
+                         markMode=self.graph.UIConfigData()['show_time_mark'])
         # item.setLine()  # 重复调用，init中已经调用过一次了，故删去。
         if train.item is not None:
             self.scene.addItem(item)
@@ -901,7 +902,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self._resetTimeAxis()
         self._resetDistanceAxis()
 
-    def save(self, filename: str = 'output/test.png'):
+    def save(self,filename, mark:str):
         """
         导出为PNG。
         """
@@ -909,14 +910,12 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.marginItemGroups["right"].setX(0)
         self.marginItemGroups["up"].setY(0)
         self.marginItemGroups["down"].setY(0)
-        self.nowItem.setX(0);
+        self.nowItem.setX(0)
         self.nowItem.setY(0)
 
         # image = QtGui.QImage(self.scene.width(),self.scene.height(),QtGui.QImage.Format_ARGB32)
         # image = QtGui.QImage(self.scene.sceneRect().toSize,QtGui.QImage.Format_ARGB32)
-        note_apdx = 0
-        if self.graph.markdown():
-            note_apdx = 80
+        note_apdx = 80
         image = QtGui.QImage(self.scene.width(), self.scene.height() + 100 + note_apdx, QtGui.QImage.Format_ARGB32)
         image.fill(Qt.white)
 
@@ -926,22 +925,23 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         font = QtGui.QFont()
         font.setPixelSize(50)
         font.setBold(True)
-        font.setUnderline(True)
+        # font.setUnderline(True)
         painter.setFont(font)
         painter.drawText(self.margins["left"], 80, "{}{}-{}间列车运行图".format(self.graph.lineName(),
                                                                                 self.graph.firstStation(),
                                                                                 self.graph.lastStation(),
                                                                                ),
                          )
+        font.setPixelSize(20)
+        font.setBold(False)
+        font.setUnderline(False)
+        painter.setFont(font)
         if self.graph.markdown():
-            font.setPixelSize(20)
-            font.setBold(False)
-            font.setUnderline(False)
-            painter.setFont(font)
             nnn = '\n'
             painter.drawText(self.margins["left"], self.scene.height() + 100 + 40,
                              f"备注：{self.graph.markdown().replace(nnn,' ')}"
                              )
+        painter.drawText(self.scene.width()-400,self.scene.height()+100+40,mark)
 
         painter.setRenderHint(painter.Antialiasing, True)
         self.scene.render(painter, target=QtCore.QRectF(0, 100, self.scene.width(), self.scene.height()))
@@ -954,7 +954,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self._resetDistanceAxis()
         self._resetTimeAxis()
 
-    def savePdf(self,filename:str='output/0.pdf'):
+    def savePdf(self,filename:str,mark:str)->bool:
         self.marginItemGroups["left"].setX(0)
         self.marginItemGroups["right"].setX(0)
         self.marginItemGroups["up"].setY(0)
@@ -966,9 +966,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # printer.setResolution(300)
         printer.setOutputFormat(QtPrintSupport.QPrinter.PdfFormat)
         printer.setOutputFileName(filename)
-        note_apdx = 0
-        if self.graph.markdown():
-            note_apdx = 80
+        note_apdx = 80
         size = QtCore.QSize(self.scene.width(),self.scene.height()+100+note_apdx)
         pageSize = QtGui.QPageSize(size)
         printer.setPageSize(pageSize)
@@ -981,31 +979,36 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         painter = QtGui.QPainter()
         painter.begin(printer)
+        if not painter.isActive():
+            QtWidgets.QMessageBox.warning(self,'错误','保存pdf失败，可能是文件占用。')
+            return False
         painter.scale(printer.width()/self.scene.width(),printer.width()/self.scene.width())
         painter.setPen(QtGui.QPen(QtGui.QColor(self.graph.UIConfigData()["text_color"])))
         font = QtGui.QFont()
         font.setPixelSize(50)
         font.setBold(False)
-        font.setUnderline(True)
+        # font.setUnderline(True)
         painter.setFont(font)
         painter.drawText(self.margins["left"], 80, "{}{}-{}间列车运行图".format(self.graph.lineName(),
                                                                                 self.graph.firstStation(),
                                                                                 self.graph.lastStation(),
                                                                                 ),
                          )
+        font.setPixelSize(20)
+        font.setBold(False)
+        font.setUnderline(False)
+        painter.setFont(font)
         if self.graph.markdown():
-            font.setPixelSize(20)
-            font.setBold(False)
-            font.setUnderline(False)
-            painter.setFont(font)
             nnn = '\n'
             painter.drawText(self.margins["left"], self.scene.height() + 100 + 40,
                              f"备注：{self.graph.markdown().replace(nnn,' ')}"
                              )
+        painter.drawText(self.scene.width() - 400, self.scene.height() + 100 + 40, mark)
         self.scene.render(painter, target=QtCore.QRectF(0, 100, self.scene.width(), self.scene.height()))
         painter.end()
         self._resetDistanceAxis()
         self._resetTimeAxis()
+        return True
 
     def _stationFromYValue(self, event_y: int):
         """

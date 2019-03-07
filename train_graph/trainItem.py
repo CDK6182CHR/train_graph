@@ -10,9 +10,16 @@ from PyQt5.QtCore import Qt
 from .graph import Graph
 from .train import Train
 from Timetable_new.utility import isKeche
+from datetime import datetime,timedelta
 
 class TrainItem(QtWidgets.QGraphicsItem):
-    def __init__(self,train:Train,graph:Graph,graphWidget,validWidth = 1,showFullCheci=False,parent=None):
+    # 标记数字所在方向的常量
+    NE = 1
+    NW = 2
+    SW = 3
+    SE = 4
+    def __init__(self,train:Train,graph:Graph,graphWidget,validWidth = 1,
+                 showFullCheci=False,markMode=1,parent=None):
         super().__init__(parent)
         self.train = train
         self.graph = graph
@@ -20,6 +27,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.showFullCheci=showFullCheci
         self.validWidth = validWidth
         self.down = None
+        self.markMode = markMode
+        self.markTime = (markMode == 2)
 
         self.pathItem = None
         self.expandItem = None
@@ -28,6 +37,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.endLabelItem = None
         self.endLabelText = None
         self.spanItems = []
+        self.markLabels = []
         self.startRect = None
         self.endRect = None
         self.isHighlighted = False
@@ -55,6 +65,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         pen = self._trainPen()
         lineColor = pen.color()
         labelPen = self._trainPen()
+        self.pen = pen
         labelPen.setWidth(1)
 
         span_left = []
@@ -148,10 +159,18 @@ class TrainItem(QtWidgets.QGraphicsItem):
             label.lineTo(next_point)
 
         # 跨界点标签
+        UIDict = self.graph.UIConfigData()
+        span_width = UIDict["margins"]["right"]-UIDict["margins"]["label_width"]
+        font = QtGui.QFont()
+
+        if self.spanItemWidth > span_width:
+            stretch = int(100 * span_width / self.spanItemWidth)
+            font.setStretch(stretch)
         for y in span_left:
             textItem: QtWidgets.QGraphicsTextItem = QtWidgets.QGraphicsTextItem(checi, self)
             textItem.setDefaultTextColor(pen.color())
-            textItem.setX(self.graphWidget.margins["left"] - self.spanItemWidth)
+            textItem.setFont(font)
+            textItem.setX(self.graphWidget.margins["left"] - textItem.boundingRect().width())
             textItem.setY(y - self.spanItemHeight / 2)
             self.spanItems.append(textItem)
 
@@ -159,6 +178,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             textItem: QtWidgets.QGraphicsTextItem = QtWidgets.QGraphicsTextItem(checi, self)
             textItem.setDefaultTextColor(pen.color())
             textItem.setX(self.graphWidget.margins["left"] + width)
+            textItem.setFont(font)
             textItem.setY(y - 10)
             self.spanItems.append(textItem)
 
@@ -195,6 +215,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
     def _setPathItem(self,
             span_left:list,span_right:list,
+            mark_only:bool=False
         )->(QtGui.QPainterPath,QtCore.QRectF,QtCore.QRectF,):
         """
         从setLine中抽离出来的绘制pathItem函数。返回：path,start_point,end_point
@@ -205,13 +226,15 @@ class TrainItem(QtWidgets.QGraphicsItem):
         down = train.down  # 本线上下行判断
         last_point = None
         start_point = None
+        start_dd,start_cf = None,None
         for dct in train.stationDicts():
             # 计算并添加运行线，上下行判断
             station, ddsj, cfsj = dct["zhanming"],dct["ddsj"],dct["cfsj"]
             ddpoint = self.graphWidget.stationPosCalculate(station, ddsj)
             cfpoint = self.graphWidget.stationPosCalculate(station, cfsj)
+            stopped = (ddsj!=cfsj)
 
-            if ddpoint is None:
+            if ddpoint is None or cfpoint is None:
                 continue
 
             if self.graph.stationDirection(station) == 0x0:
@@ -223,12 +246,14 @@ class TrainItem(QtWidgets.QGraphicsItem):
             station_count += 1
 
             if station_count == 1:
+                start_dd,start_cf = ddsj,cfsj
                 path.moveTo(ddpoint)
                 start_point = ddpoint
 
             else:
                 # path.lineTo(ddpoint)
-                self._incline_line(path, last_point, ddpoint, span_left, span_right)
+                if not mark_only:
+                    self._incline_line(path, last_point, ddpoint, span_left, span_right)
                 # 上下行判别
                 if down is None:
                     if station_count == 2:
@@ -236,12 +261,41 @@ class TrainItem(QtWidgets.QGraphicsItem):
                             down = True
                         else:
                             down = False
-
-            self._H_line(path, ddpoint, cfpoint, span_left, span_right,
+            if not mark_only:
+                self._H_line(path, ddpoint, cfpoint, span_left, span_right,
                          self.graph.UIConfigData()["show_line_in_station"])
+            if self.markTime:
+                # 标记停点。precondition: for station_count>=2, down is whether True or False, i.e. not None
+                if station_count == 1:
+                    last_point = cfpoint
+                    continue
+                elif station_count == 2:
+                    # 先补画第一个站的
+                    first_stopped = (last_point != start_point)
+                    if first_stopped and down:
+                        self.addTimeMark(start_point,start_dd,self.NE)
+                        self.addTimeMark(last_point,start_cf,self.SW)
+                    elif first_stopped and not down:
+                        self.addTimeMark(start_point,start_dd,self.SE)
+                        self.addTimeMark(last_point,start_cf,self.NW)
+                    elif not first_stopped and not down:
+                        self.addTimeMark(last_point,start_dd,self.NW)
+                    else:
+                        self.addTimeMark(last_point,start_dd,self.SW)
+                if stopped and down:
+                    self.addTimeMark(ddpoint,ddsj,self.NE)
+                    self.addTimeMark(cfpoint,cfsj,self.SW)
+                elif stopped and not down:
+                    self.addTimeMark(ddpoint,ddsj,self.SE)
+                    self.addTimeMark(cfpoint,cfsj,self.NW)
+                elif not stopped and not down:
+                    self.addTimeMark(ddpoint,ddsj,self.NW)
+                else:
+                    self.addTimeMark(ddpoint,ddsj,self.SW)
             last_point = cfpoint
         end_point = path.currentPosition()
-        self.endPoint = end_point
+        if not mark_only:
+            self.endPoint = end_point
         self.down = down
         self.station_count = station_count
         return path,start_point,end_point
@@ -354,6 +408,33 @@ class TrainItem(QtWidgets.QGraphicsItem):
             else:
                 path.moveTo(point2)
 
+    def addTimeMark(self,point:QtCore.QPoint,tm:datetime,dir_:int):
+        """
+        给一个点增加精确时刻标注。
+        """
+        d = tm.minute
+        if tm.second >= 30:
+            d += 1
+        d %=10
+        item = QtWidgets.QGraphicsSimpleTextItem(str(d),self)
+        h,w = item.boundingRect().height(),item.boundingRect().width()
+        x_off,y_off = 0*w,0*h
+        if dir_ == self.SW:
+            item.setX(point.x()-w+x_off)
+            item.setY(point.y()-y_off)
+        elif dir_ == self.SE:
+            item.setX(point.x()-x_off)
+            item.setY(point.y()-y_off)
+        elif dir_ == self.NW:
+            item.setX(point.x()-w+x_off)
+            item.setY(point.y()-h+y_off)
+        else: # NE
+            item.setX(point.x()-x_off)
+            item.setY(point.y()-h+y_off)
+        # item.setDefaultTextColor(self.color)
+        item.setBrush(QtGui.QBrush(self.color))
+        self.markLabels.append(item)
+
     def select(self):
         """
         封装选中本车次的所有操作，主要是运行线加粗。
@@ -435,12 +516,22 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.endLabelText.setDefaultTextColor(Qt.white)
 
         # 设置跨界点标签突出显示
-        bfont = QtGui.QFont()
-        bfont.setBold(True)
-        for sub in self.spanItems:
-            # sub:QtWidgets.QGraphicsTextItem
-            sub.setFont(bfont)
+        if self.spanItems:
+            bfont = self.spanItems[0].font()
+            bfont.setBold(True)
+            for sub in self.spanItems:
+                # sub:QtWidgets.QGraphicsTextItem
+                sub.setFont(bfont)
         self.setZValue(2)
+
+        # 显示详细停点
+        if self.markMode == 1:
+            self.markTime = True
+            if self.markLabels:
+                for it in self.markLabels:
+                    it.setVisible(True)
+            else:
+                self._setPathItem([],[],mark_only=True)
         self.isHighlighted = True
 
     def unSelect(self):
@@ -474,12 +565,18 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.tempRect2 = None
 
         # 取消跨界点标签突出显示
-        bfont = QtGui.QFont()
-        bfont.setBold(False)
-        for sub in self.spanItems:
-            # sub:QtWidgets.QGraphicsTextItem
-            sub.setFont(bfont)
+        if self.spanItems:
+            bfont = self.spanItems[0].font()
+            bfont.setBold(False)
+            for sub in self.spanItems:
+                # sub:QtWidgets.QGraphicsTextItem
+                sub.setFont(bfont)
         self.setZValue(0)
+
+        if self.markMode == 1:
+            for item in self.markLabels:
+                item.setVisible(False)
+            self.markTime = False
 
         self.isHighlighted = False
 
@@ -548,7 +645,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         return result
 
 
-    def validItems(self,containSpan=True,containExpand=False):
+    def validItems(self,containSpan=True,containExpand=False,containMark=True):
         """
         依次给出自身的所有非None子item
         """
@@ -558,6 +655,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
             valids += self.spanItems
         if containExpand:
             valids.append(self.expandItem)
+        if containMark:
+            valids += self.markLabels
         for sub in valids:
             if sub is not None:
                 yield sub

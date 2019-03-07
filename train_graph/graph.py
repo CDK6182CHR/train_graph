@@ -76,6 +76,7 @@ class Graph:
             "start_label_height":30,
             "end_label_height":15,
             "table_row_height":30,
+            "show_time_mark":1, # 显示详细停点。0-不显示，1-仅显示选中车次，2-显示所有车次
             "default_colors": {"快速": "#FF0000", "特快": "#0000FF",
                                "直达特快": "#FF00FF", "动车组": "#804000", "动车": "#804000",
                                "高速": "#FF00BE", "城际": "#FF33CC", "default": "#008000"

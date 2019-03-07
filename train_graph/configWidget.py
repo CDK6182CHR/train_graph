@@ -117,6 +117,12 @@ class ConfigWidget(QtWidgets.QWidget):
         self.validWidthSpin = spin
         layout.addRow("有效选择宽度",spin)
 
+        combo = QtWidgets.QComboBox()
+        combo.addItems(('不显示','仅选中车次显示','全部显示'))
+        self.markModeCombo = combo
+        combo.setCurrentIndex(self.UIDict.setdefault('show_time_mark',1))
+        layout.addRow("图中显示时刻",combo)
+
         check = QtWidgets.QCheckBox()
         check.setChecked(self.UIDict.setdefault('showFullCheci', False))
         layout.addRow("显示完整车次", check)
@@ -187,6 +193,7 @@ class ConfigWidget(QtWidgets.QWidget):
         if not self.system:
             self.setOrdinateCombo()
         self.showFullCheciCheck.setChecked(UIDict["showFullCheci"])
+        self.markModeCombo.setCurrentIndex(UIDict["show_time_mark"])
         self.validWidthSpin.setValue(UIDict.setdefault('valid_width',3))
         self.autoPaintCheck.setChecked(UIDict.setdefault('auto_paint',True))
         if not self.system:
@@ -342,6 +349,9 @@ class ConfigWidget(QtWidgets.QWidget):
                 repaint = True
         if self.showFullCheciCheck.isChecked() != UIDict["showFullCheci"]:
             UIDict["showFullCheci"] = self.showFullCheciCheck.isChecked()
+            repaint = True
+        if self.markModeCombo.currentIndex() != UIDict["show_time_mark"]:
+            UIDict["show_time_mark"] = self.markModeCombo.currentIndex()
             repaint = True
         UIDict['auto_paint'] = self.autoPaintCheck.isChecked()
         if self.validWidthSpin.value() != UIDict['valid_width']:
