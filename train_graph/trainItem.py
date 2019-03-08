@@ -98,8 +98,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
         label.moveTo(start_point)
 
         # 终点标签
-        endLabelText = QtWidgets.QGraphicsTextItem(checi, self)
-        endLabelText.setDefaultTextColor(pen.color())
+        brush = QtGui.QBrush(pen.color())
+        endLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+        endLabelText.setBrush(brush)
         self.spanItemWidth = endLabelText.boundingRect().width()
         self.spanItemHeight = endLabelText.boundingRect().height()
         endLabel = QtGui.QPainterPath()
@@ -110,7 +111,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             endLabel.lineTo(end_point.x(), end_point.y() + end_height)
             endLabel.moveTo(end_point.x() - self.spanItemWidth/2, end_point.y() + end_height)
             endLabelText.setX(end_point.x() - self.spanItemWidth/2)
-            endLabelText.setY(end_point.y()+end_height-self.spanItemHeight*0.15)
+            endLabelText.setY(end_point.y()+end_height)
             # endLabel.addText(end_point.x() - (len(checi) * 9) / 2,
             #                  end_point.y() + 20 + 12, QtGui.QFont(), checi)
             # endLabel.moveTo(end_point.x() - 30, end_point.y() + 18)
@@ -123,13 +124,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
             # endLabel.addText(end_point.x() - (len(checi) * 9) / 2, end_point.y() - 18, QtGui.QFont(),
             #                  checi)
             endLabelText.setX(self.endPoint.x()-self.spanItemWidth/2)
-            endLabelText.setY(self.endPoint.y()-self.spanItemHeight*0.8-end_height)
+            endLabelText.setY(self.endPoint.y()-self.spanItemHeight-end_height)
             # endLabel.moveTo(end_point.x() - 30, end_point.y() - 18)
             endLabel.lineTo(end_point.x() + self.spanItemWidth/2, end_point.y() - end_height)
 
         # 起点标签
-        startLabelText = QtWidgets.QGraphicsTextItem(checi, self)
-        startLabelText.setDefaultTextColor(pen.color())
+        startLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+        startLabelText.setBrush(brush)
         self.startLabelText = startLabelText
         start_height = self.graph.UIConfigData()['start_label_height']
         if down:
@@ -141,7 +142,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             # label.addText(next_point.x() + 30 - (len(checi) * 9) / 2, next_point.y(), QtGui.QFont(),
             #               checi)
             startLabelText.setX(next_point.x())
-            startLabelText.setY(next_point.y()-self.spanItemHeight*0.8)
+            startLabelText.setY(next_point.y()-self.spanItemHeight)
             # label.moveTo(next_point)
             next_point.setX(next_point.x() + self.spanItemWidth)
             label.lineTo(next_point)
@@ -153,7 +154,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             next_point.setY(next_point.y())
             label.moveTo(next_point)
             self.startLabelText.setX(next_point.x())
-            self.startLabelText.setY(next_point.y()-self.spanItemHeight*0.15)
+            self.startLabelText.setY(next_point.y())
             next_point.setY(next_point.y())
             next_point.setX(next_point.x() + self.spanItemWidth)
             label.lineTo(next_point)
@@ -167,23 +168,20 @@ class TrainItem(QtWidgets.QGraphicsItem):
             stretch = int(100 * span_width / self.spanItemWidth)
             font.setStretch(stretch)
         for y in span_left:
-            textItem: QtWidgets.QGraphicsTextItem = QtWidgets.QGraphicsTextItem(checi, self)
-            textItem.setDefaultTextColor(pen.color())
+            textItem = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+            textItem.setBrush(brush)
             textItem.setFont(font)
             textItem.setX(self.graphWidget.margins["left"] - textItem.boundingRect().width())
             textItem.setY(y - self.spanItemHeight / 2)
             self.spanItems.append(textItem)
 
         for y in span_right:
-            textItem: QtWidgets.QGraphicsTextItem = QtWidgets.QGraphicsTextItem(checi, self)
-            textItem.setDefaultTextColor(pen.color())
+            textItem = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+            textItem.setBrush(brush)
             textItem.setX(self.graphWidget.margins["left"] + width)
             textItem.setFont(font)
             textItem.setY(y - 10)
             self.spanItems.append(textItem)
-
-        brush = QtGui.QBrush(lineColor)
-        brush.setColor(lineColor)
 
         stroker = QtGui.QPainterPathStroker()
         stroker.setWidth(0.5)
@@ -473,21 +471,21 @@ class TrainItem(QtWidgets.QGraphicsItem):
         UIDict = self.graph.UIConfigData()
         if self.train.isDown():
             Rect = QtCore.QRectF(startPoint.x()-self.spanItemWidth/2,
-                                          startPoint.y()-self.spanItemHeight*0.75-UIDict['start_label_height'],
+                                          startPoint.y()-self.spanItemHeight-UIDict['start_label_height'],
                                           self.spanItemWidth,
-                                          self.spanItemHeight*0.7)
+                                          self.spanItemHeight)
         else:
             Rect = QtCore.QRectF(startPoint.x() - self.spanItemWidth / 2,
                                           startPoint.y()+UIDict['start_label_height'],
                                           self.spanItemWidth,
-                                          self.spanItemHeight*0.7)
+                                          self.spanItemHeight)
         self.tempRect = QtWidgets.QGraphicsRectItem(Rect,self)
 
         self.tempRect.setPen(rectPen)
         self.tempRect.setBrush(brush)
         self.tempRect.setZValue(0.5)
         self.startLabelText.setZValue(1)
-        self.startLabelText.setDefaultTextColor(QtGui.QColor('#FFFFFF'))
+        self.startLabelText.setBrush(Qt.white)
 
         label = self.endLabelItem
         label.setZValue(1)
@@ -500,20 +498,20 @@ class TrainItem(QtWidgets.QGraphicsItem):
             rect = QtCore.QRectF(endPoint.x()-self.spanItemWidth/2,
                                  endPoint.y()+UIDict['end_label_height'],
                                  self.spanItemWidth,
-                                 self.spanItemHeight*0.7
+                                 self.spanItemHeight
             )
         else:
             rect = QtCore.QRectF(endPoint.x() - self.spanItemWidth / 2,
-                                 endPoint.y() - UIDict['end_label_height'] - self.spanItemHeight*0.7,
+                                 endPoint.y() - UIDict['end_label_height'] - self.spanItemHeight,
                                  self.spanItemWidth,
-                                 self.spanItemHeight * 0.7
+                                 self.spanItemHeight
                                  )
         self.tempRect2 = QtWidgets.QGraphicsRectItem(rect,self)
         self.tempRect2.setPen(rectPen)
         self.tempRect2.setBrush(brush)
         self.tempRect2.setZValue(0.5)
         self.endLabelText.setZValue(1)
-        self.endLabelText.setDefaultTextColor(Qt.white)
+        self.endLabelText.setBrush(Qt.white)
 
         # 设置跨界点标签突出显示
         if self.spanItems:
@@ -548,9 +546,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
             path.setPen(pathPen)
             path.setZValue(0)
             self.startLabelText.setZValue(0)
-            self.startLabelText.setDefaultTextColor(pathPen.color())
+            self.startLabelText.setBrush(pathPen.color())
             self.endLabelText.setZValue(0)
-            self.endLabelText.setDefaultTextColor(pathPen.color())
+            self.endLabelText.setBrush(pathPen.color())
 
             pathPen.setWidth(1)
             label.setPen(pathPen)

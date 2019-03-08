@@ -821,6 +821,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             self._line_selected(item, ensure_visible=False)
 
         self.lastpos = pos
+        super(GraphicsWidget, self).mousePressEvent(QMouseEvent)
 
     def posTrain(self,pos)->Train:
         """
@@ -896,6 +897,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     speed_str = f"{speed:.2f} km/h"
                 text += f"区间里程{mile} km，技术速度{speed_str}"
             self.setToolTip(text)
+        super(GraphicsWidget, self).mouseMoveEvent(event)
 
     def resizeEvent(self, event: QtGui.QResizeEvent):
         super().resizeEvent(event)
