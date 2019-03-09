@@ -53,9 +53,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V1.5.1"
+        self.version = "V1.5.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190307'
+        self.build = '20190309'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -951,6 +951,16 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.setShortcut('ctrl+J')
         menu.addAction(action)
 
+        actionZoonIn = QtWidgets.QAction('放大视图', self)
+        actionZoonIn.setShortcut('ctrl+=')
+        actionZoomOut = QtWidgets.QAction('缩小视图', self)
+        menu.addAction(actionZoonIn)
+
+        actionZoomOut.setShortcut('ctrl+-')
+        actionZoonIn.triggered.connect(lambda: self.GraphWidget.scale(1.25, 1.25))
+        actionZoomOut.triggered.connect(lambda: self.GraphWidget.scale(0.8, 0.8))
+        menu.addAction(actionZoomOut)
+
         # 查看
         menu = menubar.addMenu("查看(&I)")
 
@@ -1129,8 +1139,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _initToolBar(self):
         pass
         # toolBar=QtWidgets.QToolBar()
-        # actionTrain = QtWidgets.QAction('车次编辑',self)
-        # toolBar.addAction(actionTrain)
+        # actionZoonIn = QtWidgets.QAction('放大视图',self)
+        # toolBar.addAction(actionZoonIn)
+        # actionZoonIn.setShortcut('ctrl+=')
+        # actionZoomOut = QtWidgets.QAction('缩小视图',self)
+        # toolBar.addAction(actionZoomOut)
+        # actionZoomOut.setShortcut('ctrl+-')
+        # actionZoonIn.triggered.connect(lambda:self.GraphWidget.scale(1.25,1.25))
+        # actionZoomOut.triggered.connect(lambda:self.GraphWidget.scale(0.8,0.8))
         # self.addToolBar(Qt.TopToolBarArea,toolBar)
 
     def _newGraph(self):
@@ -1166,6 +1182,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         if not filename:
             return
 
+        self.GraphWidget._line_un_selected()
         self.graph = Graph()
         self.showFilter.setGraph(self.graph)
         try:

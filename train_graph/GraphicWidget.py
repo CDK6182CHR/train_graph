@@ -44,6 +44,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         self.setWindowTitle("GraphicsViewsTestWindow")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
+        QtWidgets.QScroller.grabGesture(self,QtWidgets.QScroller.TouchGesture)
         self.setGeometry(200, 200, 1200, 600)
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
@@ -623,7 +624,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         rectItem.setBrush(QtGui.QBrush(color))
         nowItem: QtWidgets.QGraphicsTextItem = self.scene.addText(' ',
                                                                   font=QtGui.QFont('Sim sum', 12))  # 当前车次信息显示在左上角
-        timeItems.append(nowItem)
+        # timeItems.append(nowItem)
         self.nowItem = nowItem
         nowItem.setDefaultTextColor(QtGui.QColor(UIDict["text_color"]))
         nowItem.setZValue(10)
@@ -725,7 +726,13 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         point = QtCore.QPoint(0, 0)
         scenepoint = self.mapToScene(point)
         self.marginItemGroups["up"].setY(scenepoint.y())
-        # self.nowItem.setY(scenepoint.y())
+        try:
+            self.nowItem.setY(scenepoint.y())
+        except RuntimeError:
+            # 可能报错：Wrapped C++ class have been deleted.
+            # 怀疑是打开新运行图时nowItem已经被析构，然后由引起resize或者类似问题。
+            print("Wrapped C++ class NowItem has been deleted.")
+            pass
 
         point = QtCore.QPoint(0, self.height())
         scenepoint = self.mapToScene(point)
@@ -735,7 +742,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         point = QtCore.QPoint(0, 0)
         scenepoint = self.mapToScene(point)
         self.marginItemGroups["left"].setX(scenepoint.x())
-        self.nowItem.setX(scenepoint.x())
+        try:
+            self.nowItem.setX(scenepoint.x())
+        except RuntimeError:
+            pass
 
         point = QtCore.QPoint(self.width(), 0)
         scenepoint = self.mapToScene(point)
