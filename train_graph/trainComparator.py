@@ -114,6 +114,7 @@ class TrainComparator(QtWidgets.QDialog):
                 speed2_str = '-'
                 append_str2 = '-'
             if not sec1 and not sec2:
+                previous = st_dict
                 continue
 
             row = self.tableWidget.rowCount()

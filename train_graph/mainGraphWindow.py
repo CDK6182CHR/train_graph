@@ -55,7 +55,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V1.5.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190309'
+        self.build = '20190319'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -2244,6 +2244,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.lines = lines
 
         btnOk = QtWidgets.QPushButton("确定")
+        listWidget.itemDoubleClicked.connect(lambda:self._import_line_ok(dialog))
         btnCancel = QtWidgets.QPushButton("取消")
         hlayout = QtWidgets.QHBoxLayout()
         hlayout.addWidget(btnOk)
@@ -2257,16 +2258,69 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.exec_()
 
     def _import_line_ok(self, dialog):
+        """
+        2019.03.19新增：先选择车站再导入。
+        """
         listWidget = dialog.listWidget
         lines = dialog.lines
         line = lines[listWidget.currentRow()]
-        self.graph.setLine(line)
+
+        stDialog = QtWidgets.QDialog(dialog)
+        stDialog.setWindowTitle('选择车站')
+        vlayout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel("请在下表中选择要导入的车站（按ctrl或shift或直接拖动来多选），"
+                                 "或直接选择下方的“全选”。")
+        label.setWordWrap(True)
+        vlayout.addWidget(label)
+
+        listWidget = QtWidgets.QListWidget()
+        listWidget.setSelectionMode(listWidget.MultiSelection)
+        for st in line.stationDicts():
+            name,mile = st["zhanming"],st["licheng"]
+            listWidget.addItem(f"{mile} km  {name}")
+        vlayout.addWidget(listWidget)
+        stDialog.listWidget = listWidget
+
+        btnOk = QtWidgets.QPushButton("确定")
+        btnAll = QtWidgets.QPushButton("全选")
+        btnCancel = QtWidgets.QPushButton("取消")
+
+        btnOk.clicked.connect(lambda: self._import_line_stations(line, dialog, stDialog, False))
+        btnAll.clicked.connect(lambda: self._import_line_stations(line, dialog, stDialog, True))
+        btnCancel.clicked.connect(stDialog.close)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnAll)
+        hlayout.addWidget(btnCancel)
+        vlayout.addLayout(hlayout)
+
+        stDialog.setLayout(vlayout)
+        stDialog.exec_()
+
+
+    def _import_line_stations(self,line:Line,dialogLines,dialogStations,all:bool=False):
+        """
+        选择导入的站点后确定。
+        """
+        newLine = Line(line.name)
+        if all:
+            newLine.copyData(line,withRuler=True)
+        else:
+            listWidget:QtWidgets.QListWidget = dialogStations.listWidget
+            for idx in listWidget.selectedIndexes():
+                row = idx.row()
+                newLine.addStationDict(line.stationDictByIndex(row))
+            newLine.rulers = line.rulers
+
+        self.graph.setLine(newLine)
         self.graph.resetAllItems()
         self.graph.setOrdinateRuler(None)
         self.GraphWidget.paintGraph()
         self._initDockWidgetContents()
         self.statusOut("导入线路数据成功")
-        dialog.close()
+        dialogStations.close()
+        dialogLines.close()
 
     def _import_line_excel(self):
         flag = self.qustion("从Excel表格中导入线路数据，抛弃当前线路数据，是否继续？"
