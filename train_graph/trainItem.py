@@ -41,6 +41,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.startRect = None
         self.endRect = None
         self.isHighlighted = False
+        self.startAtThis = True
+        self.endAtThis = False
 
         self.spanItemWidth=None
         self.spanItemHeight=None
@@ -94,70 +96,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
         train.setIsDown(down)
         checi = train.fullCheci() if self.showFullCheci else train.localCheci()
 
-        label = QtGui.QPainterPath()
-        label.moveTo(start_point)
 
-        # 终点标签
         brush = QtGui.QBrush(pen.color())
-        endLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
-        endLabelText.setBrush(brush)
-        self.spanItemWidth = endLabelText.boundingRect().width()
-        self.spanItemHeight = endLabelText.boundingRect().height()
-        endLabel = QtGui.QPainterPath()
-        self.endLabelText = endLabelText
-        end_height = self.graph.UIConfigData()['end_label_height']
-        if down:
-            endLabel.moveTo(end_point)
-            endLabel.lineTo(end_point.x(), end_point.y() + end_height)
-            endLabel.moveTo(end_point.x() - self.spanItemWidth/2, end_point.y() + end_height)
-            endLabelText.setX(end_point.x() - self.spanItemWidth/2)
-            endLabelText.setY(end_point.y()+end_height)
-            # endLabel.addText(end_point.x() - (len(checi) * 9) / 2,
-            #                  end_point.y() + 20 + 12, QtGui.QFont(), checi)
-            # endLabel.moveTo(end_point.x() - 30, end_point.y() + 18)
-            endLabel.lineTo(end_point.x() + self.spanItemWidth/2, end_point.y() + end_height)
-
-        else:
-            endLabel.moveTo(end_point)
-            endLabel.lineTo(end_point.x(), end_point.y() - end_height)
-            endLabel.moveTo(end_point.x() - self.spanItemWidth/2, end_point.y() - end_height)
-            # endLabel.addText(end_point.x() - (len(checi) * 9) / 2, end_point.y() - 18, QtGui.QFont(),
-            #                  checi)
-            endLabelText.setX(self.endPoint.x()-self.spanItemWidth/2)
-            endLabelText.setY(self.endPoint.y()-self.spanItemHeight-end_height)
-            # endLabel.moveTo(end_point.x() - 30, end_point.y() - 18)
-            endLabel.lineTo(end_point.x() + self.spanItemWidth/2, end_point.y() - end_height)
+        # 终点标签
+        endLabel = self._setEndItem(end_point,brush,checi,down,self.endAtThis)
 
         # 起点标签
-        startLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
-        startLabelText.setBrush(brush)
-        self.startLabelText = startLabelText
-        start_height = self.graph.UIConfigData()['start_label_height']
-        if down:
-            label.moveTo(start_point)
-            next_point = QtCore.QPoint(start_point.x(), start_point.y() - start_height)
-            label.lineTo(next_point)
-            next_point.setX(next_point.x() - self.spanItemWidth/2)
-            label.moveTo(next_point)
-            # label.addText(next_point.x() + 30 - (len(checi) * 9) / 2, next_point.y(), QtGui.QFont(),
-            #               checi)
-            startLabelText.setX(next_point.x())
-            startLabelText.setY(next_point.y()-self.spanItemHeight)
-            # label.moveTo(next_point)
-            next_point.setX(next_point.x() + self.spanItemWidth)
-            label.lineTo(next_point)
-
-        else:
-            next_point = QtCore.QPoint(start_point.x(), start_point.y() + start_height)
-            label.lineTo(next_point)
-            next_point.setX(next_point.x() - self.spanItemWidth/2)
-            next_point.setY(next_point.y())
-            label.moveTo(next_point)
-            self.startLabelText.setX(next_point.x())
-            self.startLabelText.setY(next_point.y())
-            next_point.setY(next_point.y())
-            next_point.setX(next_point.x() + self.spanItemWidth)
-            label.lineTo(next_point)
+        label = self._setStartItem(start_point,brush,checi,down,self.startAtThis)
 
         # 跨界点标签
         UIDict = self.graph.UIConfigData()
@@ -225,6 +170,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         last_point = None
         start_point = None
         start_dd,start_cf = None,None
+        last_station = None
         for dct in train.stationDicts():
             # 计算并添加运行线，上下行判断
             station, ddsj, cfsj = dct["zhanming"],dct["ddsj"],dct["cfsj"]
@@ -242,8 +188,11 @@ class TrainItem(QtWidgets.QGraphicsItem):
             train.setTrainStationYValue(dct,ddpoint.y())
 
             station_count += 1
+            last_station = station
 
             if station_count == 1:
+                # 第一个站
+                self.startAtThis = train.isSfz(station)
                 start_dd,start_cf = ddsj,cfsj
                 path.moveTo(ddpoint)
                 start_point = ddpoint
@@ -292,11 +241,157 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     self.addTimeMark(ddpoint,ddsj,self.SW)
             last_point = cfpoint
         end_point = path.currentPosition()
+        self.endAtThis = train.isZdz(last_station)
         if not mark_only:
             self.endPoint = end_point
         self.down = down
         self.station_count = station_count
         return path,start_point,end_point
+
+    def _setEndItem(self,end_point:QtCore.QPointF,brush:QtGui.QBrush,
+                    checi:str,down:bool,endAtThis:bool)->QtGui.QPainterPath:
+        """
+        绘制终点标签。
+        同时设定spanItemHeight和~width两个attribute。
+        """
+        # 终点标签
+        endLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+        endLabelText.setBrush(brush)
+        self.spanItemWidth = endLabelText.boundingRect().width()
+        self.spanItemHeight = endLabelText.boundingRect().height()
+        w,h = self.spanItemWidth,self.spanItemHeight
+        endLabel = QtGui.QPainterPath()
+        self.endLabelText = endLabelText
+        end_height = self.graph.UIConfigData()['end_label_height']
+        if endAtThis:
+            if down:
+                endLabel.moveTo(end_point)
+                curPoint = QtCore.QPointF(end_point.x(),end_point.y())
+                curPoint.setY(curPoint.y()+end_height/2)
+                endLabel.lineTo(curPoint)
+                poly = QtGui.QPolygonF((QtCore.QPointF(curPoint.x()-end_height/3,curPoint.y()),
+                                QtCore.QPointF(curPoint.x()+end_height/3,curPoint.y()),
+                                QtCore.QPointF(curPoint.x(),curPoint.y()+end_height/2),
+                                QtCore.QPointF(curPoint.x() - end_height / 3, curPoint.y())))
+                endLabel.addPolygon(poly)
+                curPoint.setY(end_point.y()+end_height)
+                curPoint.setX(curPoint.x()-w/2)
+                endLabel.moveTo(curPoint)
+                endLabelText.setX(curPoint.x())
+                endLabelText.setY(curPoint.y())
+                curPoint.setX(curPoint.x()+w)
+                endLabel.lineTo(curPoint)
+
+            else:
+                endLabel.moveTo(end_point)
+                curPoint = QtCore.QPointF(end_point)
+                curPoint.setY(end_point.y()-end_height/2)
+                endLabel.lineTo(curPoint)
+                curPoint.setY(end_point.y()-end_height)
+                endLabel.moveTo(curPoint)
+                poly = QtGui.QPolygonF((
+                    curPoint,
+                    QtCore.QPointF(curPoint.x()-end_height/3,curPoint.y()+end_height/2),
+                    QtCore.QPointF(curPoint.x()+end_height/3,curPoint.y()+end_height/2),
+                    curPoint
+                ))
+                endLabel.addPolygon(poly)
+                curPoint.setX(curPoint.x()-w/2)
+                endLabel.moveTo(curPoint)
+                endLabelText.setX(curPoint.x())
+                endLabelText.setY(curPoint.y()-h)
+                curPoint.setX(curPoint.x()+w)
+                endLabel.lineTo(curPoint)
+        else: # not endAtThis
+            if down:
+                endLabel.moveTo(end_point)
+                curPoint = QtCore.QPointF(end_point)
+                curPoint.setY(curPoint.y()+h)
+                endLabel.lineTo(curPoint)
+                endLabelText.setPos(curPoint)
+                curPoint.setX(curPoint.x()+w+h)
+                endLabel.lineTo(curPoint)
+                curPoint.setX(curPoint.x()-h)
+                curPoint.setY(curPoint.y()+h)
+                endLabel.lineTo(curPoint)
+            else:
+                endLabel.moveTo(end_point)
+                curPoint = QtCore.QPointF(end_point)
+                curPoint.setY(curPoint.y()-h)
+                endLabel.lineTo(curPoint)
+                endLabelText.setX(curPoint.x())
+                endLabelText.setY(curPoint.y()-h)
+                curPoint.setX(curPoint.x()+w+h)
+                endLabel.lineTo(curPoint)
+                curPoint.setX(curPoint.x()-h)
+                curPoint.setY(curPoint.y()-h)
+                endLabel.lineTo(curPoint)
+
+
+        return endLabel
+
+    def _setStartItem(self, start_point: QtCore.QPointF, brush: QtGui.QBrush,
+                    checi: str, down: bool, startAtThis: bool) -> QtGui.QPainterPath:
+        label = QtGui.QPainterPath()
+        label.moveTo(start_point)
+        startLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+        startLabelText.setBrush(brush)
+        self.startLabelText = startLabelText
+        start_height = self.graph.UIConfigData()['start_label_height']
+        w,h = self.spanItemWidth,self.spanItemHeight
+        if startAtThis:
+            if down:
+                label.moveTo(start_point)
+                next_point = QtCore.QPoint(start_point.x(), start_point.y() - start_height)
+                label.lineTo(next_point)
+                next_point.setX(next_point.x() - self.spanItemWidth / 2)
+                label.moveTo(next_point)
+                # label.addText(next_point.x() + 30 - (len(checi) * 9) / 2, next_point.y(), QtGui.QFont(),
+                #               checi)
+                startLabelText.setX(next_point.x())
+                startLabelText.setY(next_point.y() - self.spanItemHeight)
+                # label.moveTo(next_point)
+                next_point.setX(next_point.x() + self.spanItemWidth)
+                label.lineTo(next_point)
+
+            else:
+                next_point = QtCore.QPoint(start_point.x(), start_point.y() + start_height)
+                label.lineTo(next_point)
+                next_point.setX(next_point.x() - self.spanItemWidth / 2)
+                next_point.setY(next_point.y())
+                label.moveTo(next_point)
+                self.startLabelText.setX(next_point.x())
+                self.startLabelText.setY(next_point.y())
+                next_point.setY(next_point.y())
+                next_point.setX(next_point.x() + self.spanItemWidth)
+                label.lineTo(next_point)
+
+        else:
+            if down:
+                label.moveTo(start_point)
+                curPoint = QtCore.QPointF(start_point)
+                curPoint.setY(curPoint.y()-start_height)
+                label.lineTo(curPoint)
+                curPoint.setX(curPoint.x()-w)
+                label.lineTo(curPoint)
+                startLabelText.setX(curPoint.x())
+                startLabelText.setY(curPoint.y()-h)
+                curPoint.setX(curPoint.x()-h)
+                curPoint.setY(curPoint.y()-h)
+                label.lineTo(curPoint)
+            else:
+                label.moveTo(start_point)
+                curPoint = QtCore.QPointF(start_point)
+                curPoint.setY(curPoint.y()+start_height)
+                label.lineTo(curPoint)
+                curPoint.setX(curPoint.x()-w)
+                label.lineTo(curPoint)
+                startLabelText.setPos(curPoint)
+                curPoint.setX(curPoint.x()-h)
+                curPoint.setY(curPoint.y()+h)
+                label.lineTo(curPoint)
+
+        return label
 
     def _trainColor(self):
         color_str = self.train.color()
@@ -469,13 +564,14 @@ class TrainItem(QtWidgets.QGraphicsItem):
         # 起点
         startPoint = self.startPoint
         UIDict = self.graph.UIConfigData()
+        x_append = self.spanItemWidth / 2 if self.startAtThis else self.spanItemWidth
         if self.train.isDown():
-            Rect = QtCore.QRectF(startPoint.x()-self.spanItemWidth/2,
+            Rect = QtCore.QRectF(startPoint.x()-x_append,
                                           startPoint.y()-self.spanItemHeight-UIDict['start_label_height'],
                                           self.spanItemWidth,
                                           self.spanItemHeight)
         else:
-            Rect = QtCore.QRectF(startPoint.x() - self.spanItemWidth / 2,
+            Rect = QtCore.QRectF(startPoint.x() - x_append,
                                           startPoint.y()+UIDict['start_label_height'],
                                           self.spanItemWidth,
                                           self.spanItemHeight)
@@ -494,14 +590,15 @@ class TrainItem(QtWidgets.QGraphicsItem):
         label.setPen(pen)
         brush = QtGui.QBrush(pen.color())
         endPoint = self.endPoint
+        x_append = self.spanItemWidth/2 if self.endAtThis else 0
         if train.isDown():
-            rect = QtCore.QRectF(endPoint.x()-self.spanItemWidth/2,
+            rect = QtCore.QRectF(endPoint.x()-x_append,
                                  endPoint.y()+UIDict['end_label_height'],
                                  self.spanItemWidth,
                                  self.spanItemHeight
             )
         else:
-            rect = QtCore.QRectF(endPoint.x() - self.spanItemWidth / 2,
+            rect = QtCore.QRectF(endPoint.x() - x_append,
                                  endPoint.y() - UIDict['end_label_height'] - self.spanItemHeight,
                                  self.spanItemWidth,
                                  self.spanItemHeight

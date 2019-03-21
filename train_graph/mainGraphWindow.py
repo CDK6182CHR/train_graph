@@ -53,9 +53,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V1.5.2"
+        self.version = "V1.5.3"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190319'
+        self.build = '20190321'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
