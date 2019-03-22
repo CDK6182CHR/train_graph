@@ -6,6 +6,7 @@ from Timetable_new.checi3 import Checi
 from datetime import datetime,timedelta
 from Timetable_new.utility import judge_type,stationEqual,strToTime
 import re,bisect
+from typing import Iterable
 
 import cgitb
 cgitb.enable(format='text')
@@ -28,10 +29,22 @@ class Train():
             "ddsj":ddsj,
             "cfsj":cfsj
         }
+    items 中数据结构：
+    dict{
+        start:开始站，
+        end:结束站，
+        down:下行，
+        show:显示，
+        show_start_label:开始标记bool
+        show_end_label:结束标记bool
+    }
     """
     def __init__(self,checi_full='',checi_down='',checi_up='',sfz='',zdz='',origin=None):
         self.item = None
-        self.down = None
+        self._items = []
+        self._itemInfo = []
+        self._autoItem = True
+        # self.down = None
         self.shown = True  #是否显示运行线
         self._localFirst=None
         self._localLast=None
@@ -67,6 +80,8 @@ class Train():
         self.zdz = origin["zdz"]
         self._localFirst = origin.get('localFirst',None)
         self._localLast = origin.get('localLast',None)
+        self._itemInfo = origin.get("itemInfo",[])
+        self._autoItem = origin.get("autoItem",True)
 
         try:
             origin["shown"]
@@ -133,12 +148,19 @@ class Train():
         return self.checi[2]
 
     def localCheci(self):
-        if self.down:
-            return self.downCheci()
-        elif self.isDown() == False:
-            return self.upCheci()
+        raise Exception("取消定义检查完毕的函数 localCheci")
+        # if self.down:
+        #     return self.downCheci()
+        # elif self.isDown() == False:
+        #     return self.upCheci()
+        # else:
+        #     return self.fullCheci()
+
+    def getCheci(self,down:bool):
+        if down:
+            return self.checi[1]
         else:
-            return self.fullCheci()
+            return self.checi[2]
 
     def addStation(self,name:str,ddsj,cfsj,auto_cover=False,to_end=True):
         #增加站。暂定到达时间、出发时间用datetime类。
@@ -243,6 +265,8 @@ class Train():
             "shown":self.shown,
             "localFirst":self._localFirst,
             "localLast":self._localLast,
+            "autoItem":self._autoItem,
+            "itemInfo":self._itemInfo,
         }
         for dict in self.timetable:
             ddsj:datetime = dict["ddsj"]
@@ -269,21 +293,130 @@ class Train():
             self.resetYValueMap()
 
     def getItem(self):
-        return self.item
+        raise Exception("取消定义的函数getItem")
+        # return self.item
+
+    def firstItem(self):
+        if self._items:
+            return self._items[0]
+        return None
 
     def setIsDown(self,down):
-        self.down = down
+        raise Exception("取消定义的函数setIsDown")
+        # self.down = down
+
+    def trainAutoDown(self)->bool:
+        """
+        2.0新增。某些特殊的场合仍然需要统一的上下行判断，用这个函数给出。
+        """
+        for it in self._itemInfo:
+            return it["down"]
+        return True
+
+    def items(self):
+        return self._items
+
+    def itemInfo(self)->Iterable[dict]:
+        for it in self._itemInfo:
+            yield it
+
+    def addItemInfoDict(self,info:dict):
+        self._itemInfo.append(info)
+
+    def addItem(self,item):
+        self._items.append(item)
+
+    def clearItems(self):
+        """
+        清空item对象但不删除信息
+        """
+        self._items = []
+
+    def clearItemInfo(self):
+        self._itemInfo = []
+
+    def autoItem(self):
+        return self._autoItem
+
+    def setAutoItem(self,on:bool):
+        self._autoItem = on
 
     def isDown(self,auto_guess=False,graph=None,default=None):
-        not_decided = False
-        if self.down is None:
-            not_decided = True
-        if not_decided and auto_guess:
-            self.autoDown(graph)
-        if not_decided and default is not None:
-            return default
+        raise Exception("取消定义的函数isDown")
+        # not_decided = False
+        # if self.down is None:
+        #     not_decided = True
+        # if not_decided and auto_guess:
+        #     self.autoDown(graph)
+        # if not_decided and default is not None:
+        #     return default
+        #
+        # return self.down
 
-        return self.down
+    def firstDown(self)->bool:
+        """
+        返回第一个区间的上下行情况。2.0新增。
+        """
+        for dct in self.itemInfo():
+            return dct["down"]
+        return None
+
+    def stationDown(self,station:str,graph)->bool:
+        """
+        2.0新增。返回本车次在某个车站及其左邻域内的上下行情况。
+        调用了线性算法。需要依赖于线路上的y_value，这就是说必须保证本站是铺画了的。
+        """
+        idx = self.stationIndexByName(station)
+        y = graph.stationYValue(station)
+        if y == -1:
+            return None
+        # 先向左查找
+        leftY = -1
+        i = idx
+        while i > 0:
+            i-=1
+            leftY = graph.stationYValue(self.stationNameByIndex(i))
+            if leftY != -1:
+                break
+        if leftY != -1:
+            if leftY < y:
+                return False
+            return True
+
+        # 如果左边没有了，向右查找
+        i = idx
+        rightY = -1
+        while i < len(self.timetable):
+            i += 1
+            rightY = graph.stationYValue(self.stationNameByIndex(i))
+            if rightY != -1:
+                break
+        if rightY != -1:
+            if y < rightY:
+                return False
+            return True
+        return None
+
+    def reverseAllItemDown(self):
+        """
+        2.0新增，转置所有item的上下行。
+        """
+        for dct in self.itemInfo():
+            dct['down'] = not dct['down']
+
+    def stationIndexByName(self,name,strict=False)->int:
+        """
+        2.0新增。线性算法。
+        """
+        for i,st in enumerate(self.timetable):
+            if stationEqual(st['zhanming'],name):
+                return i
+
+    def stationNameByIndex(self,idx:int):
+        """
+        保证数据有效。
+        """
+        return self.timetable[idx]['zhanming']
 
     def setUI(self,color=None,width=None):
         if color is not None:
@@ -367,9 +500,10 @@ class Train():
         self.timetable = []
 
     def downStr(self):
-        if self.isDown() is True:
+        print("Warning: 即将取消定义的函数downStr。自动按firstDown过渡")
+        if self.firstDown() is True:
             return '下行'
-        elif self.isDown() is False:
+        elif self.firstDown() is False:
             return '上行'
         else:
             return '未知'
@@ -526,17 +660,18 @@ class Train():
             return ""
 
     def autoDown(self,graph):
-        in_stations = []
-        for st in self.timetable:
-            if graph.stationExisted(st["zhanming"]):
-                in_stations.append(st["zhanming"])
-            if len(in_stations) == 2:
-                if graph.line.isDownGap(in_stations[0],in_stations[1]):
-                    self.setIsDown(True)
-                    return
-                else:
-                    self.setIsDown(False)
-                    return
+        raise Exception("取消定义的函数autoDown")
+        # in_stations = []
+        # for st in self.timetable:
+        #     if graph.stationExisted(st["zhanming"]):
+        #         in_stations.append(st["zhanming"])
+        #     if len(in_stations) == 2:
+        #         if graph.line.isDownGap(in_stations[0],in_stations[1]):
+        #             self.setIsDown(True)
+        #             return
+        #         else:
+        #             self.setIsDown(False)
+        #             return
 
     def jointTrain(self,train,former:bool,graph):
         """
@@ -582,6 +717,9 @@ class Train():
         st_dict["cfsj"] += dt
 
     def stationDict(self,name,strict=False):
+        """
+        线性算法
+        """
         for st in self.timetable:
             if stationEqual(st["zhanming"],name,strict):
                 return st
@@ -623,7 +761,6 @@ class Train():
         newtrain.autoType()
         newtrain.timetable = deepcopy(self.timetable)
         newtrain.UI = copy(self.UI)
-        newtrain.setIsDown(self.down)
 
         for st_dict in newtrain.timetable:
             st_dict["ddsj"] += dt_time
@@ -666,7 +803,8 @@ class Train():
         self.sfz,self.zdz = train.sfz,train.zdz
         self.type = train.type
         self.UI = copy(train.UI)
-        self.down = train.down
+        self._items = train._items
+        self.clearItems()
         self.timetable = deepcopy(train.timetable)
 
     def relativeError(self,ruler):
@@ -702,7 +840,8 @@ class Train():
             return
         new_timetable=[]
         #将针对线路的toStart、End转变为针对本次列车的
-        if self.down:
+        down = self.trainAutoDown()
+        if down:
             #本次列车下行，toStart对应始发，toEnd对应终到
             fromStart=toStart and not graph.stationInLine(self.sfz)
             toEnd=toEnd and not graph.stationInLine(self.zdz)
@@ -716,8 +855,8 @@ class Train():
 
         last_tudy_dict=None  #上一个有效图定站点
         interval_queue=[]
-        for name in graph.stations(not self.down):
-            if not int(0b01 if self.down else 0b10) & graph.stationDirection(name):
+        for name in graph.stations(not down):
+            if not int(0b01 if down else 0b10) & graph.stationDirection(name):
                 #本方向不通过本站点
                 # print("不通过",name)
                 continue
@@ -921,13 +1060,15 @@ class Train():
                 cnt += 1
         return cnt
 
-    def binDirection(self,default=0x11):
+    def binDirection(self,default=0b11):
         """
         返回通过方向的常量表示形式。
+        todo down的处理
         """
-        if self.down is True:
+        down = self.trainAutoDown()
+        if down is True:
             return 0b01
-        elif self.down is False:
+        elif down is False:
             return 0b10
         else:
             return default
@@ -943,8 +1084,8 @@ class Train():
         if self.item is not None:
             self.item.resetUI()
 
-    def stationDicts(self):
-        for dct in self.timetable:
+    def stationDicts(self,startIndex=0):
+        for dct in self.timetable[startIndex:]:
             yield dct
 
 

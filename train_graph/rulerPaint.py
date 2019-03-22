@@ -36,7 +36,7 @@ class rulerPainter(QtWidgets.QWidget):
         self.start_time = datetime(1900,1,1,0,0,0)
         self.isAppend = False
         self.toEnd = True
-        self.train.setIsDown(True)
+        # self.train.setIsDown(True)
         self._initUI()
 
     def _initUI(self):
@@ -155,15 +155,14 @@ class rulerPainter(QtWidgets.QWidget):
     def _append_changed(self,checi:str):
         """
         “追加到车次”选项变更。
-        :param checi:
-        :return:
+        todo 追加到车次也不一定非要按相同行别
         """
         if not checi:
             self.train = self.train_new
         else:
             train:Train = self.graph.trainFromCheci(checi,full_only=True)
             if train:
-                #复制车次
+                # 复制车次
                 self.train = train.translation(checi,timedelta(days=0,seconds=0))
             else:
                 self.train = self.train_new
@@ -175,7 +174,7 @@ class rulerPainter(QtWidgets.QWidget):
             self.radioEnd.setEnabled(False)
             self.isAppend = False
         else:
-            down = self.train.isDown(auto_guess=True,graph=self.graph)
+            down = self.train.firstDown()
             if down:
                 self.radio1.setChecked(True)
             else:
@@ -372,8 +371,8 @@ class rulerPainter(QtWidgets.QWidget):
     def _radio_toggled(self,isChecked:bool):
         radio = self.widget1.sender()
         print(radio.text(),isChecked)
-        self.train.setIsDown(isChecked)
-        self.down = self.train.isDown()
+        # self.train.setIsDown(isChecked)
+        self.down = isChecked
         self._setRulerInfo()
 
     # slots
@@ -464,19 +463,17 @@ class rulerPainter(QtWidgets.QWidget):
                 self.train.addStation(name, ddsj, cfsj, auto_cover=True, to_end=False)
 
         new = True
-        if self.train.getItem() is not None:
+        if self.train.items():
             self.graphWindow.delTrainLine(self.train)
             new = False
 
         self.graphWindow.addTrainLine(self.train)
-        if new:
-            self.graphWindow.ensureVisible(self.train.getItem())
+        # if new:
+        #     self.graphWindow.ensureVisible(self.train.getItem())
 
     def _setEndStation(self,row:int):
         """
         设置row行为终到站。
-        :param row:
-        :return:
         """
         if row == 0:
             return
@@ -630,18 +627,18 @@ class rulerPainter(QtWidgets.QWidget):
             self.train.autoType()
 
             graph.addTrain(self.train)
-            if self.train.getItem() is not None:
+            if self.train.items():
                 self.graphWindow.delTrainLine(self.train)
             self.graphWindow.addTrainLine(self.train)
 
         else:
             #追加排图模式
-            if self.train.getItem() is not None:
+            if self.train.items():
                 self.graphWindow.delTrainLine(self.train)
 
             train:Train = self.graph.trainFromCheci(self.train.fullCheci())
 
-            if train.getItem() is not None:
+            if train.items():
                 self.graphWindow.delTrainLine(train)
 
             train.coverData(self.train)
@@ -698,8 +695,8 @@ class rulerPainter(QtWidgets.QWidget):
         for node in timeTable_dicts:
             if node["ddsj"] >= start_time and node["ddsj"] <= end_time:
                 reform = {
-                    "checi":node["train"].localCheci(),
-                    "down":node["train"].isDown(),
+                    "checi":node["train"].fullCheci(),
+                    "down":node["train"].stationDown(station_name,self.graph),
                     "time":node["ddsj"],
                 }
                 if node["ddsj"] == node["cfsj"]:
@@ -711,8 +708,8 @@ class rulerPainter(QtWidgets.QWidget):
 
             if node["cfsj"] >= start_time and node["cfsj"] <= end_time:
                 reform = {
-                    "checi": node["train"].localCheci(),
-                    "down": node["train"].isDown(),
+                    "checi": node["train"].fullCheci(),
+                    "down": node["train"].stationDown(station_name,self.graph),
                     "time": node["cfsj"],
                 }
                 if node["ddsj"] != node["cfsj"]:

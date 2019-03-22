@@ -62,18 +62,19 @@ class CurrentWidget(QtWidgets.QWidget):
         flayout.addRow("列车种类", comboType)
         comboType.setCurrentText("")
 
-        checkDown = QtWidgets.QCheckBox()
-        checkDown.setChecked(True)
-        checkDown.setText("本线下行运行")
-        self.checkDown = checkDown
+        btnItems = QtWidgets.QPushButton("设置")
+        btnItems.setMaximumWidth(120)
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(btnItems)
+        checkAutoItem = QtWidgets.QCheckBox('自动设置')
+        hlayout.addWidget(checkAutoItem)
+        flayout.addRow("运行线管理",hlayout)
+
         checkShow = QtWidgets.QCheckBox()
         checkShow.setChecked(True)
-        checkShow.setText("显示运行线")
+        checkShow.setText("显示")
         self.checkShow = checkShow
-        hlayout = QtWidgets.QVBoxLayout()  # 名称未修改，注意类型
-        hlayout.addWidget(checkDown)
-        hlayout.addWidget(checkShow)
-        flayout.addRow("铺画", hlayout)
+        flayout.addRow("显示运行线", checkShow)
 
         btnColor = QtWidgets.QPushButton("系统默认")
         btnColor.clicked.connect(self._set_train_color)
@@ -202,7 +203,6 @@ class CurrentWidget(QtWidgets.QWidget):
             self.btnColor.setStyleSheet(self.color)
         self.spinWidth.setValue(train.lineWidth())
 
-        self.checkDown.setChecked(train.isDown(default=True))
         self.checkShow.setChecked(train.isShow())
 
         timeTable: QtWidgets.QTableWidget = self.timeTable
@@ -333,48 +333,37 @@ class CurrentWidget(QtWidgets.QWidget):
     def _load_station_list(self, timeTable):
         """
         导入本线车站表。按上下行
+        todo 改为手动选择
         """
         flag = self.main.qustion("删除本车次时刻表信息，从本线车站表导入，是否继续？")
         if not flag:
             return
 
-        down = self.checkDown.isChecked()
+        down = True  # todo here
 
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle("本线车站导入")
         layout = QtWidgets.QVBoxLayout()
 
-        label = QtWidgets.QLabel(f"本车次当前方向为【{'下行'if down else '上行'}】，已自动选中本方向车站")
-        label.setWordWrap(True)
-        layout.addWidget(label)
+        radioDown = QtWidgets.QRadioButton('下行')
+        radioUp = QtWidgets.QRadioButton("上行")
+        radioDown.setChecked(True)
+        box = QtWidgets.QButtonGroup(self)
+        box.addButton(radioDown)
+        box.addButton(radioUp)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(radioDown)
+        hlayout.addWidget(radioUp)
+        layout.addLayout(hlayout)
+        radioDown.toggled.connect(self._set_load_station_list)
 
         listWidget = QtWidgets.QListWidget()
 
-        dir = Line.DownVia if down else Line.UpVia
-
-        dir_dict = {
-            0x0: '不通过',
-            0x1: '下行',
-            0x2: '上行',
-            0x3: '上下行'
-        }
-
         listWidget.setSelectionMode(listWidget.MultiSelection)
+        self.loadList = listWidget
 
-        for st in self.main.graph.stationDicts(reverse=not down):
-            try:
-                st["direction"]
-            except KeyError:
-                st["direction"] = 0x3
-
-            text = "%s\t%s" % (st["zhanming"], dir_dict[st["direction"]])
-            item = QtWidgets.QListWidgetItem(text)
-            item.setData(-1, st["zhanming"])
-            listWidget.addItem(item)
-            if dir & st["direction"]:
-                item.setSelected(True)
-            else:
-                item.setSelected(False)
+        self._set_load_station_list(down)
 
         layout.addWidget(listWidget)
 
@@ -391,6 +380,32 @@ class CurrentWidget(QtWidgets.QWidget):
         dialog.setLayout(layout)
 
         dialog.exec_()
+
+    def _set_load_station_list(self,down:bool):
+        listWidget = self.loadList
+        listWidget.clear()
+        dir = Line.DownVia if down else Line.UpVia
+
+        dir_dict = {
+            0x0: '不通过',
+            0x1: '下行',
+            0x2: '上行',
+            0x3: '上下行'
+        }
+        for st in self.main.graph.stationDicts(reverse=not down):
+            try:
+                st["direction"]
+            except KeyError:
+                st["direction"] = 0x3
+
+            text = "%s\t%s" % (st["zhanming"], dir_dict[st["direction"]])
+            item = QtWidgets.QListWidgetItem(text)
+            item.setData(-1, st["zhanming"])
+            listWidget.addItem(item)
+            if dir & st["direction"]:
+                item.setSelected(True)
+            else:
+                item.setSelected(False)
 
     def _load_station_ok(self, listWidget: QtWidgets.QListWidget, timeTable: QtWidgets.QTableWidget):
         timeTable.setRowCount(0)
@@ -435,9 +450,9 @@ class CurrentWidget(QtWidgets.QWidget):
             self.main._initTypeWidget()
         train.setType(trainType)
 
-        isDown = self.checkDown.isChecked()
+        # isDown = self.checkDown.isChecked()
         isShow = self.checkShow.isChecked()
-        train.setIsDown(isDown)
+        # train.setIsDown(isDown)
         train.setIsShow(isShow)
 
         train.setUI(color=self.color, width=self.spinWidth.value())

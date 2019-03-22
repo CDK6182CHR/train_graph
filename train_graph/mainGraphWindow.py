@@ -273,7 +273,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _check_ruler(self, train: Train):
         """
-        检查对照标尺和实际时刻表
+        检查对照标尺和实际时刻表.
+        todo 参考两车次标尺对照功能修改
         0-通通
         1-起通
         2-通停
@@ -312,7 +313,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         former_time = []
         for name, ddsj, cfsj in train.station_infos():
             # 这里填入车次信息，不填标尺信息
-            dir_ = Line.DownVia if train.isDown() else Line.UpVia
+            dir_ = Line.DownVia if train.firstDown() else Line.UpVia
             if not former:
                 if self.graph.stationInLine(name) and self.graph.stationDirection(name) & dir_:
                     former = name
@@ -743,7 +744,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         2018.12.28新增逻辑，强制显示运行线
         """
         train.setIsShow(True, affect_item=True)
-        self.GraphWidget._line_selected(train.getItem())
+        for item in train.items():
+            self.GraphWidget._line_selected(item)
+            break
         dock: QtWidgets.QDockWidget = self.currentDockWidget
         dock.setVisible(True)
 
@@ -767,7 +770,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         2018.12.28修改：封装trainWidget部分，直接接受车次对象。这个函数只管划线部分
         """
 
-        if show and train.getItem() is None:
+        if show and not train.items():
             # 如果最初铺画没有铺画运行线而要求显示运行线，重新铺画。
             # print('重新铺画运行线。Line972')
             self.GraphWidget.addTrainLine(train)
@@ -1337,8 +1340,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         # 这是为了避免间接递归。若不加检查，这里取消后再次引发改变，则item选中两次。
         if self.GraphWidget.selectedTrain is not train:
             self.GraphWidget._line_un_selected()
-
-        self.GraphWidget._line_selected(train.item, True)  # 函数会检查是否重复选择
+        self.GraphWidget._line_selected(train.firstItem(), True)  # 函数会检查是否重复选择
 
     def _add_train_by_ruler(self):
         """
@@ -1474,7 +1476,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
             tableWidget.setItem(row, 5, QtWidgets.QTableWidgetItem(stop_text))
 
-            text = '下行' if train.isDown() == True else ('上行' if train.isDown() == False else '未知')
+            down = train.stationDown(station_name,self.graph)
+            text = '下行' if  down is True else ('上行' if down is False else '未知')
             item = QtWidgets.QTableWidgetItem(text)
             tableWidget.setItem(row, 6, item)
 

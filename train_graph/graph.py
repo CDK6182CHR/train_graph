@@ -77,6 +77,7 @@ class Graph:
             "end_label_height":15,
             "table_row_height":30,
             "show_time_mark":1, # 显示详细停点。0-不显示，1-仅显示选中车次，2-显示所有车次
+            "max_passed_stations":3,  # 至多跨越站数。超过这个数将被分成两段运行图。
             "default_colors": {"快速": "#FF0000", "特快": "#0000FF",
                                "直达特快": "#FF00FF", "动车组": "#804000", "动车": "#804000",
                                "高速": "#FF00BE", "城际": "#FF33CC", "default": "#008000"
@@ -536,7 +537,7 @@ class Graph:
 
     def setDirShow(self,down,show):
         for train in self.trains():
-            if train.isDown() == down and train.type not in self.UIConfigData()['not_show_types']:
+            if train.firstDown() == down and train.type not in self.UIConfigData()['not_show_types']:
                 train.setIsShow(show,affect_item=False)
 
     def trainExisted(self,train:Train,ignore:Train=None):
@@ -586,7 +587,7 @@ class Graph:
                     "ddsj":st_dict["ddsj"],
                     "cfsj":st_dict["cfsj"],
                     "station_name":st_dict["zhanming"],
-                    "down":train.isDown(auto_guess=True,graph=self),
+                    "down":train.stationDown(st_dict['zhanming'],self),
                     "note":st_dict.get("note",''),
                     "train":train,
                 }
@@ -604,7 +605,6 @@ class Graph:
     def reverse(self):
         """
         反排运行图
-        :return:
         """
         length = self.lineLength()
 
@@ -616,8 +616,7 @@ class Graph:
         #列车上下行调整、上下行车次交换
         for train in self._trains:
             #上下行交换
-            if train.isDown() is not None:
-                train.setIsDown(not train.isDown())
+            train.reverseAllItemDown()
 
             #车次交换
             temp = train.setCheci(train.fullCheci(),train.upCheci(),train.downCheci())
@@ -625,14 +624,14 @@ class Graph:
     def downTrainCount(self):
         count = 0
         for train in self.trains():
-            if train.isDown() is True:
+            if train.firstDown() is True:
                 count+=1
         return count
 
     def upTrainCount(self):
         count = 0
         for train in self.trains():
-            if train.isDown() is False:
+            if train.firstDown() is False:
                 count+=1
         return count
 
@@ -702,6 +701,7 @@ class Graph:
 
     def jointGraph(self,graph,former:bool,reverse:bool,line_only:bool):
         """
+        todo 上下行逻辑存在比较大的问题
         拼接两运行图。
         :param graph: 另一运行图
         :param former: 另一运行图是否在本运行图前侧链接
@@ -720,10 +720,10 @@ class Graph:
                     train_main.delNonLocal(self)
                     train_append.delNonLocal(graph)
                     # 方向以本线为准
-                    down = train_main.isDown(auto_guess=True, graph=self)
+                    down = train_main.firstDown()
                     if down is None:
                         #如果本线无法判断，例如Z90终到石家庄在京石段只有一个站，则用另一条线的。
-                        down = train_append.isDown(auto_guess=True,graph=graph)
+                        down = train_append.firstDown()
                     if down is None:
                         #如果都无法判断，直接判断为下行车次
                         print("cannot judge down. use default.",train_main.fullCheci())

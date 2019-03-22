@@ -704,23 +704,51 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             self.graph.UIConfigData()["showFullCheci"]
         except KeyError:
             self.graph.UIConfigData()["showFullCheci"] = False
-        item = TrainItem(train, self.graph, self,self.graph.UIConfigData().setdefault('valid_width',3),
-                         showFullCheci=self.graph.UIConfigData()['showFullCheci'],
-                         markMode=self.graph.UIConfigData()['show_time_mark'])
+
+        if train.autoItem():
+            start = 0
+            status = None
+            while status not in (TrainItem.End,TrainItem.Invalid):
+                # item = TrainItem(train, self.graph, self,self.graph.UIConfigData().setdefault('valid_width',3),
+                #          showFullCheci=self.graph.UIConfigData()['showFullCheci'],
+                #          markMode=self.graph.UIConfigData()['show_time_mark'])
+                item = TrainItem(train,self.graph,self,
+                                 validWidth=self.graph.UIConfigData().setdefault('valid_width',3),
+                                 showFullCheci=self.graph.UIConfigData()['showFullCheci'],
+                                 markMode=self.graph.UIConfigData()['show_time_mark']
+                                 )
+                if status != TrainItem.Reversed:
+                    showStart = True
+                else:
+                    showStart = False
+                end, status = item.setLine(start, showStartLabel=showStart)
+                # print(train.fullCheci(),"setLine returns",end,status)
+                if status != TrainItem.Invalid:
+                    if status == TrainItem.Reversed:
+                        print("行别变化！")
+                    train.addItem(item)
+                    dct = {
+                        "start":train.stationNameByIndex(start),
+                        "end":train.stationNameByIndex(end),
+                        "down":item.down,
+                        "show_start_label":showStart,
+                        "show_end_label":False if status == TrainItem.Reversed else True,
+                    }
+                    train.addItemInfoDict(dct)
+                    self.scene.addItem(item)
+                start = end
         # item.setLine()  # 重复调用，init中已经调用过一次了，故删去。
-        if train.item is not None:
-            self.scene.addItem(item)
 
     def delTrainLine(self, train):
         if train is self.selectedTrain:
             self._line_un_selected()
 
-        item = train.getItem()
-
-        # 这里需要遍历检查items，是因为防止ctrl+R操作中的train未添加进来，尝试删除引发错误。暂未找到更合适方案。
-        if item in self.scene.items():
-            self.scene.removeItem(item)
-        train.setItem(None)
+        # item = train.getItem()
+        for item in train.items():
+            # 这里需要遍历检查items，是因为防止ctrl+R操作中的train未添加进来，尝试删除引发错误。暂未找到更合适方案。
+            if item in self.scene.items():
+                self.scene.removeItem(item)
+        train.clearItems()
 
     def _resetTimeAxis(self):
         point = QtCore.QPoint(0, 0)
@@ -795,7 +823,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         train = item.train
         if train is self.selectedTrain:
             return
-        item.select()
+        for item in train.items():
+            item.select()
 
         if ensure_visible:
             self.ensureVisible(item)
@@ -808,8 +837,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         train = self.selectedTrain
         if train is None:
             return
-        item: TrainItem = train.getItem()
-        item.unSelect()
+        for item in train.items():
+            item.unSelect()
 
         self.nowItem.setPlainText(' ')
         self.selectedTrain = None
@@ -1069,15 +1098,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             return []
         # item:QtWidgets.QGraphicsPathItem
         self.selectedTrain: Train
-        collidItems = self.selectedTrain.getItem().collidingItems()
-        print("collid calculate ok")
-        selfItem = self.selectedTrain.getItem()
-
         events = []
         # 图定到开时间
         train = self.selectedTrain
         for dct in train.stationDicts():
-            name,ddsj,cfsj = dct['zhanming'],dct['ddsj'],dct['cfsj']
+            name, ddsj, cfsj = dct['zhanming'], dct['ddsj'], dct['cfsj']
             if not self.graph.stationInLine(name):
                 continue
             if ddsj == cfsj:
@@ -1093,7 +1118,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     "later_station": None,
                     "another": None,
                     "mile": self.graph.stationMile(name),
-                    "note":dct.get("note",''),
+                    "note": dct.get("note", ''),
                 }
                 events.append(dict)
 
@@ -1116,25 +1141,32 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 }
                 events.append(dict1)
                 events.append(dict2)
+        # collidItems = self.selectedTrain.getItem().collidingItems()
 
-        # 多车次事件
-        for item in collidItems:
-            # 2018.12.14：封装item后，collid会同时包含TrainItem和pathItem，此时不可以取parent，否则重复计算
-            # while item.parentItem():
-            #     item = item.parentItem()
-            if item is self.selectedTrain.item:
-                continue
-            if isinstance(item, TrainItem):
-                train = item.train
-                if (train is None):
-                    # 表明是标签对象，无意义
+        # 2.0版本调整。逻辑不确定。
+        for item in self.selectedTrain.items():
+            collidItems = []
+            collidItems.extend(item.collidingItems())
+            # print("collid calculate ok")
+            selfItem = item
+            # 多车次事件
+            for item in collidItems:
+                # 2018.12.14：封装item后，collid会同时包含TrainItem和pathItem，此时不可以取parent，否则重复计算
+                # while item.parentItem():
+                #     item = item.parentItem()
+                if item is self.selectedTrain.item:
                     continue
-                print(self.selectedTrain.fullCheci(), train.fullCheci())
-                events += self._trains_collid(selfItem, item, self.selectedTrain, train)
-            elif isinstance(item, QtWidgets.QGraphicsLineItem):
-                # events += self._line_collid(selfItem,item,self.selectedTrain)
-                # TODO 推算时刻
-                pass
+                if isinstance(item, TrainItem):
+                    train = item.train
+                    if (train is None):
+                        # 表明是标签对象，无意义
+                        continue
+                    print(self.selectedTrain.fullCheci(), train.fullCheci())
+                    events += self._trains_collid(selfItem, item, self.selectedTrain, train)
+                elif isinstance(item, QtWidgets.QGraphicsLineItem):
+                    # events += self._line_collid(selfItem,item,self.selectedTrain)
+                    # TODO 推算时刻
+                    pass
 
         # 事件排序
         self._sort_event(events)
@@ -1154,7 +1186,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # 2019.02.23修改：按里程优先，时间次之的顺序排序。
         train:Train = self.selectedTrain
         event_source.sort(key=lambda x:(x["mile"],x["time"]))
-        if not train.isDown():
+        if not train.firstDown():
             event_source.reverse()
 
     def _line_collid(self, pathItem: QtWidgets.QGraphicsPathItem, lineItem: QtWidgets.QGraphicsLineItem, train):
@@ -1195,7 +1227,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         站内：停车的一方为待避，另一方为越行。
         站外：比较两站时刻。用时短的一方是越行。
         """
-        if train1.isDown() != train2.isDown():
+        if train1.stationDown(former) != train2.stationDown(former):
             return TrainEventType.meet
 
         if later is None:

@@ -18,15 +18,25 @@ class TrainItem(QtWidgets.QGraphicsItem):
     NW = 2
     SW = 3
     SE = 4
-    def __init__(self,train:Train,graph:Graph,graphWidget,validWidth = 1,
-                 showFullCheci=False,markMode=1,parent=None):
+    # 结束判断的标记
+    Pass = 1  # 因跨越站超过限制值终止
+    End = 0
+    Invalid = -1  # 运行线无效
+    Setted = 2  # 用户设置终止
+    Reversed = 3  # 因上下行翻转终止
+    def __init__(self,train:Train,graph:Graph,graphWidget,start=None,end=None,down=None,
+                 validWidth = 1,
+                 showFullCheci=False,markMode=1,
+                 parent=None):
         super().__init__(parent)
         self.train = train
         self.graph = graph
+        self.startStation = start
+        self.endStation = end
         self.graphWidget = graphWidget
         self.showFullCheci=showFullCheci
         self.validWidth = validWidth
-        self.down = None
+        self.down = down
         self.markMode = markMode
         self.markTime = (markMode == 2)
 
@@ -50,17 +60,23 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.endPoint=None
         # self.labelItemWidth=None
         # self.labelItemHeight=None
+        self.maxPassed = graph.UIConfigData().setdefault("max_passed_stations",3)
 
         self.color = self._trainColor()
-        self.setLine()
 
-    def setLine(self):
+    def setLine(self,start:int=0,end:int=-1,showStartLabel=True,showEndLabel = True)->(int,int):
         """
         2019.02.11新增逻辑：绘图过程中记录下每个车站的y_value。
+        返回铺画结束的标号。如果有特殊情况，返回-1.
+        铺画时从startIndex开始扫描站表，遇到startStation时开始铺画。
+        如果end=None表明是自动判别，当判别到上下行翻转时返回。
+        运行线有效是当且仅当返回不是-1.
         """
+        end_setted = (self.startStation is not None)
+        self.start_index = start
         if not self.train.isShow():
             # 若设置为不显示，忽略此命令
-            return
+            return -1,self.Invalid
         train = self.train
         station_count = 0  # 本线站点数
 
@@ -76,33 +92,43 @@ class TrainItem(QtWidgets.QGraphicsItem):
         width = self.graphWidget.scene.width() - self.graphWidget.margins['left'] - \
                 self.graphWidget.margins['right']
 
-        path,start_point,end_point = self._setPathItem(span_left,span_right)
+        # 绘制主要部分pathItem
+        path,start_point,end_point,end,status = self._setPathItem(span_left,span_right,False,start)
         down = self.down
 
         expand_path = None
         if self.validWidth > 1:
-            expand_path,_,_ = self._setPathItem([],[])
+            expand_path,_,_,_,_ = self._setPathItem([],[],False,start)
 
         station_count = self.station_count
         if station_count < 2:
-            return
+            # print("station count < 2")
+            return -1,self.Invalid
 
         if start_point is None:
             print(train.fullCheci())
-            return
+            return -1,self.Invalid
         else:
             self.startPoint = start_point
 
-        train.setIsDown(down)
-        checi = train.fullCheci() if self.showFullCheci else train.localCheci()
-
+        # train.setIsDown(down)
+        checi = train.fullCheci() if self.showFullCheci else train.getCheci(down) # todo 修改逻辑
 
         brush = QtGui.QBrush(pen.color())
         # 终点标签
-        endLabel = self._setEndItem(end_point,brush,checi,down,self.endAtThis)
+        # 绘制终点标签的条件是：自动计算Item且不是由转向终止的，或者用户指定。
+        if showEndLabel and (end_setted or status != self.Reversed):
+            endLabel = self._setEndItem(end_point,brush,checi,down,self.endAtThis)
+            endLabelItem = QtWidgets.QGraphicsPathItem(endLabel, self)
+            endLabelItem.setPen(labelPen)
+            self.endLabelItem = endLabelItem
 
         # 起点标签
-        label = self._setStartItem(start_point,brush,checi,down,self.startAtThis)
+        if showStartLabel:
+            label = self._setStartItem(start_point,brush,checi,down,self.startAtThis)
+            labelItem = QtWidgets.QGraphicsPathItem(label, self)
+            labelItem.setPen(labelPen)
+            self.startLabelItem = labelItem
 
         # 跨界点标签
         UIDict = self.graph.UIConfigData()
@@ -132,54 +158,78 @@ class TrainItem(QtWidgets.QGraphicsItem):
         stroker.setWidth(0.5)
         outpath = stroker.createStroke(path)
 
-        if station_count >= 2:
-            # item = QtWidgets.QGraphicsItem
-            pen.setJoinStyle(Qt.SvgMiterJoin)
-            pen.setCapStyle(Qt.SquareCap)
-            if expand_path is not None:
-                outexpand = stroker.createStroke(expand_path)
-                expandItem = QtWidgets.QGraphicsPathItem(outexpand,self)
-                expandPen = QtGui.QPen(Qt.transparent,pen.width()*self.validWidth)
-                expandItem.setPen(expandPen)
-                expandItem.setZValue(-1)
-                self.expandItem = expandItem
-            pathItem = QtWidgets.QGraphicsPathItem(outpath, self)
-            pathItem.setPen(pen)
-            self.pathItem = pathItem
-            labelItem = QtWidgets.QGraphicsPathItem(label, self)
-            labelItem.setPen(labelPen)
-            self.startLabelItem = labelItem
-            endLabelItem = QtWidgets.QGraphicsPathItem(endLabel,self)
-            endLabelItem.setPen(labelPen)
-            self.endLabelItem=endLabelItem
-            train.setItem(self)
-        else:
-            train.setItem(None)
+        # item = QtWidgets.QGraphicsItem
+        pen.setJoinStyle(Qt.SvgMiterJoin)
+        pen.setCapStyle(Qt.SquareCap)
+        if expand_path is not None:
+            outexpand = stroker.createStroke(expand_path)
+            expandItem = QtWidgets.QGraphicsPathItem(outexpand,self)
+            expandPen = QtGui.QPen(Qt.transparent,pen.width()*self.validWidth)
+            expandItem.setPen(expandPen)
+            expandItem.setZValue(-1)
+            self.expandItem = expandItem
+        pathItem = QtWidgets.QGraphicsPathItem(outpath, self)
+        pathItem.setPen(pen)
+        self.pathItem = pathItem
+        return end,status
+
+
+    def isDownInterval(self,last_point,this_point)->bool:
+        """
+        判定上下行区间。
+        """
+        if this_point.y() > last_point.y():
+            return True
+        return False
 
     def _setPathItem(self,
             span_left:list,span_right:list,
-            mark_only:bool=False
-        )->(QtGui.QPainterPath,QtCore.QRectF,QtCore.QRectF,):
+            mark_only:bool,
+            startIndex:int,
+        )->(QtGui.QPainterPath,QtCore.QRectF,QtCore.QRectF,int,int):
         """
-        从setLine中抽离出来的绘制pathItem函数。返回：path,start_point,end_point
+        从setLine中抽离出来的绘制pathItem函数。返回：path,start_point,end_point, endIndex, status（终止原因）
         """
         train = self.train
         path = QtGui.QPainterPath()
         station_count = 0
-        down = train.down  # 本线上下行判断
+        down = self.down  # 本线上下行判断
         last_point = None
         start_point = None
         start_dd,start_cf = None,None
         last_station = None
-        for dct in train.stationDicts():
+        passedCount = 0
+        started = False if self.startStation is not None else True
+        status = None
+        curIndex = -1
+        last_index = None
+        for index,dct in enumerate(train.stationDicts(startIndex)):
+            curIndex = index + startIndex  # 标记当前处理对象在时刻表中的index
             # 计算并添加运行线，上下行判断
             station, ddsj, cfsj = dct["zhanming"],dct["ddsj"],dct["cfsj"]
             ddpoint = self.graphWidget.stationPosCalculate(station, ddsj)
             cfpoint = self.graphWidget.stationPosCalculate(station, cfsj)
             stopped = (ddsj!=cfsj)
 
+            if not started:
+                if station == self.startStation:
+                    started = True
+                else:
+                    continue
             if ddpoint is None or cfpoint is None:
                 continue
+            else:
+                graph_index = self.graph.stationIndex(station)
+                if last_index is not None and abs(graph_index - last_index) > 1:
+                    print("passedCount+=",abs(graph_index - last_index))
+                    passedCount += abs(graph_index - last_index) - 1
+                else:
+                    passedCount = 0
+                if passedCount > self.maxPassed:
+                    status = self.Pass
+                    last_station = station
+                    print("passedCount > maxPassed")
+                    break
 
             if self.graph.stationDirection(station) == 0x0:
                 # 取消贪心策略，设置为不通过的站一律不画
@@ -193,21 +243,26 @@ class TrainItem(QtWidgets.QGraphicsItem):
             if station_count == 1:
                 # 第一个站
                 self.startAtThis = train.isSfz(station)
+                self.startStation = station
                 start_dd,start_cf = ddsj,cfsj
                 path.moveTo(ddpoint)
                 start_point = ddpoint
 
             else:
                 # path.lineTo(ddpoint)
+                # 上下行判别
+                newDown = self.isDownInterval(last_point,ddpoint)
+                if down is None:
+                    down = newDown
+                elif down != newDown and self.endStation is None:
+                    # 行别变化，终止铺画
+                    status = self.Reversed
+                    print("行别变化",down,newDown,station,self.train.fullCheci(),curIndex,station_count)
+                    curIndex -= 1
+                    # 注意：保持last_station是上一个。
+                    break
                 if not mark_only:
                     self._incline_line(path, last_point, ddpoint, span_left, span_right)
-                # 上下行判别
-                if down is None:
-                    if station_count == 2:
-                        if ddpoint.y() - start_point.y() > 0:
-                            down = True
-                        else:
-                            down = False
             if not mark_only:
                 self._H_line(path, ddpoint, cfpoint, span_left, span_right,
                          self.graph.UIConfigData()["show_line_in_station"])
@@ -240,13 +295,33 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 else:
                     self.addTimeMark(ddpoint,ddsj,self.SW)
             last_point = cfpoint
+            last_index = graph_index
+            if self.endStation is not None and self.endStation == station:
+                status = self.Setted
+                last_station = station
+                break
+
+        self.endStation = last_station
+        if status is None:
+            status = self.End
         end_point = path.currentPosition()
-        self.endAtThis = train.isZdz(last_station)
+        if last_station is not None:
+            self.endAtThis = train.isZdz(last_station)
         if not mark_only:
             self.endPoint = end_point
         self.down = down
         self.station_count = station_count
-        return path,start_point,end_point
+        return path,start_point,end_point,curIndex,status
+
+    def _setStartEndLabelText(self,checi,brush)->QtWidgets.QGraphicsSimpleTextItem:
+        """
+        生成一个simpleTextItem，并设置好self.spanItemWidth等。
+        """
+        endLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+        endLabelText.setBrush(brush)
+        self.spanItemWidth = endLabelText.boundingRect().width()
+        self.spanItemHeight = endLabelText.boundingRect().height()
+        return endLabelText
 
     def _setEndItem(self,end_point:QtCore.QPointF,brush:QtGui.QBrush,
                     checi:str,down:bool,endAtThis:bool)->QtGui.QPainterPath:
@@ -255,10 +330,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         同时设定spanItemHeight和~width两个attribute。
         """
         # 终点标签
-        endLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
-        endLabelText.setBrush(brush)
-        self.spanItemWidth = endLabelText.boundingRect().width()
-        self.spanItemHeight = endLabelText.boundingRect().height()
+        endLabelText = self._setStartEndLabelText(checi,brush)
         w,h = self.spanItemWidth,self.spanItemHeight
         endLabel = QtGui.QPainterPath()
         self.endLabelText = endLabelText
@@ -327,15 +399,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 curPoint.setY(curPoint.y()-h)
                 endLabel.lineTo(curPoint)
 
-
         return endLabel
 
     def _setStartItem(self, start_point: QtCore.QPointF, brush: QtGui.QBrush,
                     checi: str, down: bool, startAtThis: bool) -> QtGui.QPainterPath:
         label = QtGui.QPainterPath()
         label.moveTo(start_point)
-        startLabelText = QtWidgets.QGraphicsSimpleTextItem(checi, self)
-        startLabelText.setBrush(brush)
+        startLabelText = self._setStartEndLabelText(checi,brush)
         self.startLabelText = startLabelText
         start_height = self.graph.UIConfigData()['start_label_height']
         w,h = self.spanItemWidth,self.spanItemHeight
@@ -552,63 +622,67 @@ class TrainItem(QtWidgets.QGraphicsItem):
         pen.setWidth(pen.width()+1)
         path.setPen(pen)
         path.setZValue(1)
-        label.setZValue(1)
+
+        brush = QtGui.QBrush(pen.color())
+        UIDict = self.graph.UIConfigData()
 
         #标签突出显示
         rectPen = QtGui.QPen(pen.color())
         rectPen.setWidth(0.5)
         pen.setWidth(2)
-        label.setPen(pen)
-        # brush = QtGui.QBrush(QtGui.QColor("#FFFFFF"))
-        brush = QtGui.QBrush(pen.color())
-        # 起点
-        startPoint = self.startPoint
-        UIDict = self.graph.UIConfigData()
-        x_append = self.spanItemWidth / 2 if self.startAtThis else self.spanItemWidth
-        if self.train.isDown():
-            Rect = QtCore.QRectF(startPoint.x()-x_append,
-                                          startPoint.y()-self.spanItemHeight-UIDict['start_label_height'],
-                                          self.spanItemWidth,
-                                          self.spanItemHeight)
-        else:
-            Rect = QtCore.QRectF(startPoint.x() - x_append,
-                                          startPoint.y()+UIDict['start_label_height'],
-                                          self.spanItemWidth,
-                                          self.spanItemHeight)
-        self.tempRect = QtWidgets.QGraphicsRectItem(Rect,self)
+        if label is not None:
+            label.setZValue(1)
+            label.setPen(pen)
 
-        self.tempRect.setPen(rectPen)
-        self.tempRect.setBrush(brush)
-        self.tempRect.setZValue(0.5)
-        self.startLabelText.setZValue(1)
-        self.startLabelText.setBrush(Qt.white)
+            # 起点
+            startPoint = self.startPoint
+            x_append = self.spanItemWidth / 2 if self.startAtThis else self.spanItemWidth
+            if self.down:
+                Rect = QtCore.QRectF(startPoint.x()-x_append,
+                                              startPoint.y()-self.spanItemHeight-UIDict['start_label_height'],
+                                              self.spanItemWidth,
+                                              self.spanItemHeight)
+            else:
+                Rect = QtCore.QRectF(startPoint.x() - x_append,
+                                              startPoint.y()+UIDict['start_label_height'],
+                                              self.spanItemWidth,
+                                              self.spanItemHeight)
+            self.tempRect = QtWidgets.QGraphicsRectItem(Rect,self)
 
-        label = self.endLabelItem
-        label.setZValue(1)
+            self.tempRect.setPen(rectPen)
+            self.tempRect.setBrush(brush)
+            self.tempRect.setZValue(0.5)
+            self.startLabelText.setZValue(1)
+            self.startLabelText.setBrush(Qt.white)
+
+
         # 终点标签突出显示
-        pen.setWidth(2)
-        label.setPen(pen)
-        brush = QtGui.QBrush(pen.color())
-        endPoint = self.endPoint
-        x_append = self.spanItemWidth/2 if self.endAtThis else 0
-        if train.isDown():
-            rect = QtCore.QRectF(endPoint.x()-x_append,
-                                 endPoint.y()+UIDict['end_label_height'],
-                                 self.spanItemWidth,
-                                 self.spanItemHeight
-            )
-        else:
-            rect = QtCore.QRectF(endPoint.x() - x_append,
-                                 endPoint.y() - UIDict['end_label_height'] - self.spanItemHeight,
-                                 self.spanItemWidth,
-                                 self.spanItemHeight
-                                 )
-        self.tempRect2 = QtWidgets.QGraphicsRectItem(rect,self)
-        self.tempRect2.setPen(rectPen)
-        self.tempRect2.setBrush(brush)
-        self.tempRect2.setZValue(0.5)
-        self.endLabelText.setZValue(1)
-        self.endLabelText.setBrush(Qt.white)
+        label = self.endLabelItem
+        if label is not None:
+            label.setZValue(1)
+            pen.setWidth(2)
+            label.setPen(pen)
+            brush = QtGui.QBrush(pen.color())
+            endPoint = self.endPoint
+            x_append = self.spanItemWidth/2 if self.endAtThis else 0
+            if self.down:
+                rect = QtCore.QRectF(endPoint.x()-x_append,
+                                     endPoint.y()+UIDict['end_label_height'],
+                                     self.spanItemWidth,
+                                     self.spanItemHeight
+                )
+            else:
+                rect = QtCore.QRectF(endPoint.x() - x_append,
+                                     endPoint.y() - UIDict['end_label_height'] - self.spanItemHeight,
+                                     self.spanItemWidth,
+                                     self.spanItemHeight
+                                     )
+            self.tempRect2 = QtWidgets.QGraphicsRectItem(rect,self)
+            self.tempRect2.setPen(rectPen)
+            self.tempRect2.setBrush(brush)
+            self.tempRect2.setZValue(0.5)
+            self.endLabelText.setZValue(1)
+            self.endLabelText.setBrush(Qt.white)
 
         # 设置跨界点标签突出显示
         if self.spanItems:
@@ -626,7 +700,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 for it in self.markLabels:
                     it.setVisible(True)
             else:
-                self._setPathItem([],[],mark_only=True)
+                self._setPathItem([],[],startIndex=self.start_index,mark_only=True)
         self.isHighlighted = True
 
     def unSelect(self):
@@ -642,20 +716,22 @@ class TrainItem(QtWidgets.QGraphicsItem):
             pathPen.setWidth(pathPen.width() - 1)
             path.setPen(pathPen)
             path.setZValue(0)
-            self.startLabelText.setZValue(0)
-            self.startLabelText.setBrush(pathPen.color())
-            self.endLabelText.setZValue(0)
-            self.endLabelText.setBrush(pathPen.color())
 
-            pathPen.setWidth(1)
-            label.setPen(pathPen)
-            label.setZValue(0)
+            if label is not None:
+                pathPen.setWidth(1)
+                label.setPen(pathPen)
+                label.setZValue(0)
+                self.startLabelText.setZValue(0)
+                self.startLabelText.setBrush(pathPen.color())
+                self.graphWidget.scene.removeItem(self.tempRect)
 
-            endlabel.setPen(pathPen)
-            endlabel.setZValue(0)
+            if endlabel is not None:
+                endlabel.setPen(pathPen)
+                endlabel.setZValue(0)
+                self.endLabelText.setZValue(0)
+                self.endLabelText.setBrush(pathPen.color())
+                self.graphWidget.scene.removeItem(self.tempRect2)
 
-        self.graphWidget.scene.removeItem(self.tempRect)
-        self.graphWidget.scene.removeItem(self.tempRect2)
         self.tempRect = None
         self.tempRect2 = None
 

@@ -117,6 +117,14 @@ class ConfigWidget(QtWidgets.QWidget):
         self.validWidthSpin = spin
         layout.addRow("有效选择宽度",spin)
 
+        spin = QtWidgets.QSpinBox()
+        spin.setRange(0,100)
+        spin.setValue(self.UIDict.setdefault("max_passed_stations",3))
+        text = "当区间无数据站点超过设定值时，系统自动分成两条运行线。运行线也可以手工管理。"
+        spin.setToolTip(text)
+        self.maxPassSpin = spin
+        layout.addRow("最大跨越站数",spin)
+
         combo = QtWidgets.QComboBox()
         combo.addItems(('不显示','仅选中车次显示','全部显示'))
         self.markModeCombo = combo
@@ -195,6 +203,7 @@ class ConfigWidget(QtWidgets.QWidget):
         self.showFullCheciCheck.setChecked(UIDict["showFullCheci"])
         self.markModeCombo.setCurrentIndex(UIDict["show_time_mark"])
         self.validWidthSpin.setValue(UIDict.setdefault('valid_width',3))
+        self.maxPassSpin.setValue(UIDict.setdefault("max_passed_stations",3))
         self.autoPaintCheck.setChecked(UIDict.setdefault('auto_paint',True))
         if not self.system:
             self.noteEdit.setPlainText(self.graph.markdown())
@@ -356,6 +365,9 @@ class ConfigWidget(QtWidgets.QWidget):
         UIDict['auto_paint'] = self.autoPaintCheck.isChecked()
         if self.validWidthSpin.value() != UIDict['valid_width']:
             UIDict['valid_width'] = self.validWidthSpin.value()
+            repaint = True
+        if self.maxPassSpin.value() != UIDict['max_passed_stations']:
+            UIDict['max_passed_stations'] = self.maxPassSpin.value()
             repaint = True
         repaint = repaint or self._applyGridDialogConfig()
         if not self.system:
