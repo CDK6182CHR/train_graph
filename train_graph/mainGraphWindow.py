@@ -53,9 +53,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V1.5.3"
+        self.version = "V2.0.0 Preview2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190321'
+        self.build = '20190322'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -743,7 +743,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         2018.12.28新增逻辑，强制显示运行线
         """
+        print("double clicked!")
         train.setIsShow(True, affect_item=True)
+        self.GraphWidget.setTrainShow(train,True)
         for item in train.items():
             self.GraphWidget._line_selected(item)
             break
@@ -762,7 +764,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         if train.item is None:
             self.GraphWidget.addTrainLine(train)
 
-        self.GraphWidget._line_selected(train.item, ensure_visible=True)
+        self.GraphWidget._line_selected(train.firstItem(), ensure_visible=True)
 
     def _train_show_changed(self, train: Train, show: bool):
         """

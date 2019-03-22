@@ -98,7 +98,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
         expand_path = None
         if self.validWidth > 1:
-            expand_path,_,_,_,_ = self._setPathItem([],[],False,start)
+            expand_path,_,_,_,_ = self._setPathItem([],[],False,start,valid_only=True)
 
         station_count = self.station_count
         if station_count < 2:
@@ -185,7 +185,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
     def _setPathItem(self,
             span_left:list,span_right:list,
             mark_only:bool,
-            startIndex:int,
+            startIndex:int,*,valid_only=False
         )->(QtGui.QPainterPath,QtCore.QRectF,QtCore.QRectF,int,int):
         """
         从setLine中抽离出来的绘制pathItem函数。返回：path,start_point,end_point, endIndex, status（终止原因）
@@ -202,7 +202,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
         started = False if self.startStation is not None else True
         status = None
         curIndex = -1
-        last_index = None
+        last_loop_station = None
+        end_point = None
         for index,dct in enumerate(train.stationDicts(startIndex)):
             curIndex = index + startIndex  # 标记当前处理对象在时刻表中的index
             # 计算并添加运行线，上下行判断
@@ -219,17 +220,19 @@ class TrainItem(QtWidgets.QGraphicsItem):
             if ddpoint is None or cfpoint is None:
                 continue
             else:
-                graph_index = self.graph.stationIndex(station)
-                if last_index is not None and abs(graph_index - last_index) > 1:
-                    print("passedCount+=",abs(graph_index - last_index))
-                    passedCount += abs(graph_index - last_index) - 1
-                else:
-                    passedCount = 0
-                if passedCount > self.maxPassed:
-                    status = self.Pass
-                    last_station = station
-                    print("passedCount > maxPassed")
-                    break
+                if last_loop_station is not None:
+                    passed_stations_left = self.graph.passedStationCount(last_loop_station,station,down)
+                    if passed_stations_left:
+                        # print("passedCount+=",abs(graph_index - last_index))
+                        passedCount += passed_stations_left
+                    else:
+                        passedCount = 0
+                    if passedCount > self.maxPassed and self.endStation is None:
+                        status = self.Pass
+                        last_station = station
+                        end_point = last_point
+                        # print("passedCount > maxPassed")
+                        break
 
             if self.graph.stationDirection(station) == 0x0:
                 # 取消贪心策略，设置为不通过的站一律不画
@@ -247,6 +250,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 start_dd,start_cf = ddsj,cfsj
                 path.moveTo(ddpoint)
                 start_point = ddpoint
+                last_loop_station = station
 
             else:
                 # path.lineTo(ddpoint)
@@ -295,7 +299,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 else:
                     self.addTimeMark(ddpoint,ddsj,self.SW)
             last_point = cfpoint
-            last_index = graph_index
+            last_loop_station = station
             if self.endStation is not None and self.endStation == station:
                 status = self.Setted
                 last_station = station
@@ -304,10 +308,11 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.endStation = last_station
         if status is None:
             status = self.End
-        end_point = path.currentPosition()
+        if end_point is None:
+            end_point = path.currentPosition()
         if last_station is not None:
             self.endAtThis = train.isZdz(last_station)
-        if not mark_only:
+        if not mark_only and not valid_only:
             self.endPoint = end_point
         self.down = down
         self.station_count = station_count

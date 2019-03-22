@@ -792,6 +792,24 @@ class Graph:
         """
         return self.line.stationDictByName(name,strict)
 
+    def passedStationCount(self,st1:str,st2:str,down:bool)->int:
+        """
+        检查以st1为发站，st2为到站，方向为down的区间内有多少个站。2.0新增。
+        """
+        s1 = self.stationIndex(st1)
+        s2 = self.stationIndex(st2)
+        dir_ = 0b1 if down else 0b10
+        cnt = 0
+        t1 = min((s1,s2))
+        t2 = max((s1,s2))
+        # print("t1 t2",t1,t2)
+        for i in range(t1+1,t2):
+            dct = self.line.stationDictByIndex(i)
+            if dir_ & dct.get('direction',0b11):
+                cnt+= 1
+        # print("passedStationCount",st1,st2,down,cnt)
+        return cnt
+
     def resetStationName(self,old,new,auto_field=False):
         old_dict = self.stationByDict(old)
         if old_dict is not None:

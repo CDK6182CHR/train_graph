@@ -67,7 +67,9 @@ class CurrentWidget(QtWidgets.QWidget):
         hlayout = QtWidgets.QHBoxLayout()
         hlayout.addWidget(btnItems)
         checkAutoItem = QtWidgets.QCheckBox('自动设置')
+        self.checkAutoItem = checkAutoItem
         hlayout.addWidget(checkAutoItem)
+        btnItems.clicked.connect(self._items_dialog)
         flayout.addRow("运行线管理",hlayout)
 
         checkShow = QtWidgets.QCheckBox()
@@ -173,6 +175,149 @@ class CurrentWidget(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
+    def _items_dialog(self):
+        """
+        显示对话框，用以设置运行图铺画参数。
+        """
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle('运行线管理')
+        self.itemDialog = dialog
+        hlayout = QtWidgets.QHBoxLayout()
+
+        listWidget = QtWidgets.QListWidget()
+        listWidget.setSelectionMode(listWidget.MultiSelection)
+        self.stationList = listWidget
+        hlayout.addWidget(listWidget)
+        self._set_item_station_list(0)
+
+        vlayout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel("请在左侧列表中选择任意多个车站，系统将你选择的"
+                                 "第一个作为起始站，最后一个作为终止站，自动添加到表格中。"
+                                 "请注意你的这些设置只有在“自动设置”没有勾选时才有效。")
+        label.setWordWrap(True)
+        vlayout.addWidget(label)
+        sublayout = QtWidgets.QHBoxLayout()
+        btnAdd = QtWidgets.QPushButton("添加")
+        btnDel = QtWidgets.QPushButton("删除")
+        sublayout.addWidget(btnAdd)
+        sublayout.addWidget(btnDel)
+
+        vlayout.addLayout(sublayout)
+
+        tableWidget = QtWidgets.QTableWidget()
+        tableWidget.setColumnCount(5)
+        tableWidget.setHorizontalHeaderLabels(('起始站','结束站','下行','起始标签','结束标签'))
+        tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
+        for i,s in enumerate((90,90,50,80,80)):
+            tableWidget.setColumnWidth(i,s)
+        self.itemTable = tableWidget
+
+        maxi = 0
+        for dct in self.train.itemInfo():
+            end = dct["end"]
+            end_index = self.train.stationIndexByName(end)
+            maxi = max((end_index,maxi))
+            self._add_item_table_row(dct['start'],end,end_index,dct['down'],
+                                     dct['show_start_label'],dct['show_end_label'])
+        self._set_item_station_list(maxi)
+
+        btnAdd.clicked.connect(self._add_item_part)
+        btnDel.clicked.connect(self._del_item_part)
+
+        vlayout.addWidget(tableWidget)
+
+        sublayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton("确定")
+        btnCancel = QtWidgets.QPushButton("取消")
+        sublayout.addWidget(btnOk)
+        sublayout.addWidget(btnCancel)
+        vlayout.addLayout(sublayout)
+        hlayout.addLayout(vlayout)
+
+        btnOk.clicked.connect(self._set_item_ok)
+        btnCancel.clicked.connect(dialog.close)
+
+        dialog.setLayout(hlayout)
+        dialog.resize(900,700)
+        dialog.exec_()
+
+    def _set_item_station_list(self,start=0):
+        listWidget = self.stationList
+        listWidget.clear()
+        for i,st in enumerate(self.train.stationDicts(start)):
+            index = i + start
+            item = QtWidgets.QListWidgetItem(st['zhanming'])
+            item.setData(-1,index)
+            listWidget.addItem(item)
+
+    def _add_item_part(self):
+        listWidget = self.stationList
+        firstIndex,lastIndex = None,None
+        firstStation = None
+        curStation = None
+        for item in listWidget.selectedItems():
+            if firstIndex is None:
+                firstIndex = item.data(-1)
+                firstStation = item.text()
+            lastIndex = item.data(-1)
+            curStation = item.text()
+        if firstStation is None:
+            QtWidgets.QMessageBox.warning(self,'错误','请先再左侧选择要添加的站！')
+            return
+        self._add_item_table_row(firstStation,curStation,lastIndex,True,True,True)
+
+        self._set_item_station_list(lastIndex)
+
+    def _add_item_table_row(self,start,end,lastIndex,down,showstart,showend):
+        tableWidget = self.itemTable
+        row = tableWidget.rowCount()
+        tableWidget.insertRow(row)
+
+        item = QtWidgets.QTableWidgetItem(start)
+        tableWidget.setItem(row, 0, item)
+
+        item = QtWidgets.QTableWidgetItem(end)
+        tableWidget.setItem(row, 1, item)
+        item.setData(-1, lastIndex)
+
+        checkDown = QtWidgets.QCheckBox()
+        checkDown.setChecked(down)
+        tableWidget.setCellWidget(row, 2, checkDown)
+
+        checkStart = QtWidgets.QCheckBox()
+        checkStart.setChecked(showstart)
+        tableWidget.setCellWidget(row, 3, checkStart)
+
+        checkEnd = QtWidgets.QCheckBox()
+        checkEnd.setChecked(showend)
+        tableWidget.setCellWidget(row, 4, checkEnd)
+
+        tableWidget.setRowHeight(row, self.graph.UIConfigData().get("table_row_height", 30))
+
+    def _del_item_part(self):
+        tableWidget = self.itemTable
+        tableWidget.removeRow(tableWidget.currentRow())
+        maxi = 0
+        for row in range(tableWidget.rowCount()):
+            maxi = max((maxi,tableWidget.item(row,1).data(-1)))
+        self._set_item_station_list(maxi)
+
+    def _set_item_ok(self):
+        train = self.train
+        train.clearItemInfo()
+        tableWidget = self.itemTable
+        for row in range(tableWidget.rowCount()):
+            dct = {
+                "start":tableWidget.item(row,0).text(),
+                "end":tableWidget.item(row,1).text(),
+                "down":tableWidget.cellWidget(row,2).isChecked(),
+                "show_start_label":tableWidget.cellWidget(row,3).isChecked(),
+                "show_end_label":tableWidget.cellWidget(row,4).isChecked()
+            }
+            train.addItemInfoDict(dct)
+        self.itemDialog.close()
+
+
     def setData(self,train:Train=None):
         """
         将current中的信息变为train的信息
@@ -204,6 +349,7 @@ class CurrentWidget(QtWidgets.QWidget):
         self.spinWidth.setValue(train.lineWidth())
 
         self.checkShow.setChecked(train.isShow())
+        self.checkAutoItem.setChecked(train.autoItem())
 
         timeTable: QtWidgets.QTableWidget = self.timeTable
         timeTable.setRowCount(0)
@@ -333,13 +479,12 @@ class CurrentWidget(QtWidgets.QWidget):
     def _load_station_list(self, timeTable):
         """
         导入本线车站表。按上下行
-        todo 改为手动选择
         """
         flag = self.main.qustion("删除本车次时刻表信息，从本线车站表导入，是否继续？")
         if not flag:
             return
 
-        down = True  # todo here
+        down = self.train.firstDown()
 
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle("本线车站导入")
@@ -450,10 +595,9 @@ class CurrentWidget(QtWidgets.QWidget):
             self.main._initTypeWidget()
         train.setType(trainType)
 
-        # isDown = self.checkDown.isChecked()
         isShow = self.checkShow.isChecked()
-        # train.setIsDown(isDown)
         train.setIsShow(isShow)
+        train.setAutoItem(self.checkAutoItem.isChecked())
 
         train.setUI(color=self.color, width=self.spinWidth.value())
 

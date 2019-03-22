@@ -158,6 +158,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             progressDialog.setWindowTitle('正在铺画')
         i = 0
         for train in self.graph.trains():
+            train.clearItems()
             i += 1
             if train.trainType() not in self.graph.typeList:
                 self.graph.typeList.append(train.trainType())
@@ -172,7 +173,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 self.addTrainLine(train)
             # else:
             #     # 2018.12.15补正：对show=False的将item设为None，相当于删除item对象，防止再次要求显示时发生错误。
-            #     train.setItem(None)
+            #     train.clearItems()
 
             if self.parent():
                 progressDialog.setValue(i)
@@ -708,6 +709,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         if train.autoItem():
             start = 0
             status = None
+            train.clearItemInfo()
             while status not in (TrainItem.End,TrainItem.Invalid):
                 # item = TrainItem(train, self.graph, self,self.graph.UIConfigData().setdefault('valid_width',3),
                 #          showFullCheci=self.graph.UIConfigData()['showFullCheci'],
@@ -736,6 +738,22 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     }
                     train.addItemInfoDict(dct)
                     self.scene.addItem(item)
+                start = end
+
+        else:  # 手动模式，按照要求铺画
+            for dct in train.itemInfo():
+                start = 0
+                item = TrainItem(train,self.graph,self,
+                                 dct['start'],dct['end'],dct['down'],
+                                 self.graph.UIConfigData()['valid_width'],
+                                 self.graph.UIConfigData()['showFullCheci'],
+                                 self.graph.UIConfigData()['show_time_mark']
+                                 )
+                end,status = item.setLine(start,showStartLabel=dct['show_start_label'],
+                                          showEndLabel=dct['show_end_label'])
+                if status != TrainItem.Invalid:
+                    self.scene.addItem(item)
+                    train.addItem(item)
                 start = end
         # item.setLine()  # 重复调用，init中已经调用过一次了，故删去。
 
@@ -1227,7 +1245,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         站内：停车的一方为待避，另一方为越行。
         站外：比较两站时刻。用时短的一方是越行。
         """
-        if train1.stationDown(former) != train2.stationDown(former):
+        if train1.stationDown(former,self.graph) != train2.stationDown(former,self.graph):
             return TrainEventType.meet
 
         if later is None:
@@ -1322,14 +1340,13 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         else:
             train.setIsShow(show, affect_item=False)
         if show:
-            item:TrainItem = train.item
-            if item is None:
+            if not train.items():
                 self.addTrainLine(train)
-            elif not item.isVisible():
-                item.setVisible(True)
+            else:
+                for item in train.items():
+                    item.setVisible(True)
         else:
-            item:TrainItem = train.item
-            if item is not None and item.isVisible():
+            for item in train.items():
                 item.setVisible(False)
 
 

@@ -236,11 +236,8 @@ class Train():
         self.shown = show
         if not affect_item:
             return
-        if self.item:
-            try:
-                self.item.setVisible(show)
-            except:
-                pass
+        for item in self.items():
+            item.setVisible(show)
 
     def show(self):
         #调试用
