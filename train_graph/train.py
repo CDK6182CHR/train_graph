@@ -377,8 +377,8 @@ class Train():
                 break
         if leftY != -1:
             if leftY < y:
-                return False
-            return True
+                return True
+            return False
 
         # 如果左边没有了，向右查找
         i = idx
@@ -390,8 +390,8 @@ class Train():
                 break
         if rightY != -1:
             if y < rightY:
-                return False
-            return True
+                return True
+            return False
         return None
 
     def reverseAllItemDown(self):

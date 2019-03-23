@@ -218,21 +218,27 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 else:
                     continue
             if ddpoint is None or cfpoint is None:
+                if start_point is not None:
+                    passedCount += 1  # 这是列车区间跑到别的区段上的站点数
+                if passedCount > self.maxPassed and self.endStation is None:
+                    status = self.Pass
+                    last_station = station
+                    end_point = last_point
+                    # print("passedCount > maxPassed 227",self.train.fullCheci(),station)
+                    break
                 continue
             else:
                 if last_loop_station is not None:
                     passed_stations_left = self.graph.passedStationCount(last_loop_station,station,down)
-                    if passed_stations_left:
-                        # print("passedCount+=",abs(graph_index - last_index))
-                        passedCount += passed_stations_left
-                    else:
-                        passedCount = 0
+                    passedCount += passed_stations_left  # 叠加此区间内的【车次时刻表】和【本线站表】不重合的数量
                     if passedCount > self.maxPassed and self.endStation is None:
                         status = self.Pass
                         last_station = station
                         end_point = last_point
-                        # print("passedCount > maxPassed")
+                        # print("passedCount > maxPassed line238",self.train.fullCheci(),station)
+                        print(passed_stations_left,last_loop_station,station,down)
                         break
+                passedCount = 0
 
             if self.graph.stationDirection(station) == 0x0:
                 # 取消贪心策略，设置为不通过的站一律不画
