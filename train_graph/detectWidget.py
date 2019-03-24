@@ -130,7 +130,7 @@ class DetectWidget(QtWidgets.QDialog):
         item.setData(-1,train)
         tableWidget.setItem(row,0,item)
 
-        item=QtWidgets.QTableWidgetItem(train.downStr())
+        item=QtWidgets.QTableWidgetItem(train.firstDownStr())
         tableWidget.setItem(row,1,item)
 
         item=QtWidgets.QTableWidgetItem(train.trainType())
@@ -181,7 +181,7 @@ class DetectWidget(QtWidgets.QDialog):
         item=QtWidgets.QTableWidgetItem(train.fullCheci())
         tableWidget.setItem(row,0,item)
 
-        item = QtWidgets.QTableWidgetItem(train.downStr())
+        item = QtWidgets.QTableWidgetItem(train.firstDownStr())
         tableWidget.setItem(row, 1, item)
 
         item = QtWidgets.QTableWidgetItem(train.trainType())

@@ -499,11 +499,11 @@ class TrainFilter(QtCore.QObject):
         if self.direction == self.DownAndUp:
             return True
         elif self.direction == self.DownOnly:
-            if train.down:
+            if train.firstDown():
                 return True
             return False
         else: # UpOnly
-            if train.down:
+            if train.firstDown():
                 return False
             return True
 

@@ -700,6 +700,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         """
         if not train.isShow():
             # 若设置为不显示，忽略此命令
+            print("addTrainLine:not show train",train.fullCheci())
             return
         try:
             self.graph.UIConfigData()["showFullCheci"]
@@ -710,10 +711,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             start = 0
             status = None
             train.clearItemInfo()
-            while status not in (TrainItem.End,TrainItem.Invalid):
-                # item = TrainItem(train, self.graph, self,self.graph.UIConfigData().setdefault('valid_width',3),
-                #          showFullCheci=self.graph.UIConfigData()['showFullCheci'],
-                #          markMode=self.graph.UIConfigData()['show_time_mark'])
+            while status != TrainItem.End:
+                # 扫描到最后总是会返回end
                 item = TrainItem(train,self.graph,self,
                                  validWidth=self.graph.UIConfigData().setdefault('valid_width',3),
                                  showFullCheci=self.graph.UIConfigData()['showFullCheci'],
@@ -724,20 +723,22 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 else:
                     showStart = False
                 end, status = item.setLine(start, showStartLabel=showStart)
-                # print(train.fullCheci(),"setLine returns",end,status)
+                if train.fullCheci() == 'Z225/8':
+                    print(train.fullCheci(),"setLine returns",end,status)
                 if status != TrainItem.Invalid:
-                    if status == TrainItem.Reversed:
-                        print("行别变化！")
                     train.addItem(item)
-                    dct = {
-                        "start":train.stationNameByIndex(start),
-                        "end":train.stationNameByIndex(end),
-                        "down":item.down,
-                        "show_start_label":showStart,
-                        "show_end_label":False if status == TrainItem.Reversed else True,
-                    }
-                    train.addItemInfoDict(dct)
-                    self.scene.addItem(item)
+                    # 铺画完毕后，item.start/endStation参数被补齐。
+                    if item.down is not None:
+                        # 只要铺画了有效的运行线，down就不可能是None
+                        dct = {
+                            "start":item.startStation,
+                            "end":item.endStation,
+                            "down":item.down,
+                            "show_start_label":showStart,
+                            "show_end_label":False if status == TrainItem.Reversed else True,
+                        }
+                        train.addItemInfoDict(dct)
+                        self.scene.addItem(item)
                 start = end
 
         else:  # 手动模式，按照要求铺画
@@ -764,8 +765,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # item = train.getItem()
         for item in train.items():
             # 这里需要遍历检查items，是因为防止ctrl+R操作中的train未添加进来，尝试删除引发错误。暂未找到更合适方案。
-            if item in self.scene.items():
-                self.scene.removeItem(item)
+            # if item in self.scene.items():
+            # if item.scene() is self.scene:
+            self.scene.removeItem(item)
         train.clearItems()
 
     def _resetTimeAxis(self):

@@ -86,7 +86,6 @@ class Ruler():
 
     def del_station(self,station_name:str):
         """
-        TODO
         删除某个站点，连接前后区间数据
         :param station_name:
         :return:
@@ -124,9 +123,6 @@ class Ruler():
     def _multiBFS(self,start,end):
         """
         BFS框架搜索从start到end的路径
-        :param start:
-        :param end:
-        :return:
         """
         length_dict={}
         last_dict={}  #记住每个站路径中的上一个站，方便回溯
@@ -170,9 +166,6 @@ class Ruler():
     def _find_path(self,fazhan,daozhan,passed:list):
         """
         找出从fazhan到daozhan间的一条路径，返回经过的站点表
-        :param fazhan:
-        :param daozhan:
-        :return:
         """
         neighbors = self._find_neighbors(fazhan)
 
@@ -254,10 +247,6 @@ class Ruler():
     def rulerFromTrain(self,train,stop:int=120,start:int=120):
         """
         从既有运行图自动推算同方向标尺，覆盖原有标尺
-        :param train:
-        :param stop:
-        :param start:
-        :return:
         """
         if train is None:
             return
@@ -407,8 +396,6 @@ class Ruler():
     def coveredStations(self,down:bool):
         """
         返回某方向的覆盖车站表.
-        :param down:
-        :return:
         """
         stations:list = self._line.stations[:]
         if not down:
@@ -435,6 +422,19 @@ class Ruler():
             former=st
 
         return covered
+
+    def mergeRuler(self,ruler,cover):
+        """
+        将ruler的信息合并到本标尺。cover指示是否要覆盖已经存在的。
+        """
+        if cover:
+            for node in ruler._nodes:
+                self.addStation_dict(copy(node),del_existed=True)
+        else:
+            for node in ruler._nodes:
+                thisNode = self.getInfo(node['fazhan'],node['daozhan'])
+                if thisNode is None:
+                    self.addStation_dict(copy(node))
 
     def line(self):
         return self._line

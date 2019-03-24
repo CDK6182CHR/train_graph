@@ -59,8 +59,11 @@ class RulerWidget(QtWidgets.QTabWidget):
             btnSet = QtWidgets.QPushButton("设为排图标尺")
             btnSet.clicked.connect(lambda: self._apply_ruler_change(widget))  # 先提交标尺信息
             btnSet.clicked.connect(lambda: self.main.changeOrdinateRuler(ruler))  # 直接触发修改函数
+            btnMerge = QtWidgets.QPushButton("合并标尺")
+            btnMerge.clicked.connect(lambda:self._merge_ruler(widget))
             hlayout = QtWidgets.QHBoxLayout()
             hlayout.addWidget(btnRead)
+            hlayout.addWidget(btnMerge)
             hlayout.addWidget(btnSet)
 
             vlayout.addLayout(hlayout)
@@ -394,6 +397,50 @@ class RulerWidget(QtWidgets.QTabWidget):
             # 如果是新建标尺，则再新建一个tab
             new_ruler = Ruler(line=line)
             self._addRulerTab(new_ruler)
+
+    def _merge_ruler(self,widget:QtWidgets.QWidget):
+        """
+        合并标尺。选择另一标尺，将其中所有内容复制过来。
+        """
+        ruler = widget.ruler
+        cover = self.qustion('将本线另一标尺的数据合并到本标尺中，如何处理公共区间的数据？'
+                             '选择是以覆盖，选择否以忽略。')
+        dialog = QtWidgets.QDialog(self)
+        dialog.cover = cover
+        dialog.setWindowTitle('标尺合并')
+        vlayout = QtWidgets.QVBoxLayout()
+        listWidget = QtWidgets.QListWidget()
+        dialog.listWidget = listWidget
+        for r in self.line.rulers:
+            if r is not ruler:
+                listWidget.addItem(r.name())
+        vlayout.addWidget(listWidget)
+
+        btnOk = QtWidgets.QPushButton("确定")
+        btnCancel = QtWidgets.QPushButton("取消")
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnCancel)
+        vlayout.addLayout(hlayout)
+
+        btnOk.clicked.connect(lambda:self._merge_ruler_ok(widget,dialog))
+        btnCancel.clicked.connect(dialog.close)
+        listWidget.itemDoubleClicked.connect(lambda:self._merge_ruler_ok(widget,dialog))
+
+        dialog.setLayout(vlayout)
+        dialog.exec_()
+
+    def _merge_ruler_ok(self,widget,dialog):
+        ruler = widget.ruler
+        cover:bool = dialog.cover
+        listWidget:QtWidgets.QListWidget = dialog.listWidget
+        item = listWidget.currentItem()
+        if item is None:
+            QtWidgets.QMessageBox.warning(self,'错误','请选择要合并的标尺名称！')
+            return
+        ruler.mergeRuler(self.line.rulerByName(item.text()),cover)
+        self._setRulerTable(widget.tableWidget,ruler)
+        dialog.close()
 
     # 允许直接使用main
     def _ruler_from_train(self, widget: QtWidgets.QWidget):

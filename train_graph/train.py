@@ -147,15 +147,6 @@ class Train():
     def upCheci(self):
         return self.checi[2]
 
-    def localCheci(self):
-        raise Exception("取消定义检查完毕的函数 localCheci")
-        # if self.down:
-        #     return self.downCheci()
-        # elif self.isDown() == False:
-        #     return self.upCheci()
-        # else:
-        #     return self.fullCheci()
-
     def getCheci(self,down:bool):
         if down:
             return self.checi[1]
@@ -289,26 +280,10 @@ class Train():
         if self.item is None:
             self.resetYValueMap()
 
-    def getItem(self):
-        raise Exception("取消定义的函数getItem")
-        # return self.item
-
     def firstItem(self):
         if self._items:
             return self._items[0]
         return None
-
-    def setIsDown(self,down):
-        raise Exception("取消定义的函数setIsDown")
-        # self.down = down
-
-    def trainAutoDown(self)->bool:
-        """
-        2.0新增。某些特殊的场合仍然需要统一的上下行判断，用这个函数给出。
-        """
-        for it in self._itemInfo:
-            return it["down"]
-        return True
 
     def items(self):
         return self._items
@@ -338,23 +313,19 @@ class Train():
     def setAutoItem(self,on:bool):
         self._autoItem = on
 
-    def isDown(self,auto_guess=False,graph=None,default=None):
-        raise Exception("取消定义的函数isDown")
-        # not_decided = False
-        # if self.down is None:
-        #     not_decided = True
-        # if not_decided and auto_guess:
-        #     self.autoDown(graph)
-        # if not_decided and default is not None:
-        #     return default
-        #
-        # return self.down
-
     def firstDown(self)->bool:
         """
         返回第一个区间的上下行情况。2.0新增。
         """
         for dct in self.itemInfo():
+            return dct["down"]
+        return None
+
+    def lastDown(self)->bool:
+        """
+        本线最后一个区间的上下行情况。2.0新增，主要为了满足jointGraph的需要。
+        """
+        for dct in reversed(list(self.itemInfo())):
             return dct["down"]
         return None
 
@@ -408,6 +379,7 @@ class Train():
         for i,st in enumerate(self.timetable):
             if stationEqual(st['zhanming'],name):
                 return i
+        return -1
 
     def stationNameByIndex(self,idx:int):
         """
@@ -496,11 +468,27 @@ class Train():
     def clearTimetable(self):
         self.timetable = []
 
-    def downStr(self):
-        print("Warning: 即将取消定义的函数downStr。自动按firstDown过渡")
+    def firstDownStr(self):
         if self.firstDown() is True:
             return '下行'
         elif self.firstDown() is False:
+            return '上行'
+        else:
+            return '未知'
+
+    def stationDownStr(self,name,graph):
+        down = self.stationDown(name,graph)
+        if down is True:
+            return '下行'
+        elif down is False:
+            return '上行'
+        else:
+            return '未知'
+
+    def lastDownStr(self):
+        if self.lastDown() is True:
+            return '下行'
+        elif self.lastDown() is False:
             return '上行'
         else:
             return '未知'
@@ -579,10 +567,24 @@ class Train():
         return count
 
     def localMile(self,graph):
-        try:
-            return graph.gapBetween(self.localFirst(graph),self.localLast(graph))
-        except:
-            return 0
+        """
+        2.0版本修改算法：改为依赖于运行线铺画管理数据计算，每一段的localMile相加。
+        如果没有数据，则使用老版本的程序。
+        """
+        if not self._itemInfo:
+            print("localMile:没有铺画数据，使用全程数据",self.fullCheci())
+            try:
+                return graph.gapBetween(self.localFirst(graph),self.localLast(graph))
+            except:
+                return 0
+        else:
+            mile = 0
+            for dct in self.itemInfo():
+                try:
+                    mile += graph.gapBetween(dct['start'],dct['end'])
+                except:
+                    pass
+            return mile
 
     def localTime(self,graph):
         firstDD,_ = self.stationTime(self.localFirst(graph))
@@ -655,20 +657,6 @@ class Train():
             return self.timetable[-1]["zhanming"]
         except IndexError:
             return ""
-
-    def autoDown(self,graph):
-        raise Exception("取消定义的函数autoDown")
-        # in_stations = []
-        # for st in self.timetable:
-        #     if graph.stationExisted(st["zhanming"]):
-        #         in_stations.append(st["zhanming"])
-        #     if len(in_stations) == 2:
-        #         if graph.line.isDownGap(in_stations[0],in_stations[1]):
-        #             self.setIsDown(True)
-        #             return
-        #         else:
-        #             self.setIsDown(False)
-        #             return
 
     def jointTrain(self,train,former:bool,graph):
         """
@@ -783,9 +771,8 @@ class Train():
 
     def coverData(self,train):
         """
+        2.0版本注释：本函数只由rulerPaint调用，所以保留items不变，目的是方便后面删除。不会引起问题。
         用train的信息覆盖本车次信息
-        :param train:
-        :return:
         List<Str> checi;
     Str sfz,zdz;
     Str type;
@@ -800,8 +787,7 @@ class Train():
         self.sfz,self.zdz = train.sfz,train.zdz
         self.type = train.type
         self.UI = copy(train.UI)
-        self._items = train._items
-        self.clearItems()
+        self._itemInfo = train._itemInfo
         self.timetable = deepcopy(train.timetable)
 
     def relativeError(self,ruler):
@@ -836,10 +822,10 @@ class Train():
         if not self.timetable:
             return
         new_timetable=[]
-        #将针对线路的toStart、End转变为针对本次列车的
-        down = self.trainAutoDown()
+        # 将针对线路的toStart、End转变为针对本次列车的
+        down = self.firstDown()
         if down:
-            #本次列车下行，toStart对应始发，toEnd对应终到
+            # 本次列车下行，toStart对应始发，toEnd对应终到
             fromStart=toStart and not graph.stationInLine(self.sfz)
             toEnd=toEnd and not graph.stationInLine(self.zdz)
         else:
@@ -1027,6 +1013,7 @@ class Train():
     def intervalPassedCount(self,graph,start=None,end=None):
         """
         计算start-end区间跨越的站点的个数。start,end两站必须在时刻表上。缺省则使用本线第一个/最后一个站。
+        todo 2.0版本此功能去留？
         """
         if start is None:
             start = self.localFirst(graph)
@@ -1060,9 +1047,8 @@ class Train():
     def binDirection(self,default=0b11):
         """
         返回通过方向的常量表示形式。
-        todo down的处理
         """
-        down = self.trainAutoDown()
+        down = self.firstDown()
         if down is True:
             return 0b01
         elif down is False:

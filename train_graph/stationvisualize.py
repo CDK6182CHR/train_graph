@@ -10,9 +10,10 @@ from .graph import Graph
 from datetime import datetime,timedelta
 
 class StationGraphWidget(QtWidgets.QGraphicsView):
-    def __init__(self,station_list,graph,mainWindow):
+    def __init__(self,station_list,graph,station_name,mainWindow):
         super().__init__()
         self.scene = QtWidgets.QGraphicsScene()
+        self.station_name = station_name
         mainWindow.stationVisualSizeChanged.connect(self._repaint)
         self.seconds_per_pix = 15
         self.row_height = 40
@@ -348,7 +349,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         rectItem: QtWidgets.QGraphicsRectItem = self.scene.addRect(dd_x, start_y, width, self.row_height)
         rectItem.setBrush(QtGui.QBrush(color))
 
-        text = f"{train.fullCheci()} {train.downStr()} "
+        text = f"{train.fullCheci()} {train.stationDownStr(self.station_name,self.graph)} "
         if self._isPassed(train_dict):
             text += f"通过  {train_dict['ddsj'].strftime('%H:%M:%S')}"
         else:

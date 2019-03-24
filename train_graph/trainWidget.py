@@ -225,6 +225,7 @@ class TrainWidget(QtWidgets.QWidget):
         """
         train = self.trainByRow(row)
         if train is None:
+            print("trainWidget::_current_row_changed: train is None.",row)
             return
         self.current_train_changed.emit(train)
 

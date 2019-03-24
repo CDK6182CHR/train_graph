@@ -103,11 +103,11 @@ class TrainItem(QtWidgets.QGraphicsItem):
         station_count = self.station_count
         if station_count < 2:
             # print("station count < 2")
-            return -1,self.Invalid
+            return end,status
 
         if start_point is None:
             print(train.fullCheci())
-            return -1,self.Invalid
+            return end,status
         else:
             self.startPoint = start_point
 
@@ -222,7 +222,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     passedCount += 1  # 这是列车区间跑到别的区段上的站点数
                 if passedCount > self.maxPassed and self.endStation is None:
                     status = self.Pass
-                    last_station = station
+                    last_station = last_loop_station
                     end_point = last_point
                     # print("passedCount > maxPassed 227",self.train.fullCheci(),station)
                     break
@@ -233,7 +233,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     passedCount += passed_stations_left  # 叠加此区间内的【车次时刻表】和【本线站表】不重合的数量
                     if passedCount > self.maxPassed and self.endStation is None:
                         status = self.Pass
-                        last_station = station
+                        last_station = last_loop_station
                         end_point = last_point
                         # print("passedCount > maxPassed line238",self.train.fullCheci(),station)
                         print(passed_stations_left,last_loop_station,station,down)

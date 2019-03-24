@@ -179,6 +179,8 @@ class CurrentWidget(QtWidgets.QWidget):
         """
         显示对话框，用以设置运行图铺画参数。
         """
+        if self.train is None:
+            return
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle('运行线管理')
         self.itemDialog = dialog
@@ -186,6 +188,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
         listWidget = QtWidgets.QListWidget()
         listWidget.setSelectionMode(listWidget.MultiSelection)
+        listWidget.setMaximumWidth(200)
         self.stationList = listWidget
         hlayout.addWidget(listWidget)
         self._set_item_station_list(0)
@@ -208,7 +211,7 @@ class CurrentWidget(QtWidgets.QWidget):
         tableWidget.setColumnCount(5)
         tableWidget.setHorizontalHeaderLabels(('起始站','结束站','下行','起始标签','结束标签'))
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-        for i,s in enumerate((90,90,50,80,80)):
+        for i,s in enumerate((120,120,50,90,90)):
             tableWidget.setColumnWidth(i,s)
         self.itemTable = tableWidget
 
@@ -322,9 +325,10 @@ class CurrentWidget(QtWidgets.QWidget):
         """
         将current中的信息变为train的信息
         """
-        if train is self.train:
-            # 此逻辑不确定
-            return
+        # 2019.03.24取消此逻辑。此逻辑导致“还原”操作无效。
+        # if train is self.train:
+        #     # 此逻辑不确定
+        #     return
         self.train = train
         if train is None:
             # 2019.01.29修改：取消return，空列车信息按空白处置
@@ -637,7 +641,7 @@ class CurrentWidget(QtWidgets.QWidget):
         self.main.statusOut("车次信息更新完毕")
 
     def _del_train_from_current(self):
-        tableWidget = self.main.trainTable
+        tableWidget = self.main.trainWidget.trainTable
         train: Train = self.train
         isOld = self.graph.trainExisted(train)
 

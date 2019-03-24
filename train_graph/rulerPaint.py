@@ -104,9 +104,15 @@ class rulerPainter(QtWidgets.QWidget):
             comboAppend.addItem(train.fullCheci())
 
         comboAppend.setCurrentText('')
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(comboAppend)
+        label = QtWidgets.QLabel("车次无效")
+        label.setMaximumWidth(80)
+        hlayout.addWidget(label)
+        self.appendValidLabel = label
         comboAppend.setToolTip('将当前排图信息追加到车次，覆盖该车次已存在的站点时刻表。请注意，只能向后追加，不能倒推。'
                                '留空或车次非法表示铺画新车次运行图。')
-        flayout.addRow("附加到车次",comboAppend)
+        flayout.addRow("附加到车次",hlayout)
 
         group = QtWidgets.QButtonGroup(self)
         radioBegin = QtWidgets.QRadioButton("添加到开头")
@@ -155,17 +161,20 @@ class rulerPainter(QtWidgets.QWidget):
     def _append_changed(self,checi:str):
         """
         “追加到车次”选项变更。
-        todo 追加到车次也不一定非要按相同行别
+        2.0版本修改：不再限制追加排图时只能使用相同行别。
         """
         if not checi:
             self.train = self.train_new
+            self.appendValidLabel.setText('车次无效')
         else:
             train:Train = self.graph.trainFromCheci(checi,full_only=True)
             if train:
                 # 复制车次
                 self.train = train.translation(checi,timedelta(days=0,seconds=0))
+                self.appendValidLabel.setText('车次有效')
             else:
                 self.train = self.train_new
+                self.appendValidLabel.setText('车次无效')
 
         if self.train is self.train_new:
             self.radio1.setEnabled(True)
@@ -174,13 +183,6 @@ class rulerPainter(QtWidgets.QWidget):
             self.radioEnd.setEnabled(False)
             self.isAppend = False
         else:
-            down = self.train.firstDown()
-            if down:
-                self.radio1.setChecked(True)
-            else:
-                self.radio2.setChecked(True)
-            self.radio1.setEnabled(False)
-            self.radio2.setEnabled(False)
             self.radioBegin.setEnabled(True)
             self.radioEnd.setEnabled(True)
             self.train_origin = train
@@ -421,24 +423,27 @@ class rulerPainter(QtWidgets.QWidget):
     def _stop_changed(self,row:int):
         """
         车站停时改变触发。
-        :param row:
-        :return:
         """
         self._reCalculate(row)
 
     def _paint_to_here(self,row:int):
         """
-        铺画运行线至本行
-        :param row:
-        :return:
+        铺画运行线至本行.
+        2.0版本新增逻辑：当现在铺画的运行线的行别与原车次行别在【铺画开始站】左邻域内相同时，
+        选择覆盖，否则不覆盖。如果原车次在该点邻域上下行数据为None，则按覆盖处理。
         """
         if row<1:
             return
 
         if self.isAppend:
             self.train.coverData(self.train_origin)
+            down_origin = self.train_origin.stationDown(self.start_station,self.graph)
+            if down_origin == self.down or down_origin is None:
+                cover = True
+            else:cover = False
         else:
             self.train.clearTimetable()
+            cover = False
 
         self._reCalculate(0)
         if self.start_from_this:
@@ -450,22 +455,25 @@ class rulerPainter(QtWidgets.QWidget):
 
         if not self.isAppend or (self.isAppend and self.toEnd):
             for i in range(row+1):
+                this_cover = cover or (i==0)# 第一行是无条件覆盖的
                 name = self.timeTable.item(i,0).text()
                 ddsj = datetime.strptime(self.timeTable.item(i,3).text(),'%H:%M:%S')
                 cfsj = datetime.strptime(self.timeTable.item(i,4).text(),'%H:%M:%S')
-                self.train.addStation(name,ddsj,cfsj,auto_cover=True,to_end=True)
+                self.train.addStation(name,ddsj,cfsj,auto_cover=this_cover,to_end=True)
 
         else:
             for i in reversed(range(row + 1)):
+                this_cover = cover or (i==0)
                 name = self.timeTable.item(i, 0).text()
                 ddsj = datetime.strptime(self.timeTable.item(i, 3).text(), '%H:%M:%S')
                 cfsj = datetime.strptime(self.timeTable.item(i, 4).text(), '%H:%M:%S')
-                self.train.addStation(name, ddsj, cfsj, auto_cover=True, to_end=False)
+                self.train.addStation(name, ddsj, cfsj, auto_cover=this_cover, to_end=False)
 
-        new = True
-        if self.train.items():
-            self.graphWindow.delTrainLine(self.train)
-            new = False
+        self.graphWindow.delTrainLine(self.train)
+        # new = True
+        # if self.train.items():
+        #     # self.graphWindow.delTrainLine(self.train)
+        #     new = False
 
         self.graphWindow.addTrainLine(self.train)
         # if new:
@@ -513,8 +521,6 @@ class rulerPainter(QtWidgets.QWidget):
     def _reCalculate(self,from_row:int=0):
         """
         从from_row开始重新计算以下所有的时刻信息。信息都已经更新完毕。
-        :param from_row:
-        :return:
         """
         timeTable = self.timeTable
 

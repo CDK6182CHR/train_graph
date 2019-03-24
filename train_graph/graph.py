@@ -536,6 +536,9 @@ class Graph:
                 train.setIsShow(True,affect_item=False)
 
     def setDirShow(self,down,show):
+        """
+        约定此处指入图时的上下行
+        """
         for train in self.trains():
             if train.firstDown() == down and train.type not in self.UIConfigData()['not_show_types']:
                 train.setIsShow(show,affect_item=False)
@@ -701,12 +704,10 @@ class Graph:
 
     def jointGraph(self,graph,former:bool,reverse:bool,line_only:bool):
         """
-        todo 上下行逻辑存在比较大的问题
         拼接两运行图。
         :param graph: 另一运行图
         :param former: 另一运行图是否在本运行图前侧链接
         :param reverse: 另一运行图是否转置
-        :return:
         """
         if reverse:
             graph.reverse()
@@ -720,12 +721,19 @@ class Graph:
                     train_main.delNonLocal(self)
                     train_append.delNonLocal(graph)
                     # 方向以本线为准
-                    down = train_main.firstDown()
+                    # down表示列车在两线路连接点附近的上下行情况。
+                    if former:
+                        down = train_main.firstDown()
+                    else:
+                        down = train_main.lastDown()
                     if down is None:
-                        #如果本线无法判断，例如Z90终到石家庄在京石段只有一个站，则用另一条线的。
-                        down = train_append.firstDown()
+                        # 如果本线无法判断，例如Z90终到石家庄在京石段只有一个站，则用另一条线的。
+                        if former:
+                            down = train_append.lastDown()
+                        else:
+                            down = train_append.firstDown()
                     if down is None:
-                        #如果都无法判断，直接判断为下行车次
+                        # 如果都无法判断，直接判断为下行车次
                         print("cannot judge down. use default.",train_main.fullCheci())
                         down = True
 
@@ -750,7 +758,13 @@ class Graph:
                 if not self.stationExisted(st["zhanming"]):
                     self.line.addStation_by_origin(st)
 
-
+        # 标尺的处理，直接复制过来就好
+        for ruler in graph.rulers():
+            thisruler = self.line.rulerByName(ruler.name())
+            if thisruler is not None:
+                thisruler._nodes += ruler._nodes
+            else:
+                self.addRuler(ruler)
 
     def resetAllItems(self):
         for train in self.trains():

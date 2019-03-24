@@ -53,9 +53,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.0.0 Preview2"
+        self.version = "V2.0.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190322'
+        self.build = '20190324'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -274,7 +274,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _check_ruler(self, train: Train):
         """
         检查对照标尺和实际时刻表.
-        todo 参考两车次标尺对照功能修改
         0-通通
         1-起通
         2-通停
@@ -313,14 +312,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         former_time = []
         for name, ddsj, cfsj in train.station_infos():
             # 这里填入车次信息，不填标尺信息
-            dir_ = Line.DownVia if train.firstDown() else Line.UpVia
+            # dir_ = Line.DownVia if train.stationDown(name,self.graph) else Line.UpVia
             if not former:
-                if self.graph.stationInLine(name) and self.graph.stationDirection(name) & dir_:
+                if self.graph.stationInLine(name):
                     former = name
                     former_time = [ddsj, cfsj]
                 continue
 
-            if not self.graph.stationInLine(name) or not self.graph.stationDirection(name) & dir_:
+            if not self.graph.stationInLine(name):
                 continue
 
             row = tableWidget.rowCount()
@@ -332,7 +331,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             tableWidget.setItem(row, 0, item)
             item.setData(-1, [former, name])
 
-            dt = train.gapBetweenStation(former, name)
+            dt = (ddsj - former_time[1]).seconds
             dt_str = "%02d:%02d" % (int(dt / 60), dt % 60)
             item = QtWidgets.QTableWidgetItem(dt_str)
             item.setData(-1, dt)
@@ -568,7 +567,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         label = QtWidgets.QLabel(f"{train.fullCheci()}次列车在{self.graph.lineName()}"
-                                 f"按{train.downStr()}方向运行的事件时刻表如下。")
+                                 f"的事件时刻表如下。")
         label.setWordWrap(True)
         layout.addWidget(label)
 
@@ -1320,15 +1319,17 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         # 设置train编辑中的current
         self.trainWidget.setCurrentTrain(train)
 
+        # 2019.03.24调整，移动到trainWidget的行号变化里面。
         # 设置currentWidget
-        if self.currentDockWidget.isVisible():
-            # 2019.02.03增加：提高效率，只有currentWidget显示的时候才设置数据
-            self.currentWidget.setData(train)
+        # if self.currentDockWidget.isVisible():
+        #     # 2019.02.03增加：提高效率，只有currentWidget显示的时候才设置数据
+        #     self.currentWidget.setData(train)
 
     def _current_train_changed(self, train: Train):
         """
         tableWidget选中的行变化触发。第一个参数是行数有效，其余无效。
-        2018.12.28修改：把解读车次的逻辑放入trainWidget中。这里直接接受列车对象
+        2018.12.28修改：把解读车次的逻辑放入trainWidget中。这里直接接受列车对象.
+        2.0版本修改：把currentWidget信息变化的调用从Graphics那边的槽函数挪到这里。防止没有运行线的车不能显示。
         """
 
         # print("current train changed. line 1708", row,train.fullCheci())
@@ -1343,6 +1344,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         if self.GraphWidget.selectedTrain is not train:
             self.GraphWidget._line_un_selected()
         self.GraphWidget._line_selected(train.firstItem(), True)  # 函数会检查是否重复选择
+        if self.currentWidget.isVisible():
+            self.currentWidget.setData(train)
 
     def _add_train_by_ruler(self):
         """
@@ -1531,7 +1534,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         slider.valueChanged.connect(lambda x: self.stationVisualSizeChanged.emit(x))
         layout.addLayout(hlayout)
 
-        widget = StationGraphWidget(station_dicts, self.graph, self)
+        widget = StationGraphWidget(station_dicts, self.graph,station_name, self)
         btnAdvance.clicked.connect(lambda: self._station_visualize_advance(widget))
         layout.addWidget(widget)
         dialog.setLayout(layout)
@@ -1936,7 +1939,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         text += f"分方向车次：{train.downCheci()}/{train.upCheci()}\n"
         text += f"始发终到：{train.sfz}->{train.zdz}\n"
         text += f"列车种类：{train.trainType()}\n"
-        text += f"本线运行方向：{train.downStr()}\n"
+        text += f"本线运行入图方向：{train.firstDownStr()}\n"
+        text == f"本线运行出图方向：{train.lastDownStr()}\n"
         text += f"本线入图点：{train.localFirst(self.graph)}\n"
         text += f"本线出图点：{train.localLast(self.graph)}\n"
         text += f"本线图定站点数：{train.localCount(self.graph)}\n"
