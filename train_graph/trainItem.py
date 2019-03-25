@@ -135,6 +135,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
         span_width = UIDict["margins"]["right"]-UIDict["margins"]["label_width"]
         font = QtGui.QFont()
 
+        if self.spanItemWidth is None:
+            self._setStartEndLabelText(checi,brush)
         if self.spanItemWidth > span_width:
             stretch = int(100 * span_width / self.spanItemWidth)
             font.setStretch(stretch)
@@ -228,16 +230,6 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     break
                 continue
             else:
-                if last_loop_station is not None:
-                    passed_stations_left = self.graph.passedStationCount(last_loop_station,station,down)
-                    passedCount += passed_stations_left  # 叠加此区间内的【车次时刻表】和【本线站表】不重合的数量
-                    if passedCount > self.maxPassed and self.endStation is None:
-                        status = self.Pass
-                        last_station = last_loop_station
-                        end_point = last_point
-                        # print("passedCount > maxPassed line238",self.train.fullCheci(),station)
-                        print(passed_stations_left,last_loop_station,station,down)
-                        break
                 passedCount = 0
 
             if self.graph.stationDirection(station) == 0x0:
@@ -271,6 +263,17 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     curIndex -= 1
                     # 注意：保持last_station是上一个。
                     break
+                if last_loop_station is not None:
+                    # 当down是None时这里的判断引起问题. 故把这一块移动到上下行判断之后去。
+                    passed_stations_left = self.graph.passedStationCount(last_loop_station,station,down)
+                    passedCount += passed_stations_left  # 叠加此区间内的【车次时刻表】和【本线站表】不重合的数量
+                    if passedCount > self.maxPassed and self.endStation is None:
+                        status = self.Pass
+                        last_station = last_loop_station
+                        end_point = last_point
+                        # print("passedCount > maxPassed line238",self.train.fullCheci(),station)
+                        print(passed_stations_left,last_loop_station,station,down)
+                        break
                 if not mark_only:
                     self._incline_line(path, last_point, ddpoint, span_left, span_right)
             if not mark_only:

@@ -42,7 +42,7 @@ class TrainWidget(QtWidgets.QWidget):
 
         tableWidget.setRowCount(0)
         tableWidget.setColumnCount(7)
-        tableWidget.setHorizontalHeaderLabels(["车次", "始发", "终到", "类型", "显示", "本线里程",'跨越站数'])
+        tableWidget.setHorizontalHeaderLabels(["车次", "始发", "终到", "类型", "显示", "本线里程",'本线旅速'])
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
         tableWidget.setSelectionBehavior(tableWidget.SelectRows)
         tableWidget.currentCellChanged.connect(self._current_row_changed)
@@ -129,13 +129,15 @@ class TrainWidget(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem(train.type)
         tableWidget.setItem(now_line, 3, item)
 
-        item = QtWidgets.QTableWidgetItem('%.2f' % train.localMile(self.graph))
-        item.setData(0, train.localMile(self.graph))
+        mile = train.localMile(self.graph,fullAsDefault=False)
+        item = QtWidgets.QTableWidgetItem(f"{mile:.2f}")
+        item.setData(0, mile)
         tableWidget.setItem(now_line, 5, item)
 
         # train: Train
         item = QtWidgets.QTableWidgetItem()
-        item.setData(0, train.intervalPassedCount(self.graph))
+        spd = train.localSpeed(self.graph,fullAsDefault=False)
+        item.setData(0, spd)
         tableWidget.setItem(now_line, 6, item)
 
         # 修改直接生效
@@ -177,8 +179,8 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.item(row,2).setText(train.zdz)
         tableWidget.item(row,3).setText(train.trainType())
         tableWidget.cellWidget(row,4).setChecked(train.isShow())
-        tableWidget.item(row,5).setData(0,train.localMile(self.graph))
-        tableWidget.item(row,6).setData(0,train.intervalPassedCount(self.graph))
+        tableWidget.item(row,5).setData(0,train.localMile(self.graph,fullAsDefault=False))
+        tableWidget.item(row,6).setData(0,train.localSpeed(self.graph,fullAsDefault=False))
 
     def updateRowByTrain(self,train:Train):
         row = self.trainMapToRow[train]

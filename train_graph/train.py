@@ -292,6 +292,15 @@ class Train():
         for it in self._itemInfo:
             yield it
 
+    def removeItemInfo(self,dct:dict):
+        """
+        手动铺画情况下调用的。删除无效的铺画区间。直接调用remove即可。
+        """
+        try:
+            self._itemInfo.remove(dct)
+        except:
+            print("Train::removeItemInfo: remove failed. ")
+
     def addItemInfoDict(self,info:dict):
         self._itemInfo.append(info)
 
@@ -566,16 +575,20 @@ class Train():
                 break
         return count
 
-    def localMile(self,graph):
+    def localMile(self,graph,*,fullAsDefault=True):
         """
         2.0版本修改算法：改为依赖于运行线铺画管理数据计算，每一段的localMile相加。
         如果没有数据，则使用老版本的程序。
         """
         if not self._itemInfo:
-            print("localMile:没有铺画数据，使用全程数据",self.fullCheci())
-            try:
-                return graph.gapBetween(self.localFirst(graph),self.localLast(graph))
-            except:
+            if fullAsDefault:
+                print("localMile:没有铺画数据，使用全程数据",self.fullCheci())
+                try:
+                    return graph.gapBetween(self.localFirst(graph),self.localLast(graph))
+                except:
+                    return 0
+            else:
+                print("localMile:没有铺画数据，里程默认为0", self.fullCheci())
                 return 0
         else:
             mile = 0
@@ -621,16 +634,26 @@ class Train():
         # print(running, stay)
         return running, stay
 
-    def localRunStayTime(self,graph):
+    def localRunStayTime(self,graph)->(int,int):
         """
         计算本线纯运行时间的总和、本线停站时间总和。算法是从本线入图点开始，累加所有区间时分。
+        2.0版本修改：计算所有【运行线铺画区段】的上述数值。区段包括首末站。不铺画运行线的区段不累计。
         """
         started = False
+        n = 0  # 即将开始的铺画区段
         running = 0
         stay = 0
         former = None
+
+        bounds = []
+        for dct in self.itemInfo():
+            bounds.append((dct['start'],dct['end']))
+        if not bounds:
+            return 0,0
         for st in self.timetable:
-            if stationEqual(st["zhanming"],self.localFirst(graph)):
+            if stationEqual(st['zhanming'],bounds[n][0],strict=True):
+                if self.fullCheci() == '37401':
+                    print("start seted to True",st['zhanming'])
                 started = True
             if not started:
                 continue
@@ -640,11 +663,31 @@ class Train():
                 continue
             running += (st["ddsj"] - former["cfsj"]).seconds
             stay += (st["cfsj"] - st["ddsj"]).seconds
+            if self.fullCheci() == '37401':
+                print("train.runStayTime",running,stay,former['zhanming'],st['zhanming'])
             former = st
-            if stationEqual(st["zhanming"],self.localLast(graph)):
-                break
-        # print(running, stay)
+            if stationEqual(st['zhanming'],bounds[n][1],strict=True):
+                if n < len(bounds) -1 and not stationEqual(st['zhanming'],bounds[n+1][0]):
+                    started = False
+                n+=1
+                if n >= len(bounds):
+                    if self.fullCheci() == '37401':
+                        print("break!")
+                    break
         return running, stay
+
+    def localSpeed(self,graph,*,fullAsDefault=True):
+        """
+        本线旅行速度。非法时返回-1.
+        """
+        mile = self.localMile(graph,fullAsDefault=fullAsDefault)
+        run, stay = self.localRunStayTime(graph)
+        tm = run + stay
+        try:
+            spd = mile / tm * 1000 * 3.6
+        except ZeroDivisionError:
+            spd = -1
+        return spd
 
     def firstStation(self):
         try:

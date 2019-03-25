@@ -911,214 +911,215 @@ class Graph:
         col = 2
         last_train=None
         for train in self.trains():
-            if not train.down:
-                continue
-
-            if last_train and train.sfz==last_train.sfz:
-                try:
-                    ws.unmerge_cells(start_row=3, end_row=4, start_column=last_merge_sfz, end_column=col - 1)
-                except:
-                    pass
-                ws.merge_cells(start_row=3,end_row=4,start_column=last_merge_sfz,end_column=col)
-            else:
-                ws.merge_cells(start_row=3, end_row=4, start_column=col, end_column=col)
-                last_merge_sfz=col
-            ws.cell(row=3, column=col, value=train.sfz)
-
-            if last_train and train.zdz == last_train.zdz:
-                try:
-                    ws.unmerge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col - 1)
-                except:
-                    pass
-                ws.merge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col)
-            else:
-                ws.merge_cells(start_row=5, end_row=6, start_column=col, end_column=col)
-                last_merge_zdz=col
-            c=ws.cell(row=5, column=col, value=train.zdz)
-            col_str=c.column
-            ws.column_dimensions[col_str].width=6  #设置列宽为5
-
-            if last_train and train.type == last_train.type:
-                try:
-                    ws.unmerge_cells(start_row=7,end_row=8,start_column=last_merge_type,end_column=col-1)
-                except:
-                    pass
-                ws.merge_cells(start_row=7, end_row=8, start_column=last_merge_type, end_column=col)
-            else:
-                ws.merge_cells(start_row=7, end_row=8, start_column=col, end_column=col)
-                last_merge_type=col
-            ws.cell(row=7, column=col, value=train.type)
-
-            checi=train.fullCheci()
-            if '/' in checi:
-                ws.cell(row=9,column=col,value=checi.split('/')[0])
-                ws.cell(row=10,column=col,value='/'+checi.split('/',maxsplit=1)[1])
-            else:
-                ws.cell(row=9,column=col,value=checi)
-                ws.merge_cells(start_row=9,end_row=10,start_column=col,end_column=col)
-
-            last_dict=None
-
-            # 时刻表循环
-            for st_dict in train.timetable:
-                for i,s in station_row_dict.items():
-                    if stationEqual(i,st_dict['zhanming']):
-                        row=s
-                        break
-                else:
+            for dct in train.itemInfo():
+                if not dct['down']:
                     continue
-
-                if train.isSfz(st_dict['zhanming']):
-                    ws.cell(row=row,column=col,value='')
-                    ws.cell(row=row+1,column=col,value=self.outTime(st_dict['cfsj'],True))
-
-                elif train.isZdz(st_dict["zhanming"]):
-                    ws.cell(row=row,column=col,value=self.outTime(st_dict['ddsj'],True))
-                    ws.cell(row=row+1,column=col,value='    --')
-
-                elif train.stationStopped(st_dict):
-                    #本站停车，无条件写入完整到达时刻和不完整出发时刻
-                    ddsj_str=f'{st_dict["ddsj"].hour:2d}:{st_dict["ddsj"].minute:02d}'
-                    sec=st_dict['ddsj'].second
-                    if sec:
-                        ddsj_str+=f"{sec:02d}"
-                    else:
-                        ddsj_str+='  '
-                    ws.cell(row=row,column=col,value=ddsj_str)
-                    if st_dict['ddsj'].hour==st_dict['cfsj'].hour:
-                        cfsj_str='   '
-                    else:
-                        cfsj_str=f"{st_dict['cfsj'].hour:2d}:"
-                    cfsj_str+=f'{st_dict["cfsj"].minute:02d}'
-                    sec = st_dict['cfsj'].second
-                    if sec:
-                        ddsj_str += f"{sec:02d}"
-                    else:
-                        ddsj_str += '  '
-                    ws.cell(row=row+1, column=col, value=cfsj_str)
-
+                if last_train and train.sfz==last_train.sfz:
+                    try:
+                        ws.unmerge_cells(start_row=3, end_row=4, start_column=last_merge_sfz, end_column=col - 1)
+                    except:
+                        pass
+                    ws.merge_cells(start_row=3,end_row=4,start_column=last_merge_sfz,end_column=col)
                 else:
-                    give_hour=False
-                    if not last_dict:
-                        give_hour=True
-                    elif last_dict['cfsj'].hour != st_dict['ddsj'].hour:
-                        give_hour=True
-                    ws.cell(row=row,column=col,value='   ...')
-                    tgsj_str=f'{st_dict["ddsj"].hour:2d}:' if give_hour else '   '
-                    tgsj_str+=f'{st_dict["ddsj"].minute:02d}'
-                    sec = st_dict['ddsj'].second
-                    if sec:
-                        tgsj_str += f"{sec:02d}"
+                    ws.merge_cells(start_row=3, end_row=4, start_column=col, end_column=col)
+                    last_merge_sfz=col
+                ws.cell(row=3, column=col, value=train.sfz)
+
+                if last_train and train.zdz == last_train.zdz:
+                    try:
+                        ws.unmerge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col - 1)
+                    except:
+                        pass
+                    ws.merge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col)
+                else:
+                    ws.merge_cells(start_row=5, end_row=6, start_column=col, end_column=col)
+                    last_merge_zdz=col
+                c=ws.cell(row=5, column=col, value=train.zdz)
+                col_str=c.column
+                ws.column_dimensions[col_str].width=6  #设置列宽为5
+
+                if last_train and train.type == last_train.type:
+                    try:
+                        ws.unmerge_cells(start_row=7,end_row=8,start_column=last_merge_type,end_column=col-1)
+                    except:
+                        pass
+                    ws.merge_cells(start_row=7, end_row=8, start_column=last_merge_type, end_column=col)
+                else:
+                    ws.merge_cells(start_row=7, end_row=8, start_column=col, end_column=col)
+                    last_merge_type=col
+                ws.cell(row=7, column=col, value=train.type)
+
+                checi=train.fullCheci()
+                if '/' in checi:
+                    ws.cell(row=9,column=col,value=checi.split('/')[0])
+                    ws.cell(row=10,column=col,value='/'+checi.split('/',maxsplit=1)[1])
+                else:
+                    ws.cell(row=9,column=col,value=checi)
+                    ws.merge_cells(start_row=9,end_row=10,start_column=col,end_column=col)
+
+                last_dict=None
+
+                # 时刻表循环
+                for st_dict in train.timetable:
+                    for i,s in station_row_dict.items():
+                        if stationEqual(i,st_dict['zhanming']):
+                            row=s
+                            break
                     else:
-                        tgsj_str += '  '
-                    ws.cell(row=row+1, column=col, value=tgsj_str)
-                last_dict=st_dict
-            col+=1
-            last_train=train
+                        continue
+
+                    if train.isSfz(st_dict['zhanming']):
+                        ws.cell(row=row,column=col,value='')
+                        ws.cell(row=row+1,column=col,value=self.outTime(st_dict['cfsj'],True))
+
+                    elif train.isZdz(st_dict["zhanming"]):
+                        ws.cell(row=row,column=col,value=self.outTime(st_dict['ddsj'],True))
+                        ws.cell(row=row+1,column=col,value='    --')
+
+                    elif train.stationStopped(st_dict):
+                        #本站停车，无条件写入完整到达时刻和不完整出发时刻
+                        ddsj_str=f'{st_dict["ddsj"].hour:2d}:{st_dict["ddsj"].minute:02d}'
+                        sec=st_dict['ddsj'].second
+                        if sec:
+                            ddsj_str+=f"{sec:02d}"
+                        else:
+                            ddsj_str+='  '
+                        ws.cell(row=row,column=col,value=ddsj_str)
+                        if st_dict['ddsj'].hour==st_dict['cfsj'].hour:
+                            cfsj_str='   '
+                        else:
+                            cfsj_str=f"{st_dict['cfsj'].hour:2d}:"
+                        cfsj_str+=f'{st_dict["cfsj"].minute:02d}'
+                        sec = st_dict['cfsj'].second
+                        if sec:
+                            ddsj_str += f"{sec:02d}"
+                        else:
+                            ddsj_str += '  '
+                        ws.cell(row=row+1, column=col, value=cfsj_str)
+
+                    else:
+                        give_hour=False
+                        if not last_dict:
+                            give_hour=True
+                        elif last_dict['cfsj'].hour != st_dict['ddsj'].hour:
+                            give_hour=True
+                        ws.cell(row=row,column=col,value='   ...')
+                        tgsj_str=f'{st_dict["ddsj"].hour:2d}:' if give_hour else '   '
+                        tgsj_str+=f'{st_dict["ddsj"].minute:02d}'
+                        sec = st_dict['ddsj'].second
+                        if sec:
+                            tgsj_str += f"{sec:02d}"
+                        else:
+                            tgsj_str += '  '
+                        ws.cell(row=row+1, column=col, value=tgsj_str)
+                    last_dict=st_dict
+                col+=1
+                last_train=train
 
         #上行
         for train in self.trains():
-            if train.down:
-                continue
-            if last_train and train.sfz==last_train.sfz:
-                try:
-                    ws.unmerge_cells(start_row=3, end_row=4, start_column=last_merge_sfz, end_column=col - 1)
-                except:
-                    pass
-                ws.merge_cells(start_row=3,end_row=4,start_column=last_merge_sfz,end_column=col)
-            else:
-                ws.merge_cells(start_row=3, end_row=4, start_column=col, end_column=col)
-                last_merge_sfz=col
-            c=ws.cell(row=3, column=col, value=train.sfz)
-            col_str = c.column
-            ws.column_dimensions[col_str].width = 6  # 设置列宽为5
-
-            if last_train and train.zdz == last_train.zdz:
-                try:
-                    ws.unmerge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col - 1)
-                except:
-                    pass
-                ws.merge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col)
-            else:
-                ws.merge_cells(start_row=5, end_row=6, start_column=col, end_column=col)
-                last_merge_zdz=col
-            ws.cell(row=5, column=col, value=train.zdz)
-
-            if last_train and train.type == last_train.type:
-                try:
-                    ws.unmerge_cells(start_row=7,end_row=8,start_column=last_merge_type,end_column=col-1)
-                except:
-                    pass
-                ws.merge_cells(start_row=7, end_row=8, start_column=last_merge_type, end_column=col)
-            else:
-                ws.merge_cells(start_row=7, end_row=8, start_column=col, end_column=col)
-                last_merge_type=col
-            ws.cell(row=7, column=col, value=train.type)
-
-            checi=train.fullCheci()
-            if '/' in checi:
-                ws.cell(row=9,column=col,value=checi.split('/')[0])
-                ws.cell(row=10,column=col,value='/'+checi.split('/',maxsplit=1)[1])
-            else:
-                ws.cell(row=9,column=col,value=checi)
-                ws.merge_cells(start_row=9,end_row=10,start_column=col,end_column=col)
-
-            last_dict=None
-            #时刻表循环
-            for st_dict in train.timetable:
-                for i,s in station_row_dict.items():
-                    if stationEqual(i,st_dict['zhanming']):
-                        row=s
-                        break
-                else:
+            for dct in train.itemInfo():
+                if dct['down']:
                     continue
-
-                if train.isSfz(st_dict['zhanming']):
-                    ws.cell(row=row+1,column=col,value='')
-                    ws.cell(row=row,column=col,value=self.outTime(st_dict['cfsj'],True))
-
-                elif train.isZdz(st_dict["zhanming"]):
-                    ws.cell(row=row+1,column=col,value=self.outTime(st_dict['ddsj'],True))
-                    ws.cell(row=row,column=col,value='    --')
-
-                elif train.stationStopped(st_dict):
-                    #本站停车，无条件写入完整到达时刻和不完整出发时刻
-                    ddsj_str=f'{st_dict["ddsj"].hour:2d}:{st_dict["ddsj"].minute:02d}'
-                    sec=st_dict['ddsj'].second
-                    if sec:
-                        ddsj_str+=f"{sec:02d}"
-                    else:
-                        ddsj_str+='  '
-                    ws.cell(row=row+1,column=col,value=ddsj_str)
-                    if st_dict['ddsj'].hour==st_dict['cfsj'].hour:
-                        cfsj_str='   '
-                    else:
-                        cfsj_str=f"{st_dict['cfsj'].hour:2d}:"
-                    cfsj_str+=f'{st_dict["cfsj"].minute:02d}'
-                    sec = st_dict['cfsj'].second
-                    if sec:
-                        ddsj_str += f"{sec:02d}"
-                    else:
-                        ddsj_str += '  '
-                    ws.cell(row=row, column=col, value=cfsj_str)
-
+                if last_train and train.sfz==last_train.sfz:
+                    try:
+                        ws.unmerge_cells(start_row=3, end_row=4, start_column=last_merge_sfz, end_column=col - 1)
+                    except:
+                        pass
+                    ws.merge_cells(start_row=3,end_row=4,start_column=last_merge_sfz,end_column=col)
                 else:
-                    give_hour=False
-                    if not last_dict:
-                        give_hour=True
-                    elif last_dict['cfsj'].hour != st_dict['ddsj'].hour:
-                        give_hour=True
-                    ws.cell(row=row+1,column=col,value='   ...')
-                    tgsj_str=f'{st_dict["ddsj"].hour:2d}:' if give_hour else '   '
-                    tgsj_str+=f'{st_dict["ddsj"].minute:02d}'
-                    sec = st_dict['ddsj'].second
-                    if sec:
-                        tgsj_str += f"{sec:02d}"
+                    ws.merge_cells(start_row=3, end_row=4, start_column=col, end_column=col)
+                    last_merge_sfz=col
+                c=ws.cell(row=3, column=col, value=train.sfz)
+                col_str = c.column
+                ws.column_dimensions[col_str].width = 6  # 设置列宽为5
+
+                if last_train and train.zdz == last_train.zdz:
+                    try:
+                        ws.unmerge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col - 1)
+                    except:
+                        pass
+                    ws.merge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col)
+                else:
+                    ws.merge_cells(start_row=5, end_row=6, start_column=col, end_column=col)
+                    last_merge_zdz=col
+                ws.cell(row=5, column=col, value=train.zdz)
+
+                if last_train and train.type == last_train.type:
+                    try:
+                        ws.unmerge_cells(start_row=7,end_row=8,start_column=last_merge_type,end_column=col-1)
+                    except:
+                        pass
+                    ws.merge_cells(start_row=7, end_row=8, start_column=last_merge_type, end_column=col)
+                else:
+                    ws.merge_cells(start_row=7, end_row=8, start_column=col, end_column=col)
+                    last_merge_type=col
+                ws.cell(row=7, column=col, value=train.type)
+
+                checi=train.fullCheci()
+                if '/' in checi:
+                    ws.cell(row=9,column=col,value=checi.split('/')[0])
+                    ws.cell(row=10,column=col,value='/'+checi.split('/',maxsplit=1)[1])
+                else:
+                    ws.cell(row=9,column=col,value=checi)
+                    ws.merge_cells(start_row=9,end_row=10,start_column=col,end_column=col)
+
+                last_dict=None
+                #时刻表循环
+                for st_dict in train.timetable:
+                    for i,s in station_row_dict.items():
+                        if stationEqual(i,st_dict['zhanming']):
+                            row=s
+                            break
                     else:
-                        tgsj_str += '  '
-                    ws.cell(row=row, column=col, value=tgsj_str)
-            col+=1
-            last_train=train
+                        continue
+
+                    if train.isSfz(st_dict['zhanming']):
+                        ws.cell(row=row+1,column=col,value='')
+                        ws.cell(row=row,column=col,value=self.outTime(st_dict['cfsj'],True))
+
+                    elif train.isZdz(st_dict["zhanming"]):
+                        ws.cell(row=row+1,column=col,value=self.outTime(st_dict['ddsj'],True))
+                        ws.cell(row=row,column=col,value='    --')
+
+                    elif train.stationStopped(st_dict):
+                        #本站停车，无条件写入完整到达时刻和不完整出发时刻
+                        ddsj_str=f'{st_dict["ddsj"].hour:2d}:{st_dict["ddsj"].minute:02d}'
+                        sec=st_dict['ddsj'].second
+                        if sec:
+                            ddsj_str+=f"{sec:02d}"
+                        else:
+                            ddsj_str+='  '
+                        ws.cell(row=row+1,column=col,value=ddsj_str)
+                        if st_dict['ddsj'].hour==st_dict['cfsj'].hour:
+                            cfsj_str='   '
+                        else:
+                            cfsj_str=f"{st_dict['cfsj'].hour:2d}:"
+                        cfsj_str+=f'{st_dict["cfsj"].minute:02d}'
+                        sec = st_dict['cfsj'].second
+                        if sec:
+                            ddsj_str += f"{sec:02d}"
+                        else:
+                            ddsj_str += '  '
+                        ws.cell(row=row, column=col, value=cfsj_str)
+
+                    else:
+                        give_hour=False
+                        if not last_dict:
+                            give_hour=True
+                        elif last_dict['cfsj'].hour != st_dict['ddsj'].hour:
+                            give_hour=True
+                        ws.cell(row=row+1,column=col,value='   ...')
+                        tgsj_str=f'{st_dict["ddsj"].hour:2d}:' if give_hour else '   '
+                        tgsj_str+=f'{st_dict["ddsj"].minute:02d}'
+                        sec = st_dict['ddsj'].second
+                        if sec:
+                            tgsj_str += f"{sec:02d}"
+                        else:
+                            tgsj_str += '  '
+                        ws.cell(row=row, column=col, value=tgsj_str)
+                col+=1
+                last_train=train
 
         for row in range(1,ws.max_row+1):
             for col in range(1,ws.max_column+1):

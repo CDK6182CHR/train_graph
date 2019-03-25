@@ -700,7 +700,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         """
         if not train.isShow():
             # 若设置为不显示，忽略此命令
-            print("addTrainLine:not show train",train.fullCheci())
+            # print("addTrainLine:not show train",train.fullCheci())
             return
         try:
             self.graph.UIConfigData()["showFullCheci"]
@@ -723,8 +723,6 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 else:
                     showStart = False
                 end, status = item.setLine(start, showStartLabel=showStart)
-                if train.fullCheci() == 'Z225/8':
-                    print(train.fullCheci(),"setLine returns",end,status)
                 if status != TrainItem.Invalid:
                     train.addItem(item)
                     # 铺画完毕后，item.start/endStation参数被补齐。
@@ -755,6 +753,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 if status != TrainItem.Invalid:
                     self.scene.addItem(item)
                     train.addItem(item)
+                    dct['start'] = item.startStation
+                    dct['end'] = item.endStation
+                else:
+                    train.removeItemInfo(dct)
                 start = end
         # item.setLine()  # 重复调用，init中已经调用过一次了，故删去。
 
@@ -942,7 +944,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             text = f"{train.fullCheci()}次({train.sfz}->{train.zdz})在{pre['zhanming']}-{lat['zhanming']}区间 "
             text += f"{pre['cfsj'].strftime('%H:%M:%S')}-{lat['ddsj'].strftime('%H:%M:%S')} "
             sec_str = f"{sec%60:02d}秒"
-            text += f"区间运行{int(sec/60)}分 {sec_str if sec%60 else ''}\n"
+            text += f"区间运行{int(sec/60)}分{sec_str if sec%60 else ''}\n"
             try:
                 mile = self.graph.gapBetween(pre['zhanming'],lat['zhanming'])
             except:
@@ -954,7 +956,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     speed_str = 'NA'
                 else:
                     speed_str = f"{speed:.2f} km/h"
-                text += f"区间里程{mile} km，技术速度{speed_str}"
+                text += f"区间里程{mile:.2f} km，技术速度{speed_str}"
             self.setToolTip(text)
         super(GraphicsWidget, self).mouseMoveEvent(event)
 

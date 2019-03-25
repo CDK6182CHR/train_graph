@@ -53,9 +53,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.0.0"
+        self.version = "V2.0.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190324'
+        self.build = '20190325'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -603,7 +603,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         checi: str = self.GraphWidget.selectedTrain.fullCheci()
         checi_new = f"{checi.replace('/',',')}"
         filename = QtWidgets.QFileDialog.getSaveFileName(self, '选择文件',
-                                                         directory=f'../{checi_new}事件时刻表@{self.graph.lineName()}',
+                                                         directory=f'{checi_new}事件时刻表@{self.graph.lineName()}',
                                                          filter='*.xls')[0]
         if not filename:
             return
@@ -626,7 +626,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         checi: str = self.GraphWidget.selectedTrain.fullCheci()
         checi.replace('/', ',')
         filename = QtWidgets.QFileDialog.getSaveFileName(self, '选择文件',
-                                                         directory=f'../{checi}事件时刻表', filter='*.txt')[0]
+                                                         directory=f'{checi}事件时刻表', filter='*.txt')[0]
         if not filename:
             return
         text = ""
@@ -1932,6 +1932,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle("车次信息")
+        dialog.resize(400,400)
         layout = QtWidgets.QVBoxLayout()
         text = ""
 
@@ -1940,7 +1941,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         text += f"始发终到：{train.sfz}->{train.zdz}\n"
         text += f"列车种类：{train.trainType()}\n"
         text += f"本线运行入图方向：{train.firstDownStr()}\n"
-        text == f"本线运行出图方向：{train.lastDownStr()}\n"
+        text += f"本线运行出图方向：{train.lastDownStr()}\n"
         text += f"本线入图点：{train.localFirst(self.graph)}\n"
         text += f"本线出图点：{train.localLast(self.graph)}\n"
         text += f"本线图定站点数：{train.localCount(self.graph)}\n"
