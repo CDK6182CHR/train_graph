@@ -599,12 +599,6 @@ class Train():
                     pass
             return mile
 
-    def localTime(self,graph):
-        firstDD,_ = self.stationTime(self.localFirst(graph))
-        _,lastCF = self.stationTime(self.localLast(graph))
-        dt = lastCF - firstDD
-        return dt.seconds
-
     def intervalRunStayTime(self,graph,start,end):
         """
         不算起点和终点
@@ -650,10 +644,12 @@ class Train():
             bounds.append((dct['start'],dct['end']))
         if not bounds:
             return 0,0
+        # if self.fullCheci() == 'K1156/7':
+        #     print(bounds)
         for st in self.timetable:
-            if stationEqual(st['zhanming'],bounds[n][0],strict=True):
-                if self.fullCheci() == '37401':
-                    print("start seted to True",st['zhanming'])
+            if not started and stationEqual(st['zhanming'],bounds[n][0],strict=True):
+                # if self.fullCheci() == 'K8361/4/1':
+                #     print("start seted to True",st['zhanming'])
                 started = True
             if not started:
                 continue
@@ -663,16 +659,19 @@ class Train():
                 continue
             running += (st["ddsj"] - former["cfsj"]).seconds
             stay += (st["cfsj"] - st["ddsj"]).seconds
-            if self.fullCheci() == '37401':
-                print("train.runStayTime",running,stay,former['zhanming'],st['zhanming'])
+            # if self.fullCheci() == 'K8361/4/1':
+            #     print("train.runStayTime",running,stay,former['zhanming'],st['zhanming'],n)
             former = st
             if stationEqual(st['zhanming'],bounds[n][1],strict=True):
-                if n < len(bounds) -1 and not stationEqual(st['zhanming'],bounds[n+1][0]):
+                if n < len(bounds) -1 and stationEqual(st['zhanming'],bounds[n+1][0]):
+                    # if self.fullCheci() == 'K1156/7':
+                    #     print("end but go on",st['zhanming'])
+                    pass
+                else:
                     started = False
+                    former = None
                 n+=1
                 if n >= len(bounds):
-                    if self.fullCheci() == '37401':
-                        print("break!")
                     break
         return running, stay
 

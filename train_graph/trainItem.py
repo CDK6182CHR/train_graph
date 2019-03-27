@@ -261,6 +261,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     status = self.Reversed
                     print("行别变化",down,newDown,station,self.train.fullCheci(),curIndex,station_count)
                     curIndex -= 1
+                    last_station = last_loop_station
                     # 注意：保持last_station是上一个。
                     break
                 if last_loop_station is not None:

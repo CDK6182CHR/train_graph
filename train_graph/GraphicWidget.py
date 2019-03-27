@@ -723,7 +723,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 else:
                     showStart = False
                 end, status = item.setLine(start, showStartLabel=showStart)
-                if status != TrainItem.Invalid:
+                if status != TrainItem.Invalid and item.station_count >= 2:
+                    # 暂不确定是否要完全封杀station_count<2的车次
                     train.addItem(item)
                     # 铺画完毕后，item.start/endStation参数被补齐。
                     if item.down is not None:
