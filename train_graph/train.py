@@ -187,6 +187,23 @@ class Train():
         if zdz:
             self.zdz=zdz
 
+    def autoStartEnd(self):
+        """
+        自动设置始发终到站。使用itemInfo作为判据，而不使用localFirst/Last。
+        """
+        if not self.timetable:
+            return
+        first,last = None,None
+        for item in self.itemInfo():
+            if first is None:
+                first=item
+            last=item
+        firstT,lastT = self.timetable[0]['zhanming'],self.timetable[-1]['zhanming']
+        if firstT == first['start'] and re.match(f'{self.sfz}.*?场',firstT):
+            self.setStartEnd(sfz=firstT)
+        if lastT == last['end'] and re.match(f'{self.zdz}.*?场',lastT):
+            self.setStartEnd(zdz=lastT)
+
     def station_infos(self):
         for st in self.timetable:
             yield st["zhanming"],st["ddsj"],st["cfsj"]

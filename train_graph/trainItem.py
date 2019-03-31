@@ -742,6 +742,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
             if endlabel is not None:
                 endlabel.setPen(pathPen)
+                pathPen.setWidth(1)
                 endlabel.setZValue(0)
                 self.endLabelText.setZValue(0)
                 self.endLabelText.setBrush(pathPen.color())

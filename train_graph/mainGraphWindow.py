@@ -950,6 +950,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._reset_start_end)
         menu.addAction(action)
 
+        action = QtWidgets.QAction("自动适配始发终到站",self)
+        action.triggered.connect(self._auto_start_end)
+        action.setShortcut('ctrl+M')
+        menu.addAction(action)
+
         action = QtWidgets.QAction("运行图拼接", self)
         action.triggered.connect(self._joint_graph)
         action.setShortcut('ctrl+J')
@@ -2011,6 +2016,22 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             train.setStartEnd(train.firstStation(), train.endStation())
         self.trainWidget.updateAllTrains()
         self.statusOut("始发终到站重置成功")
+
+    def _auto_start_end(self):
+        """
+        自动推广适配始发终到站，通过修改符合一定条件的车次的始发站。例如成都东->成都东达成场。
+        """
+        text = "遍历所有车次，当车次满足以下条件时，将该车次的始发站调整为在本线的第一个车站，终到站调整为" \
+               "在本线的最后一个车站。\n（1）该车次在本线的第一个（最后一个）车站是时刻表中的" \
+               "第一个（最后一个）站；\n（2）该车次时刻表中第一个（最后一个）站站名形式符合：" \
+               "“{A}xx场”格式，其中A表示车次信息中的始发（终到）站。\n" \
+               "是否继续？"
+        if not self.qustion(text):
+            return
+        for train in self.graph.trains():
+            train.autoStartEnd()
+        self.trainWidget.updateAllTrains()
+        self._dout('自动设置完成！可手动重新铺画运行图（shift+F5）以查看效果。')
 
     def _joint_graph(self):
         dialog = QtWidgets.QDialog(self)
