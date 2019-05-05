@@ -596,9 +596,6 @@ class rulerPainter(QtWidgets.QWidget):
     def _cal_interval(self,node:dict,flag:int):
         """
         计算区间运行时分。
-        :param node:
-        :param flag:
-        :return:
         """
         dt = node["interval"]
         if 0x1&flag:
@@ -614,6 +611,7 @@ class rulerPainter(QtWidgets.QWidget):
         self.btnOk.setEnabled(False)
         self.btnFormer.setEnabled(False)
         self.stackedWidget.setCurrentIndex(0)
+        self.timeTable.setRowCount(0)
 
     def _ok_clicked(self):
         if not self.train.timetable:

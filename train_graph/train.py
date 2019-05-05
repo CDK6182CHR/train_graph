@@ -1,6 +1,12 @@
 """
 列车信息模块
 时间统一使用：datetime.datetime实例
+2019.04.27修改计划：
+1. 在列车数据中新增“旅客列车”参数，严格判定是否为旅客列车。增加到currentWidget中。注意，使用checkBox时允许中间状态，即由系统自动判定。默认是这种状态。
+2. 在列车时刻表数据每一行新增“营业”字段，标记是否办理业务。在currentWidget中新增按钮自动设置所有站是否办理业务。默认全为True。同时修改ctrl+2功能中的筛选条件。
+3. 取消Train中所有依据Timetable_new.utility判定类型、判定是否为客车的逻辑，此操作改为需要graph介入。
+4. 新增类型映射表。规定一系列的列车种类名称，是否属于旅客列车，对应的车次正则表达式。作为系统默认数据中的一项，也作为graph中的数据。判定是否为客车的逻辑，经由此处。此项数据在车次的类型设置为空时生效；在全局新增自动设置所有列车类型操作。
+5. 在线路基数据中新增两个字段“默认办客”“默认办货”。此项数据在第2条所述的自动设置以及标尺排图时生效。
 """
 from Timetable_new.checi3 import Checi
 from datetime import datetime,timedelta
@@ -19,7 +25,8 @@ class Train():
     Str type;
     List<Dict> timetable;
     Dict UI; #显示设置，如线形，颜色等
-    bool down;//本线的上下行
+    bool down;//本线的上下行 取消
+    bool _passenger;//是否客车
     QtWidgets.QGraphicsViewPathItem pathItem;
     QtWidgets.QGraphicsViewItem labelItem;
 
@@ -27,7 +34,8 @@ class Train():
     dict = {
             "zhanming":name,
             "ddsj":ddsj,
-            "cfsj":cfsj
+            "cfsj":cfsj,
+            "business":bool  //是否办理业务。新增
         }
     items 中数据结构：
     dict{
@@ -39,7 +47,7 @@ class Train():
         show_end_label:结束标记bool
     }
     """
-    def __init__(self,checi_full='',checi_down='',checi_up='',sfz='',zdz='',origin=None):
+    def __init__(self,checi_full='',checi_down='',checi_up='',sfz='',zdz='',origin=None,passenger=True):
         self.item = None
         self._items = []
         self._itemInfo = []
@@ -49,6 +57,7 @@ class Train():
         self._localFirst=None
         self._localLast=None
         self._yToStationMap = []  # 数据结构：List<tuple<float,dict>>
+        self._passenger=passenger
         if origin is not None:
             #从既有字典读取数据
             self.loadTrain(origin)
@@ -67,7 +76,7 @@ class Train():
                 self.checi[1]=tempcheci.down
                 self.checi[2]=tempcheci.up
                 self.type = tempcheci.type
-            self.autoType()
+            # self.autoType()  # 取消
             # self._autoUI()
 
 
@@ -82,6 +91,7 @@ class Train():
         self._localLast = origin.get('localLast',None)
         self._itemInfo = origin.get("itemInfo",[])
         self._autoItem = origin.get("autoItem",True)
+        self._passenger = origin.get("passenger",True)
 
         try:
             origin["shown"]
@@ -93,7 +103,8 @@ class Train():
         self._transfer_time()
         #如果UI为空，自动初始化
         if not self.type:
-            self.autoType()
+            pass
+            # self.autoType()
         if not self.UI:
             pass
             #self._autoUI()
@@ -115,6 +126,7 @@ class Train():
         self.type = type
 
     def autoType(self):
+        print("Train::autoType: 标记过时的函数")
         checi = self.checi[1]
         if not checi or checi == 'null':
             checi = self.checi[2]
@@ -128,7 +140,8 @@ class Train():
         # print(self.type)
 
     def _autoUI(self):
-        #默认颜色
+        print("Train::autoUI: 标记过时的函数")
+        # 默认颜色
         if self.type == '快速':
             self.UI["Color"] = '#FF0000'
         elif self.type == '特快':
@@ -154,7 +167,7 @@ class Train():
             return self.checi[2]
 
     def addStation(self,name:str,ddsj,cfsj,auto_cover=False,to_end=True):
-        #增加站。暂定到达时间、出发时间用datetime类。
+        # 增加站。暂定到达时间、出发时间用datetime类。
         if isinstance(ddsj,str):
             ddsj = strToTime(ddsj)
 
@@ -247,6 +260,18 @@ class Train():
         for item in self.items():
             item.setVisible(show)
 
+    def isPassenger(self):
+        """
+        旅客列车
+        """
+        return self._passenger
+
+    def setIsPassenger(self,t):
+        """
+        旅客列车
+        """
+        self._passenger=t
+
     def show(self):
         #调试用
         print(self.checi)
@@ -272,6 +297,7 @@ class Train():
             "localLast":self._localLast,
             "autoItem":self._autoItem,
             "itemInfo":self._itemInfo,
+            "passenger":self._passenger,
         }
         for dict in self.timetable:
             ddsj:datetime = dict["ddsj"]
@@ -794,8 +820,6 @@ class Train():
     def translation(self,checi:str,dt_time:timedelta):
         """
         复制当前车次数据，返回新的Train对象。checi已经保证合法。
-        :param dt_int:
-        :return:
         """
         # print("train::translation",checi,dt_time,self.start_time())
         from copy import copy,deepcopy
@@ -1159,6 +1183,25 @@ class Train():
             # 第一个站
             return self._yToStationMap[idx_left][1],None
         return self._yToStationMap[idx_left-1][1],self._yToStationMap[idx_left][1]
+
+    @staticmethod
+    def dt(tm1:datetime,tm2:datetime)->int:
+        """
+        工具性函数，返回tm2-tm1的时间，单位秒。
+        """
+        return (tm2-tm1).seconds
+
+    @staticmethod
+    def sec2str(sec:int)->str:
+        """
+        工具性函数，将秒数转换为形如“x分x秒”的字符串。如果时间差为0，返回空。
+        """
+        if not sec:
+            return ''
+        elif sec%60:
+            return f"{sec//60}分{sec%60:02d}秒"
+        else:
+            return f"{sec//60}分"
 
     def __str__(self):
         return f"Train object at <0x{id(self):X}> {self.fullCheci()}  {self.sfz}->{self.zdz}"

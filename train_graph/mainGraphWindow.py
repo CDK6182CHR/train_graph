@@ -38,6 +38,7 @@ from .detectWidget import DetectWidget
 from .changeStationDialog import ChangeStationDialog
 from .batchChangeStationDialog import BatchChangeStationDialog
 from .trainComparator import TrainComparator
+from .correctionWidget import CorrectionWidget
 import time
 from .thread import ThreadDialog
 import traceback
@@ -53,9 +54,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.0.1"
+        self.version = "V2.0.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190327'
+        self.build = '20190505'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -521,8 +522,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             tableWidget.setItem(row, 1, item)
 
             mile_str = "%.2f" % event["mile"] if event["mile"] != -1 else "NA"
-            item = QtWidgets.QTableWidgetItem()
-            item.setData(0, event["mile"])
+            item = QtWidgets.QTableWidgetItem(f"{event['mile']:.1f}")
+            item.setData(Qt.DisplayRole, event["mile"])
             # item.setText(mile_str)
             tableWidget.setItem(row, 2, item)
 
@@ -1053,6 +1054,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action = QtWidgets.QAction('高级显示车次设置', self)
         action.setShortcut('ctrl+shift+L')
         action.triggered.connect(self.showFilter.setFilter)
+        menu.addAction(action)
+
+        action = QtWidgets.QAction('当前车次时刻表重排',self)
+        action.setShortcut('ctrl+V')
+        action.triggered.connect(self._correction_timetable)
         menu.addAction(action)
 
         # 数据
@@ -1865,7 +1871,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             tb.setItem(i, 6, IT(tm_str))
             item = IT(speed_str)
             if speed:
-                item.setData(0, speed)
+                item.setData(Qt.DisplayRole, speed)
             tb.setItem(i, 7, item)
             tb.setItem(i, 8, IT(train.sfz))
             tb.setItem(i, 9, IT(train.zdz))
@@ -2131,7 +2137,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _adjust_train_time(self):
         """
-        :return:
         """
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle('调整当前车次时刻')
@@ -2493,6 +2498,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                 return
         dialog = DetectWidget(self, self)
         # dialog.okClicked.connect(self.GraphWidget.paintGraph)
+        dialog.exec_()
+
+    def _correction_timetable(self):
+        if not self.GraphWidget.selectedTrain:
+            self._derr('当前车次时刻表重排：当前没有选中车次！')
+            return
+        dialog = CorrectionWidget(self.GraphWidget.selectedTrain,self.graph,self)
         dialog.exec_()
 
     def _train_show_filter_ok(self):

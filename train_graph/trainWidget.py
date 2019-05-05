@@ -130,14 +130,14 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.setItem(now_line, 3, item)
 
         mile = train.localMile(self.graph,fullAsDefault=False)
-        item = QtWidgets.QTableWidgetItem(f"{mile:.2f}")
-        item.setData(0, mile)
+        item = QtWidgets.QTableWidgetItem(f"{mile:.1f}")
+        item.setData(Qt.DisplayRole, mile)
         tableWidget.setItem(now_line, 5, item)
 
         # train: Train
-        item = QtWidgets.QTableWidgetItem()
         spd = train.localSpeed(self.graph,fullAsDefault=False)
-        item.setData(0, spd)
+        item = QtWidgets.QTableWidgetItem(f"{spd:.2f}" if spd!=-1 else 'NA')
+        item.setData(Qt.DisplayRole, spd)
         tableWidget.setItem(now_line, 6, item)
 
         # 修改直接生效
@@ -179,8 +179,12 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.item(row,2).setText(train.zdz)
         tableWidget.item(row,3).setText(train.trainType())
         tableWidget.cellWidget(row,4).setChecked(train.isShow())
-        tableWidget.item(row,5).setData(0,train.localMile(self.graph,fullAsDefault=False))
-        tableWidget.item(row,6).setData(0,train.localSpeed(self.graph,fullAsDefault=False))
+        mile = train.localMile(self.graph,fullAsDefault=False)
+        tableWidget.item(row,5).setData(Qt.DisplayRole,mile)
+        tableWidget.item(row,5).setText(f"{mile:.1f}")
+        speed=train.localSpeed(self.graph,fullAsDefault=False)
+        tableWidget.item(row,6).setData(Qt.DisplayRole,speed)
+        tableWidget.item(row,6).setText(f"speed:.2f" if speed!=-1 else 'NA')
 
     def updateRowByTrain(self,train:Train):
         row = self.trainMapToRow[train]

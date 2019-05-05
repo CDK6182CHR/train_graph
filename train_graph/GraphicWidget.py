@@ -1,6 +1,13 @@
 """
 时间使用：datetime.datetime对象
 copyright (c) mxy 2018
+2019年4月27日批注，自2.0.2版本开始规范化图形空间的z_value。分配如下
+0：基本层。包含底图框线。
+[1,5) 区间安排底图上的修饰内容。目前仅有天窗。天窗为1.
+[5,10)区间安排列车运行线。目前统一安排为5.
+10：选中车次运行线层。
+[10,15)预留。
+[15,20)软件悬浮层。目前安排距离轴、时间轴15，选中车次名称16.
 """
 import cgitb
 import traceback
@@ -499,9 +506,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
 
         group1 = self.scene.createItemGroup(leftItems)
-        group1.setZValue(4)
+        group1.setZValue(15)
         group2 = self.scene.createItemGroup(rightItems)
-        group2.setZValue(4)
+        group2.setZValue(15)
         self.marginItemGroups["left"] = group1
         self.marginItemGroups["right"] = group2
 
@@ -628,7 +635,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # timeItems.append(nowItem)
         self.nowItem = nowItem
         nowItem.setDefaultTextColor(QtGui.QColor(UIDict["text_color"]))
-        nowItem.setZValue(10)
+        nowItem.setZValue(16)
         timeItems.append(rectItem)
         timeItems.append(lineItem)
 
@@ -687,11 +694,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     self.scene.addLine(x, self.margins["up"], x, self.margins["up"] + height, pen_other)
 
         group1 = self.scene.createItemGroup(timeItems)
-        group1.setZValue(3)
+        group1.setZValue(15)
         self.marginItemGroups["up"] = group1
 
         group2 = self.scene.createItemGroup(downItems)
-        group2.setZValue(3)
+        group2.setZValue(15)
         # print("y is: ",group2.y())
         self.marginItemGroups["down"] = group2
 
@@ -738,6 +745,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                         }
                         train.addItemInfoDict(dct)
                         self.scene.addItem(item)
+                        item.setZValue(5)
                 start = end
 
         else:  # 手动模式，按照要求铺画
@@ -754,6 +762,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 if status != TrainItem.Invalid:
                     self.scene.addItem(item)
                     train.addItem(item)
+                    item.setZValue(5)
                     dct['start'] = item.startStation
                     dct['end'] = item.endStation
                 else:
@@ -1313,6 +1322,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                                                                        end_y - start_y)
             rectItem.setPen(pen)
             rectItem.setBrush(brush)
+            rectItem.setZValue(1)
             return (rectItem,)
         else:
             # 跨日
@@ -1324,6 +1334,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             rectItem2 = self.scene.addRect(left_x, start_y, end_x - left_x, end_y - start_y)
             rectItem2.setPen(pen)
             rectItem2.setBrush(brush)
+            rectItem1.setZValue(1)
+            rectItem2.setZValue(1)
             return (rectItem1, rectItem2,)
 
     def _remove_forbid(self, down):

@@ -207,6 +207,8 @@ class Graph:
             self._trains.append(newtrain)
 
         self._config = info.get("config",{})
+        if not isinstance(self._config,dict):
+            self._config = {}
         if self._config.get('ordinate') is not None:
             self._config["ordinate"] = self.line.rulerByName(self._config["ordinate"])
         self.checkGraphConfig()

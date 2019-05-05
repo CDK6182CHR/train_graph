@@ -706,7 +706,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             for sub in self.spanItems:
                 # sub:QtWidgets.QGraphicsTextItem
                 sub.setFont(bfont)
-        self.setZValue(2)
+        self.setZValue(10)
 
         # 显示详细停点
         if self.markMode == 1:
@@ -758,7 +758,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             for sub in self.spanItems:
                 # sub:QtWidgets.QGraphicsTextItem
                 sub.setFont(bfont)
-        self.setZValue(0)
+        self.setZValue(5)
 
         if self.markMode == 1:
             for item in self.markLabels:

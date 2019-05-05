@@ -86,7 +86,7 @@ class ConfigWidget(QtWidgets.QWidget):
         label9 = QtWidgets.QLabel("最低粗线等级")
         spin9 = QtWidgets.QSpinBox()
         spin9.setSingleStep(1)
-        spin9.setRange(0, 20)
+        spin9.setRange(-1, 20)
         spin9.setValue(self.UIDict["bold_line_level"])
         layout.addRow(label9, spin9)
         self.bold_line_level_spin = spin9
