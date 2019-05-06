@@ -1,13 +1,17 @@
 """
 运行图类.
 同时管理self._config和self._sysConfig两套设置系统，两套系统完全分离。
+2019年5月6日备忘录：
+1. 在ctrl+3面板中调整办客的筛选条件。
+2. 车次筛选器中新增按客货车筛选。
+3. 新增自动判断所有列车是否客车、列车类型的全局操作，不设置快捷键。
 """
 from .line import Line
 from .ruler import Ruler
 from .train import Train
 from copy import copy
 from Timetable_new.utility import stationEqual
-import json
+import json,re
 
 config_file = 'config.json'
 
@@ -92,7 +96,30 @@ class Graph:
                 "label_width": 100,
                 "mile_label_width": 50,
                 "ruler_label_width": 100,
-            }
+            },
+            "type_regex":[
+                ('高速',r'G\d+',True),
+                ('动车组',r'D\d+',True),
+                ('城际',r'C\d+',True),
+                ('直达特快',r'Z\d+',True),
+                ('特快',r'T\d+',True),
+                ('快速',r'K\d+',True),
+                ('普快',r'[1-5]\d{3}',True),
+                ('普客',r'6\d{3}',True),
+                ('普客',r'7[1-5]\d{2}',True),
+                ('通勤',r'7\d+{3}',True),
+                ('通勤',r'8\d{3}',True),
+                ('旅游',r'Y\d+',True),
+                ('路用', r'57\d+', True),
+                ('特快行包',r'X1\d{2}',True),
+                ('行包',r'X\d+',False),
+                ('动检',r'DJ\d+',True),
+                ('客车底',r'0[GDCZTKY]\d+',True),
+                ('客车底',r'0\d{4}',True),
+                ('单机',r'5[0-2]\d{3}',False),
+                ('补机',r'5[3-4]\d{3}',False),
+                ('试运转',r'55\d{3}',False),
+            ]  # 类型对应正则表达式，list<tuple>有序三元列表。数据结构为类型，正则，是否客车。优先级递减。
         }
         default_config.update(self._sysConfig)
         self._sysConfig = default_config
@@ -203,7 +230,7 @@ class Graph:
         self.line.loadLine(info["line"])
         self.circuits = info.get("circuits",None)
         for dict_train in info["trains"]:
-            newtrain = Train(origin=dict_train)
+            newtrain = Train(self,origin=dict_train)
             self._trains.append(newtrain)
 
         self._config = info.get("config",{})
@@ -497,6 +524,20 @@ class Graph:
     def stationDirection(self,name:str):
         return self.line.stationViaDirection(name)
 
+    def lineStationBusiness(self,name:str,passenger:int,default=False)->bool:
+        """
+        2.0.2新增，返回车站是否办理业务。passenger是Train中规定的枚举常量，标志是否办客。
+        如果找不到，返回default。
+        """
+        dct = self.line.stationDictByName(name)
+        if dct is None:
+            return default
+
+        if passenger == Train.PassengerTrue:
+            return dct.get('passenger',True)
+        else:
+            return dct.get("freight",True)
+
     def formerBothStation(self,name:str):
         """
         寻找本站往前的第一个【下行方向通过】的站。
@@ -569,6 +610,40 @@ class Graph:
 
     def rulerCount(self):
         return len(self.line.rulers)
+
+    def checiType(self,checi:str)->str:
+        """
+        2.0.2新增。根据系统设置的判断规则，返回车次对应的类型。如果不符合任何一个，返回 其他。
+        """
+        for nm,rg,_ in self.UIConfigData()['type_regex']:
+            if re.match(rg,checi):
+                return nm
+        return '其他'
+
+    def checiTypePassenger(self,checi:str)->(str,int):
+        """
+        根据车次返回类型以及是否是客车。是否是客车按照Train中定义的常量。
+        如果不符合任何一个，返回 其他, PassengerAuto。
+        """
+        for nm,rg,ps in self.UIConfigData()['type_regex']:
+            if re.match(rg,checi):
+                if ps:
+                    return nm,Train.PassengerTrue
+                else:
+                    return nm,Train.PassengerFalse
+        return '其他',Train.PassengerAuto
+
+    def typePassenger(self,tp:str,default=Train.PassengerAuto)->int:
+        """
+        根据类型返回是否为客车。返回是Train中的PassengerTrue或PassengerFalse，如果找不到返回默认。
+        """
+        for name,_,ps in self.UIConfigData()['type_regex']:
+            if name == tp:
+                if ps:
+                    return Train.PassengerTrue
+                else:
+                    return Train.PassengerFalse
+        return default
 
     def stationTimeTable(self,name:str):
         """
@@ -687,7 +762,7 @@ class Graph:
         """
         阅读trc中单个车次的信息，不含===Train===标志头
         """
-        train = Train()
+        train = Train(self)
         for i,line in enumerate(now_list):
             if i == 0:
                 splited = line.split(',')
@@ -700,7 +775,7 @@ class Graph:
             else:
                 splited = line.split(',')
                 train.addStation(splited[0],splited[1],splited[2])
-        train.autoType()
+        train.autoTrainType()
         if train.timetable:
             self.addTrain(train)
 

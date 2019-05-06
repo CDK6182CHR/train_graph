@@ -2,17 +2,17 @@
 列车信息模块
 时间统一使用：datetime.datetime实例
 2019.04.27修改计划：
-1. 在列车数据中新增“旅客列车”参数，严格判定是否为旅客列车。增加到currentWidget中。注意，使用checkBox时允许中间状态，即由系统自动判定。默认是这种状态。
+1. 在列车数据中新增“旅客列车”参数，严格判定是否为旅客列车。增加到currentWidget中。注意，使用checkBox时允许中间状态，即由系统自动判定。默认是这种状态。ok
 2. 在列车时刻表数据每一行新增“营业”字段，标记是否办理业务。在currentWidget中新增按钮自动设置所有站是否办理业务。默认全为True。同时修改ctrl+2功能中的筛选条件。
-3. 取消Train中所有依据Timetable_new.utility判定类型、判定是否为客车的逻辑，此操作改为需要graph介入。
-4. 新增类型映射表。规定一系列的列车种类名称，是否属于旅客列车，对应的车次正则表达式。作为系统默认数据中的一项，也作为graph中的数据。判定是否为客车的逻辑，经由此处。此项数据在车次的类型设置为空时生效；在全局新增自动设置所有列车类型操作。
-5. 在线路基数据中新增两个字段“默认办客”“默认办货”。此项数据在第2条所述的自动设置以及标尺排图时生效。
+3. 取消Train中所有依据Timetable_new.utility判定类型、判定是否为客车的逻辑，此操作改为需要graph介入。ok
+4. 新增类型映射表。规定一系列的列车种类名称，是否属于旅客列车，对应的车次正则表达式。作为系统默认数据中的一项，也作为graph中的数据。判定是否为客车的逻辑，经由此处。此项数据在车次的类型设置为空时生效；在全局新增自动设置所有列车类型操作。ok
+5. 在线路基数据中新增两个字段“默认办客”“默认办货”。此项数据在第2条所述的自动设置以及标尺排图时生效。ok
 """
 from Timetable_new.checi3 import Checi
 from datetime import datetime,timedelta
 from Timetable_new.utility import judge_type,stationEqual,strToTime
 import re,bisect
-from typing import Iterable
+from typing import Iterable,Union
 
 import cgitb
 cgitb.enable(format='text')
@@ -20,13 +20,14 @@ cgitb.enable(format='text')
 class Train():
     """
     列车信息类，数据结构：
+    Graph& graph;//2.0.2开始新增，对graph的引用
     List<Str> checi;
     Str sfz,zdz;
     Str type;
     List<Dict> timetable;
     Dict UI; #显示设置，如线形，颜色等
     bool down;//本线的上下行 取消
-    bool _passenger;//是否客车
+    int _passenger;//是否客车, 用常量表达. 常量正好对应Qt中的CheckState。
     QtWidgets.QGraphicsViewPathItem pathItem;
     QtWidgets.QGraphicsViewItem labelItem;
 
@@ -47,8 +48,14 @@ class Train():
         show_end_label:结束标记bool
     }
     """
-    def __init__(self,checi_full='',checi_down='',checi_up='',sfz='',zdz='',origin=None,passenger=True):
+    PassengerFalse = 0
+    PassengerAuto = 1
+    PassengerTrue = 2
+
+    def __init__(self,graph,checi_full='',checi_down='',checi_up='',sfz='',zdz='',
+                 origin=None,passenger=PassengerAuto):
         self.item = None
+        self.graph=graph
         self._items = []
         self._itemInfo = []
         self._autoItem = True
@@ -139,6 +146,12 @@ class Train():
             #traceback.print_exc()
         # print(self.type)
 
+    def autoTrainType(self):
+        """
+        2.0.2新增，调用graph获得自动类型。取代autoType函数。
+        """
+        self.setType(self.graph.checiType(self.fullCheci()))
+
     def _autoUI(self):
         print("Train::autoUI: 标记过时的函数")
         # 默认颜色
@@ -166,7 +179,7 @@ class Train():
         else:
             return self.checi[2]
 
-    def addStation(self,name:str,ddsj,cfsj,auto_cover=False,to_end=True):
+    def addStation(self,name:str,ddsj,cfsj,*,business=None,auto_cover=False,to_end=True):
         # 增加站。暂定到达时间、出发时间用datetime类。
         if isinstance(ddsj,str):
             ddsj = strToTime(ddsj)
@@ -176,8 +189,13 @@ class Train():
         dict = {
             "zhanming":name,
             "ddsj":ddsj,
-            "cfsj":cfsj
+            "cfsj":cfsj,
         }
+        if business is None:
+            business = self.graph.lineStationBusiness(name,
+                                        self.isPassenger(detect=True),default=None) and (ddsj!=cfsj)
+        if business is not None:
+            dict['business']=business
         if auto_cover:
             former_dict = self.stationDict(name)
             if former_dict is not None:
@@ -260,11 +278,14 @@ class Train():
         for item in self.items():
             item.setVisible(show)
 
-    def isPassenger(self):
+    def isPassenger(self,detect=False)->int:
         """
-        旅客列车
+        旅客列车。如果detect=True，则利用graph引用，依据【类型】推定是否为客车。
         """
-        return self._passenger
+        if self._passenger != self.PassengerAuto or not detect:
+            return self._passenger
+        else:
+            return self.graph.typePassenger(self.trainType(),default=self.PassengerFalse)
 
     def setIsPassenger(self,t):
         """
@@ -795,6 +816,35 @@ class Train():
                 return st
         return None
 
+    def stationBusiness(self,dct:dict)->bool:
+        """
+        2.0.2开始新增函数。返回某个站是否办理业务。注意，此项数据原则上只能从这里获取，不能直接用dict取得。
+        若dct中有business字段，直接返回；若没有此项数据，则从graph中查询后返回。这个过程会比较慢。
+        正常情况下，旧版用新版第一次打开时会大量执行这个函数。
+        此操作会改变数据域。
+        """
+        try:
+            return dct['business']
+        except KeyError:
+            if dct['ddsj'] == dct['cfsj']:
+                dct['business'] = False
+            else:
+                dct['business'] = self.graph.lineStationBusiness(dct['zhanming'],
+                                                             self.isPassenger(detect=True),default=True)
+            return dct['business']
+
+    def autoBusiness(self):
+        """
+        根据本次列车是否为客车以及基线数据中是否办客/办货的设置，自动设置在各个站是否办理业务。
+        通过的站自动设为不办业务。
+        """
+        for st in self.stationDicts():
+            if st['ddsj'] == st['cfsj']:
+                st['business'] = False
+            else:
+                st['business'] = self.graph.lineStationBusiness(st['zhanming'],
+                                                                self.isPassenger(detect=True),default=False)
+
     def isSfz(self,name:str):
         if not self.sfz:
             return False
@@ -823,10 +873,10 @@ class Train():
         """
         # print("train::translation",checi,dt_time,self.start_time())
         from copy import copy,deepcopy
-        newtrain = Train()
+        newtrain = Train(self.graph)
         newtrain.setFullCheci(checi)
         newtrain.setStartEnd(self.sfz,self.zdz)
-        newtrain.autoType()
+        newtrain.autoTrainType()
         newtrain.timetable = deepcopy(self.timetable)
         newtrain.UI = copy(self.UI)
 
@@ -1204,6 +1254,9 @@ class Train():
             return f"{sec//60}分"
 
     def __str__(self):
+        return f"Train {self.fullCheci()} ({self.sfz}->{self.zdz}) "
+
+    def __repr__(self):
         return f"Train object at <0x{id(self):X}> {self.fullCheci()}  {self.sfz}->{self.zdz}"
 
 class StationMap:
@@ -1233,15 +1286,3 @@ class StationMap:
     def __str__(self):
         return f"{self._y} {self._dct['zhanming']}"
 
-if __name__ == '__main__':
-    #debug only
-    train = Train("K9484/1/4")
-    train.setStartEnd(sfz='成都',zdz='攀枝花')
-    time1 = datetime.strptime("18:00","%H:%M")
-    train.addStation("成都",time1,time1)
-    train.addStation("安靖","18:12","18:13")
-
-    info = train.outInfo()
-
-    newtrain = Train(origin=info)
-    newtrain.show()

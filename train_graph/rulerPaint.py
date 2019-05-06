@@ -19,7 +19,8 @@ class rulerPainter(QtWidgets.QWidget):
         super(rulerPainter,self).__init__(parent)
         self.graphWindow = graphWindow
         self.ruler = None
-        self.train_new = Train("0001/2","0001","0002")
+        self.graph = graphWindow.graph
+        self.train_new = Train(self.graph,"0001/2","0001","0002")
         self.widget1=QtWidgets.QWidget()
         self.widget2=QtWidgets.QWidget()
         self.stackedWidget = QtWidgets.QStackedWidget(self)
@@ -28,7 +29,6 @@ class rulerPainter(QtWidgets.QWidget):
         self.combo = None
         self.down = True
         self.start_station = None
-        self.graph = graphWindow.graph
         self.interrupted = False
         self.start_from_this = False
         self.end_at_this = False
@@ -628,7 +628,7 @@ class rulerPainter(QtWidgets.QWidget):
                 if not ok:
                     return
             self.train.setFullCheci(checi)
-            self.train.autoType()
+            self.train.autoTrainType()
 
             graph.addTrain(self.train)
             if self.train.items():

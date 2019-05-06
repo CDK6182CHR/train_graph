@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from .graph import Graph
 from .colorWidget import ColorWidget
+from .typeDialog import TypeDialog
 
 class ConfigWidget(QtWidgets.QWidget):
     RepaintGraph = QtCore.pyqtSignal()
@@ -16,6 +17,7 @@ class ConfigWidget(QtWidgets.QWidget):
         self.graph = graph
         self.UIDict = self.graph.UIConfigData() if not self.system else self.graph.sysConfigData()
         self.colorWidget = ColorWidget(self.graph, system, self)
+        self.typeDialog = TypeDialog(self.graph,system,self)
         self.initWidget()
         self.colorWidget.RepaintGraph.connect(self.setRepaintTrue)
 
@@ -153,6 +155,11 @@ class ConfigWidget(QtWidgets.QWidget):
         btnColor.setMaximumWidth(120)
         layout.addRow('默认颜色设置',btnColor)
 
+        btnType = QtWidgets.QPushButton('设置')
+        btnType.clicked.connect(self.typeDialog.exec_)
+        btnType.setMaximumWidth(120)
+        layout.addRow('类型管理',btnType)
+
         vlayout.addLayout(layout)
 
         if not self.system:
@@ -209,6 +216,7 @@ class ConfigWidget(QtWidgets.QWidget):
             self.noteEdit.setPlainText(self.graph.markdown())
         self.setGridDialogData()
         self.colorWidget.setData()
+        self.typeDialog.setData()
 
     def initGridDialog(self):
         """
@@ -374,6 +382,7 @@ class ConfigWidget(QtWidgets.QWidget):
             self.graph.setMarkdown(self.noteEdit.toPlainText())
         self.repaint = repaint
         self.colorWidget.apply_color()
+        self.typeDialog.apply()
 
         if self.repaint:
             self.RepaintGraph.emit()

@@ -12,8 +12,16 @@ class Line():
     list<dict> stations;  //站信息表
     list<Ruler> rulers; //标尺
     车站结点信息结构：
-    {"zhanming": "罗岗线路所", "licheng": 1, "dengji": 4,
-    "y_value":1244,"direction":0x3,"show":True}
+    {
+        "zhanming": "罗岗线路所",
+        "licheng": 1,
+         "dengji": 4,
+        "y_value":1244,
+        "direction":0x3,
+        "show":True,
+        "passenger":True, //办客
+        "freight":False, //办货
+    }
     """
     NoVia = 0x0
     DownVia = 0x1
@@ -361,6 +369,15 @@ class Line():
             return self.stations[-1]["licheng"]
         except IndexError:
             return 0
+
+    @staticmethod
+    def bool2CheckState(t):
+        """
+        工具函数，将bool转换成Qt.CheckState。
+        """
+        if t:
+            return 0x2
+        return 0x0
 
 
 if __name__ == '__main__':

@@ -20,7 +20,6 @@ from PyQt5.QtCore import Qt
 from .graph import Graph
 from .train import Train
 from datetime import timedelta, datetime
-from Timetable_new.utility import isKeche
 from .ruler import Ruler
 from .line import Line
 from enum import Enum

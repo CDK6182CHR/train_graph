@@ -59,7 +59,14 @@ class CurrentWidget(QtWidgets.QWidget):
         comboType.setEditable(True)
         comboType.addItems(self.main.graph.typeList)
         self.comboType = comboType
-        flayout.addRow("列车种类", comboType)
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(comboType)
+        checkPassenger = QtWidgets.QCheckBox('旅客列车')
+        checkPassenger.setTristate(True)
+        self.checkPassenger = checkPassenger
+        hlayout.addWidget(checkPassenger)
+        flayout.addRow('列车种类',hlayout)
+        comboType.setToolTip('列车种类留空则由系统自动判定')
         comboType.setCurrentText("")
 
         btnItems = QtWidgets.QPushButton("设置")
@@ -108,13 +115,14 @@ class CurrentWidget(QtWidgets.QWidget):
 
         timeTable = QtWidgets.QTableWidget()
         timeTable.setToolTip("按Alt+D将当前行到达时间复制为出发时间。")
-        timeTable.setColumnCount(5)
-        timeTable.setHorizontalHeaderLabels(["站名", "到点", "开点", '备注', "停时"])
+        timeTable.setColumnCount(6)
+        timeTable.setHorizontalHeaderLabels(["站名", "到点", "开点", '营业','备注', "停时"])
         timeTable.setColumnWidth(0, 80)
         timeTable.setColumnWidth(1, 100)
         timeTable.setColumnWidth(2, 100)
-        timeTable.setColumnWidth(3, 100)
-        timeTable.setColumnWidth(4, 80)
+        timeTable.setColumnWidth(3, 50)
+        timeTable.setColumnWidth(4, 100)
+        timeTable.setColumnWidth(5, 80)
         timeTable.setEditTriggers(timeTable.CurrentChanged)
         self.timeTable = timeTable
         actionCpy = QtWidgets.QAction(timeTable)
@@ -148,17 +156,23 @@ class CurrentWidget(QtWidgets.QWidget):
         btnCheck.clicked.connect(lambda: self.main._check_ruler(self.train))
 
         btnEvent = QtWidgets.QPushButton("切片输出")
+        btnCorrection = QtWidgets.QPushButton("顺序重排")
+        btnAutoBusiness = QtWidgets.QPushButton('自动营业')
+        btnAutoBusiness.clicked.connect(self._auto_business)
+        btnCorrection.clicked.connect(lambda:self.main._correction_timetable(self.train))
         btnEvent.setToolTip("显示本车次在本线的停站、发车、通过、会车、待避、越行等事件列表。")
         btnEvent.clicked.connect(self.main._train_event_out)
         btnCheck.setMinimumWidth(120)
         btnEvent.setMinimumWidth(120)
         hlayout.addWidget(btnCheck)
         hlayout.addWidget(btnEvent)
+        hlayout.addWidget(btnCorrection)
+        hlayout.addWidget(btnAutoBusiness)
         layout.addLayout(hlayout)
 
         hlayout = QtWidgets.QHBoxLayout()
         btnOk = QtWidgets.QPushButton("确定")
-        btnOk.setShortcut('Ctrl+Shift+I')
+        btnOk.setShortcut('Alt+I')
         btnCancel = QtWidgets.QPushButton("还原")
         btnDel = QtWidgets.QPushButton("删除车次")
         btnOk.setMinimumWidth(100)
@@ -332,7 +346,7 @@ class CurrentWidget(QtWidgets.QWidget):
         self.train = train
         if train is None:
             # 2019.01.29修改：取消return，空列车信息按空白处置
-            train = self.train = Train()
+            train = self.train = Train(self.graph)
 
         self.checiEdit.setText(train.fullCheci())
         self.checiDown.setText(train.downCheci())
@@ -354,6 +368,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
         self.checkShow.setChecked(train.isShow())
         self.checkAutoItem.setChecked(train.autoItem())
+        self.checkPassenger.setCheckState(train.isPassenger())
 
         timeTable: QtWidgets.QTableWidget = self.timeTable
         timeTable.setRowCount(0)
@@ -383,9 +398,13 @@ class CurrentWidget(QtWidgets.QWidget):
             cfsjEdit.setMinimumSize(1,1)
             timeTable.setCellWidget(num, 2, cfsjEdit)
 
+            item = QtWidgets.QTableWidgetItem()
+            item.setCheckState(Line.bool2CheckState(train.stationBusiness(st_dict)))
+            timeTable.setItem(num,3,item)
+
             note=st_dict.setdefault('note','')
             item=QtWidgets.QTableWidgetItem(note)
-            timeTable.setItem(num,3,item)
+            timeTable.setItem(num,4,item)
 
             dt: timedelta = cfsj - ddsj
             seconds = dt.seconds
@@ -411,7 +430,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
             item: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(time_str)
             item.setFlags(Qt.NoItemFlags)
-            timeTable.setItem(num, 4, item)
+            timeTable.setItem(num, 5, item)
 
             num += 1
 
@@ -420,7 +439,6 @@ class CurrentWidget(QtWidgets.QWidget):
     def _auto_updown_checi(self):
         """
         自动设置上下行车次
-        :return:
         """
         try:
             checi = Checi(self.sender().text())
@@ -458,7 +476,7 @@ class CurrentWidget(QtWidgets.QWidget):
             row += 1
         self._add_timetable_row(row, timeTable)
 
-    def _add_timetable_row(self, row: int, timeTable: QtWidgets.QTableWidget, name: str = ""):
+    def _add_timetable_row(self, row: int, timeTable: QtWidgets.QTableWidget, name: str = "",business=True):
         timeTable.insertRow(row)
         timeTable.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
@@ -476,6 +494,10 @@ class CurrentWidget(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem()
         item.setFlags(Qt.NoItemFlags)
         timeTable.setItem(row, 3, item)
+
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Line.bool2CheckState(business))
+        timeTable.setItem(row,4,item)
 
     def _remove_timetable_station(self, timeTable: QtWidgets.QTableWidget):
         timeTable.removeRow(timeTable.currentRow())
@@ -561,7 +583,8 @@ class CurrentWidget(QtWidgets.QWidget):
         for item in listWidget.selectedItems():
             zm = item.data(-1)
             row = timeTable.rowCount()
-            self._add_timetable_row(row, timeTable, zm)
+            business = self.graph.lineStationBusiness(zm,self.train.isPassenger(detect=True))
+            self._add_timetable_row(row, timeTable, zm,business)
         sender: QtWidgets.QPushButton = self.sender()
         sender.parentWidget().close()
 
@@ -569,7 +592,7 @@ class CurrentWidget(QtWidgets.QWidget):
         self.main.statusOut("车次信息更新中……")
 
         if self.train is None:
-            self.train = Train()
+            self.train = Train(self.graph)
         train: Train = self.train
 
         fullCheci = self.checiEdit.text()
@@ -602,6 +625,7 @@ class CurrentWidget(QtWidgets.QWidget):
         isShow = self.checkShow.isChecked()
         train.setIsShow(isShow)
         train.setAutoItem(self.checkAutoItem.isChecked())
+        train.setIsPassenger(self.checkPassenger.checkState())
 
         train.setUI(color=self.color, width=self.spinWidth.value())
 
@@ -620,7 +644,7 @@ class CurrentWidget(QtWidgets.QWidget):
             cfsjSpin = timeTable.cellWidget(row, 2)
             cfsj = datetime.strptime(cfsjSpin.time().toString("hh:mm:ss"), "%H:%M:%S")
 
-            train.addStation(name, ddsj, cfsj)
+            train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()))
 
         self.setData(train)
 
@@ -660,3 +684,8 @@ class CurrentWidget(QtWidgets.QWidget):
 
     def _restore_current_train(self):
         self.setData(self.train)
+
+    def _auto_business(self):
+        self.train.autoBusiness()
+        self.setData(self.train)
+

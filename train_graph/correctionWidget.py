@@ -11,10 +11,11 @@ from .train import Train
 from .graph import Graph
 
 class CorrectionWidget(QtWidgets.QDialog):
+    correctionOK = QtCore.pyqtSignal(Train)
     def __init__(self,train:Train,graph:Graph,parent=None):
         super(CorrectionWidget, self).__init__(parent)
         self.originTrain=train
-        self.train=Train()
+        self.train=Train(self.graph)
         self.train.coverData(self.originTrain)
         self.graph=graph
         self.initUI()
@@ -43,7 +44,7 @@ class CorrectionWidget(QtWidgets.QDialog):
         btnUp.clicked.connect(self._up)
         btnDown.clicked.connect(self._down)
         btnTop.clicked.connect(self._top)
-        btnDown.clicked.connect(self._bottom)
+        btnBottom.clicked.connect(self._bottom)
 
         hlayout = QtWidgets.QHBoxLayout()
 
@@ -155,11 +156,10 @@ class CorrectionWidget(QtWidgets.QDialog):
 
     def _down(self):
         tableWidget = self.tableWidget
-        for row in range(self.tableWidget.rowCount()):
+        for row in range(self.tableWidget.rowCount()-1,-1,-1):
             if tableWidget.item(row, 0).checkState() != Qt.Checked:
                 continue
             if row == tableWidget.rowCount()-1:
-                # 直接忽略移动第一行的请求
                 continue
             self.train.timetable.insert(row + 1, self.train.timetable.pop(row))
             dct = tableWidget.item(row, 1).data(Qt.UserRole)
@@ -169,10 +169,20 @@ class CorrectionWidget(QtWidgets.QDialog):
             tableWidget.item(row + 1, 0).setCheckState(Qt.Checked)
 
     def _top(self):
-        pass
+        n=0  # 插入位置
+        for row in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(row,0).checkState() == Qt.Checked:
+                self.train.timetable.insert(n,self.train.timetable.pop(row))
+                n+=1
+        self.setData()
 
     def _bottom(self):
-        pass
+        n = self.tableWidget.rowCount()-1
+        for row in range(self.tableWidget.rowCount()-1,-1,-1):
+            if self.tableWidget.item(row,0).checkState() == Qt.Checked:
+                self.train.timetable.insert(n,self.train.timetable.pop(row))
+                n-=1
+        self.setData()
 
     def _exchange(self):
         for row in range(self.tableWidget.rowCount()):
@@ -183,7 +193,21 @@ class CorrectionWidget(QtWidgets.QDialog):
                 self.tableWidget.item(row,0).setCheckState(Qt.Checked)
 
     def _reverse(self):
-        pass
+        low,high=self.tableWidget.rowCount()-1,0
+        for row in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(row,0).checkState()==Qt.Checked:
+                if row < low:
+                    low=row
+                if row > high:
+                    high=row
+        if low >= high:
+            QtWidgets.QMessageBox.warning(self,'错误','无效的选择。请选择多行，本系统将把选择的第一行至'
+                                                    '最后一行（均包含）之间的站表排序。')
+            return
+        print(low,high)
+        self.train.timetable = self.train.timetable[:low]\
+                               +self.train.timetable[high:low-1:-1]+self.train.timetable[high+1:]
+        self.setData()
 
     def _select_all(self):
         for row in range(self.tableWidget.rowCount()):
@@ -207,6 +231,7 @@ class CorrectionWidget(QtWidgets.QDialog):
 
     def _ok(self):
         self.originTrain.coverData(self.train)
+        self.correctionOK.emit(self.originTrain)
         self.close()
 
 

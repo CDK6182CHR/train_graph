@@ -1,8 +1,10 @@
 """
 抽离线路编辑部分的模块。
 2018.12.14修改：不再依赖于main模块。
+2.0.2开始新增办客、办货的选项，默认情况都是True。第一次读取时使用setdefault。
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
+from PyQt5.QtCore import Qt
 from .line import Line
 
 class LineWidget(QtWidgets.QWidget):
@@ -14,7 +16,7 @@ class LineWidget(QtWidgets.QWidget):
 
     def initWidget(self):
         """
-        add arribute to lineWidget:
+        add attributes to lineWidget:
         btnOk,btnReturn,tableWidget,nameEdit,line
         """
         line = self.line
@@ -32,14 +34,16 @@ class LineWidget(QtWidgets.QWidget):
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
         self.tableWidget = tableWidget
 
-        tableWidget.setColumnCount(5)
-        tableWidget.setHorizontalHeaderLabels(["站名", "里程", "等级", "显示", "单向站"])
+        tableWidget.setColumnCount(7)
+        tableWidget.setHorizontalHeaderLabels(["站名", "里程", "等级", "显示", "单向站","办客","办货"])
 
         tableWidget.setColumnWidth(0, 100)
         tableWidget.setColumnWidth(1, 80)
         tableWidget.setColumnWidth(2, 60)
         tableWidget.setColumnWidth(3, 40)
         tableWidget.setColumnWidth(4, 80)
+        tableWidget.setColumnWidth(5, 50)
+        tableWidget.setColumnWidth(6, 50)
 
         tableWidget.setRowCount(line.stationCount())
 
@@ -111,6 +115,10 @@ class LineWidget(QtWidgets.QWidget):
         self.tableWidget.cellWidget(row, 2).setValue(dct["dengji"])
         self.tableWidget.cellWidget(row, 3).setChecked(dct.get('show', True))
         self.tableWidget.cellWidget(row, 4).setCurrentIndex(dct.get('direction', 0x3))
+        self.tableWidget.item(row,5).setCheckState(Qt.Checked if dct.setdefault("passenger",True)
+                                                   else Qt.Unchecked)
+        self.tableWidget.item(row,6).setCheckState(Qt.Checked if dct.setdefault("freight", True)
+                                                    else Qt.Unchecked)
 
     def _setLineTable(self,start_index=0):
         tableWidget = self.tableWidget
@@ -157,6 +165,14 @@ class LineWidget(QtWidgets.QWidget):
             combo.setStyleSheet("QComboBox{margin:3px}")
             tableWidget.setCellWidget(now_line, 4, combo)
 
+            item = QtWidgets.QTableWidgetItem()
+            item.setCheckState(Line.bool2CheckState(stationDict.setdefault("passenger",True)))
+            tableWidget.setItem(now_line,5,item)
+
+            item = QtWidgets.QTableWidgetItem()
+            item.setCheckState(Line.bool2CheckState(stationDict.setdefault("freight", True)))
+            tableWidget.setItem(now_line, 6, item)
+
             tableWidget.setRowHeight(now_line, 30)  # cannot infer to graph
             now_line += 1
 
@@ -189,6 +205,14 @@ class LineWidget(QtWidgets.QWidget):
         combo.setCurrentIndex(3)
         combo.setStyleSheet("QComboBox{margin:3px}")
         tableWidget.setCellWidget(num, 4, combo)
+
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Line.bool2CheckState(True))
+        tableWidget.setItem(num, 5, item)
+
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(True)
+        tableWidget.setItem(num, 6, item)
 
         tableWidget.setRowHeight(num, 30)  # cannot infer to graph
 
@@ -242,6 +266,8 @@ class LineWidget(QtWidgets.QWidget):
                 "dengji": dengji,
                 "show": show,
                 "direction": direction,
+                "passenger":bool(tableWidget.item(i,5).checkState()),
+                "freight":bool(tableWidget.item(i,6).checkState())
             }
             new_line.addStationDict(info)
 

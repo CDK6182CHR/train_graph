@@ -2500,12 +2500,20 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         # dialog.okClicked.connect(self.GraphWidget.paintGraph)
         dialog.exec_()
 
-    def _correction_timetable(self):
-        if not self.GraphWidget.selectedTrain:
+    def _correction_timetable(self,train=None):
+        if not isinstance(train,Train):
+            train = self.GraphWidget.selectedTrain
+        if train is None:
             self._derr('当前车次时刻表重排：当前没有选中车次！')
             return
-        dialog = CorrectionWidget(self.GraphWidget.selectedTrain,self.graph,self)
+        dialog = CorrectionWidget(train,self.graph,self)
+        dialog.correctionOK.connect(self._correction_ok)
         dialog.exec_()
+
+    def _correction_ok(self,train):
+        self.currentWidget.setData(train)
+        self.GraphWidget.delTrainLine(train)
+        self.GraphWidget.addTrainLine(train)
 
     def _train_show_filter_ok(self):
         for train in self.graph.trains():

@@ -9,7 +9,6 @@ from PyQt5.QtCore import Qt
 
 from .graph import Graph
 from .train import Train
-from Timetable_new.utility import isKeche
 from datetime import datetime,timedelta
 
 class TrainItem(QtWidgets.QGraphicsItem):
@@ -498,7 +497,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
         width = train.lineWidth()
         if width == 0:
-            if isKeche(train.trainType()) or train.trainType() == "特快行包":
+            # if isKeche(train.trainType()) or train.trainType() == "特快行包":
+            if train.isPassenger(detect=True) == Train.PassengerTrue:
                 width = self.graph.UIConfigData()["default_keche_width"]
             else:
                 width = self.graph.UIConfigData()["default_huoche_width"]
