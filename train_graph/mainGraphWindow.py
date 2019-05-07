@@ -54,9 +54,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.0.2"
+        self.version = "V2.1.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190505'
+        self.build = '20190507'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -971,6 +971,15 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         actionZoomOut.triggered.connect(lambda: self.GraphWidget.scale(0.8, 0.8))
         menu.addAction(actionZoomOut)
 
+        menu.addSeparator()
+        actionResetType = QtWidgets.QAction('重置所有列车营业站',self)
+        actionResetType.triggered.connect(self._reset_business)
+        menu.addAction(actionResetType)
+
+        actionResetPassenger = QtWidgets.QAction("自动设置是否客车",self)
+        actionResetPassenger.triggered.connect(self._reset_passenger)
+        menu.addAction(actionResetPassenger)
+
         # 查看
         menu = menubar.addMenu("查看(&I)")
 
@@ -1202,6 +1211,16 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.showFilter.setGraph(self.graph)
         try:
             self.graph.loadGraph(filename)
+            if 'DB' in self.graph.version():
+                if not self.qustion('此文件可能被标记为数据库文件。如果没有特殊目的，'
+                                    'pyETRC不建议您直接打开数据库文件（尽管这是可以的），'
+                                    '而是使用ctrl+D向既有线路中导入车次。是否继续打开此文件？'):
+                    return
+            elif self.graph.version() > self.version:
+                if not self.qustion(f'此文件可能由高于当前软件版本的pyETRC保存。如果继续打开并保存此文件，'
+                                    f'可能损失一些新版本的信息。是否确认打开此文件？'
+                                    f'当前软件版本：{self.version}；文件标记版本：{self.graph.version}'):
+                    return
             self.GraphWidget.setGraph(self.graph)
             self._system["last_file"] = filename
             # print("last file changed")
@@ -1246,6 +1265,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         if not self.graph.graphFileName():
             filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
                                                              filter='JSON运行图文件(*.json)\n所有文件(*.*)')[0]
+        self.graph.setVersion(self.version)
         self.graph.save(filename)
         self.graph.setGraphFileName(filename)
         status.showMessage("保存成功")
@@ -1258,6 +1278,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
                                                          filter='JSON运行图文件(*.json)\n所有文件(*.*)')[0]
         self.statusBar().showMessage("正在保存")
+        self.graph.setVersion(self.version)
         self.graph.save(filename)
         self.graph.setGraphFileName(filename)
         self.statusBar().showMessage("保存成功")
@@ -2130,6 +2151,25 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut("就绪")
         dialog.close()
 
+    def _reset_business(self):
+        if not self.qustion('此操作将重置所有列车营业站信息，手动手动设置的营业站信息将丢失。是否继续？'):
+            return
+        if not self.qustion('再次确认，您是否确实要重置所有列车营业站信息？此操作不可撤销。'):
+            return
+        for train in self.graph.trains():
+            train.autoBusiness()
+        self.statusOut('重置营业站信息完毕')
+
+    def _reset_passenger(self):
+        if not self.qustion('按系统设置中的“类型管理”信息设置所有列车的“是否旅客列车”字段为'
+                            '“是”或者“否”。此操作有助于提高效率，但今后修改类型管理信息时，'
+                            '车次的数据不会随之更新。是否继续？'):
+            return
+        for train in self.graph.trains():
+            if train.isPassenger() == train.PassengerAuto:
+                train.setIsPassenger(train.isPassenger(detect=True))
+        self.statusOut('自动设置旅客列车信息完毕')
+
     def _view_line_data(self):
         lineDB = LineDB()
         lineDB.resize(1100, 700)
@@ -2421,9 +2461,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                    "请确认您知悉以上内容并继续。\n本提示不影响确认动作的执行。")
 
     def _import_train(self):
-        flag = self.qustion("选择运行图，导入其中所有在本线的车次，忽略已存在的车次。是否继续？")
-        if not flag:
-            return
+        flag = self.qustion("选择运行图，导入其中所有在本线的车次。您是否希望覆盖重复的车次？"
+                            "选择“是”以覆盖重复车次，“否”以忽略重复车次。")
 
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
                                                          filter='JSON运行图文件(*.json)\n文本运行图文件(*.trc)\n所有文件(*.*)')[0]
@@ -2438,7 +2477,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             traceback.print_exc()
             return
         else:
-            num = self.graph.addTrainByGraph(graph)
+            num = self.graph.addTrainByGraph(graph,flag)
             self.GraphWidget.paintGraph()
             self.trainWidget.addTrainsFromBottom(num)
             self._dout(f"成功导入{num}个车次。")

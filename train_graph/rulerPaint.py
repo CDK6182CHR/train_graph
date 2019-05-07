@@ -21,6 +21,7 @@ class rulerPainter(QtWidgets.QWidget):
         self.ruler = None
         self.graph = graphWindow.graph
         self.train_new = Train(self.graph,"0001/2","0001","0002")
+        self.train_new.autoTrainType()
         self.widget1=QtWidgets.QWidget()
         self.widget2=QtWidgets.QWidget()
         self.stackedWidget = QtWidgets.QStackedWidget(self)

@@ -3,6 +3,7 @@
 """
 from PyQt5 import QtWidgets, QtGui, QtCore
 from .graph import Graph
+from .train import Train
 
 
 class TypeWidget(QtWidgets.QWidget):
@@ -32,6 +33,15 @@ class TypeWidget(QtWidgets.QWidget):
         btnNoUp.clicked.connect(lambda: self._set_dir_show(False, False))
         hlayout.addWidget(btnNoDown)
         hlayout.addWidget(btnNoUp)
+        vlayout.addLayout(hlayout)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnPas = QtWidgets.QPushButton('客车类型')
+        btnPas.clicked.connect(self._select_passenger)
+        hlayout.addWidget(btnPas)
+        btnRev = QtWidgets.QPushButton('反选')
+        btnRev.clicked.connect(self._reverse_select)
+        hlayout.addWidget(btnRev)
         vlayout.addLayout(hlayout)
 
         listWidget = QtWidgets.QListWidget()
@@ -71,6 +81,19 @@ class TypeWidget(QtWidgets.QWidget):
     def _set_dir_show(self, down, show):
         self.graph.setDirShow(down, show)
         self.TypeShowChanged.emit()
+
+    def _select_passenger(self):
+        for i in range(self.listWidget.count()):
+            item = self.listWidget.item(i)
+            if self.graph.typePassenger(item.text(),default=Train.PassengerFalse):
+                item.setSelected(True)
+            else:
+                item.setSelected(False)
+
+    def _reverse_select(self):
+        for i in range(self.listWidget.count()):
+            item = self.listWidget.item(i)
+            item.setSelected(not item.isSelected())
 
     def _apply_type_show(self):
         listWidget = self.listWidget

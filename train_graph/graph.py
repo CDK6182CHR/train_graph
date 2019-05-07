@@ -1,10 +1,6 @@
 """
 运行图类.
 同时管理self._config和self._sysConfig两套设置系统，两套系统完全分离。
-2019年5月6日备忘录：
-1. 在ctrl+3面板中调整办客的筛选条件。
-2. 车次筛选器中新增按客货车筛选。
-3. 新增自动判断所有列车是否客车、列车类型的全局操作，不设置快捷键。
 """
 from .line import Line
 from .ruler import Ruler
@@ -36,6 +32,7 @@ class Graph:
         构造空类，不考虑读文件
         """
         self.filename = ""
+        self._version = ""
         self.line = Line()
         self._trains = []
         self._circuits = []
@@ -112,10 +109,16 @@ class Graph:
                 ('旅游',r'Y\d+',True),
                 ('路用', r'57\d+', True),
                 ('特快行包',r'X1\d{2}',True),
-                ('行包',r'X\d+',False),
                 ('动检',r'DJ\d+',True),
                 ('客车底',r'0[GDCZTKY]\d+',True),
                 ('客车底',r'0\d{4}',True),
+                ('行包', r'X\d{3}', False),
+                ('班列', r'X\d{4}', False),
+                ('直达',r'1\d{4}',False),
+                ('直货',r'2\d{4}',False),
+                ('区段',r'3\d{4}',False),
+                ('摘挂',r'4[0-4]\d{3}',False),
+                ('小运转',r'4[5-9]\d{3}',False),
                 ('单机',r'5[0-2]\d{3}',False),
                 ('补机',r'5[3-4]\d{3}',False),
                 ('试运转',r'55\d{3}',False),
@@ -241,10 +244,20 @@ class Graph:
         self.checkGraphConfig()
 
         self._markdown = info.get("markdown",'')
+        try:
+            self._version = info['version']
+        except KeyError:
+            pass
 
         fp.close()
         self.setFullCheciMap()
         self.setSingleCheciMap()
+
+    def version(self)->str:
+        return self._version
+
+    def setVersion(self,v:str):
+        self._version = v
 
     def addCircuit(self):
         pass
@@ -306,6 +319,7 @@ class Graph:
             "trains":[],
             "circuits":self._circuits,
             "config":self._config,
+            "version":self._version,
         }
         try:
             graph["markdown"] = self._markdown
@@ -531,11 +545,14 @@ class Graph:
         """
         dct = self.line.stationDictByName(name)
         if dct is None:
+            # print("graph::lineStationBusiness: no such station! return",default,name)
             return default
 
         if passenger == Train.PassengerTrue:
+            # print("graph::lineStationBusiness passengerTrue",dct.get('passenger',"无数据"))
             return dct.get('passenger',True)
         else:
+            # print("graph::lineStationBusiness passengerFalse",dct.get("freight","无数据"))
             return dct.get("freight",True)
 
     def formerBothStation(self,name:str):
@@ -922,16 +939,22 @@ class Graph:
                 st_dict["zhanming"] = new
         self.line.changeStationNameUpdateMap(old,new)
 
-    def addTrainByGraph(self,graph):
+    def addTrainByGraph(self,graph,cover=False):
         """
         添加车次，返回数量
         """
         num = 0
         for train in graph.trains():
-            if not self.checiExisted(train.fullCheci()):
-                if train.localCount(self) >= 2:
+            if train.localCount(self) >= 2:
+                if not self.checiExisted(train.fullCheci()):
                     num += 1
                     self.addTrain(train)
+                elif cover:
+                    num += 1
+                    t = self.trainFromCheci(train.fullCheci())
+                    self.delTrain(t)
+                    self.addTrain(train)
+
         return num
 
     def setMarkdown(self,mark:str):
@@ -1219,7 +1242,8 @@ class Graph:
 
     def getIntervalTrains(self,start,end,trainFilter):
         """
-        返回某个区间办客车次列表。数据结构为list<dict>
+        返回某个区间办客车次列表。数据结构为list<dict>。
+        2.1版本修改逻辑为：两站皆办理业务才被选入。
         dict{
             'train':train object,
             'isSfz':boolean,
@@ -1233,6 +1257,10 @@ class Graph:
                 continue
             b1 = train.stationStopBehaviour(start)
             b2 = train.stationStopBehaviour(end)
+            p1 = train.stationBusiness(train.stationDict(start))
+            p2 = train.stationBusiness(train.stationDict(end))
+            if not (p1 and p2):
+                continue
             if '通过' in b1 or '通过' in b2:
                 continue
             if not train.stationBefore(start,end):

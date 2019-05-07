@@ -823,14 +823,19 @@ class Train():
         正常情况下，旧版用新版第一次打开时会大量执行这个函数。
         此操作会改变数据域。
         """
+        if dct is None:
+            return False
         try:
             return dct['business']
         except KeyError:
             if dct['ddsj'] == dct['cfsj']:
                 dct['business'] = False
+            elif self.isSfz(dct['zhanming']) or self.isZdz(dct['zhanming']):
+                dct['business'] = True
             else:
                 dct['business'] = self.graph.lineStationBusiness(dct['zhanming'],
                                                              self.isPassenger(detect=True),default=True)
+            # print("train::stationBusiness: detect",dct['business'],dct['zhanming'],self)
             return dct['business']
 
     def autoBusiness(self):
@@ -839,7 +844,9 @@ class Train():
         通过的站自动设为不办业务。
         """
         for st in self.stationDicts():
-            if st['ddsj'] == st['cfsj']:
+            if self.isSfz(st['zhanming']) or self.isZdz(st['zhanming']):
+                st['business'] = True
+            elif st['ddsj'] == st['cfsj']:
                 st['business'] = False
             else:
                 st['business'] = self.graph.lineStationBusiness(st['zhanming'],
@@ -892,8 +899,6 @@ class Train():
     def delNonLocal(self,graph):
         """
         删除非本线站点信息
-        :param graph:
-        :return:
         """
         toDel = []
         for st in self.timetable:

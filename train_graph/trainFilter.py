@@ -13,6 +13,9 @@ class TrainFilter(QtCore.QObject):
     DownOnly = 1
     UpOnly = 2
     DownAndUp = 3
+    PassengerOnly = 4
+    FreightOnly = 5
+    PassengerAndFreight = 6
     FilterChanged = QtCore.pyqtSignal()
     def __init__(self,graph:Graph,parent):
         super().__init__(parent)
@@ -29,6 +32,7 @@ class TrainFilter(QtCore.QObject):
         self.useType = False
         self.showOnly = False
         self.direction = self.DownAndUp
+        self.passenger = self.PassengerAndFreight
         self.startStations = []
         self.endStations = []
         self.useStart = False
@@ -104,6 +108,27 @@ class TrainFilter(QtCore.QObject):
         hlayout.addWidget(radioUp)
         hlayout.addWidget(radioAll)
         flayout.addRow('方向选择',hlayout)
+
+        radioPas = QtWidgets.QRadioButton('客车')
+        radioFre = QtWidgets.QRadioButton('非客车')
+        radioBoth = QtWidgets.QRadioButton("全部")
+        self.radioPas = radioPas
+        self.radioFre = radioFre
+        if self.passenger == self.PassengerOnly:
+            radioPas.setChecked(True)
+        elif self.passenger == self.FreightOnly:
+            radioFre.setChecked(True)
+        else:
+            radioBoth.setChecked(True)
+        group = QtWidgets.QButtonGroup(dialog)
+        group.addButton(radioBoth)
+        group.addButton(radioPas)
+        group.addButton(radioFre)
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(radioPas)
+        hlayout.addWidget(radioFre)
+        hlayout.addWidget(radioBoth)
+        flayout.addRow('是否客车', hlayout)
 
         checkShowOnly = QtWidgets.QCheckBox()
         checkShowOnly.setChecked(self.showOnly)
@@ -434,6 +459,14 @@ class TrainFilter(QtCore.QObject):
             self.direction = self.UpOnly
         else:
             self.direction = self.DownAndUp
+
+        if self.radioPas.isChecked():
+            self.passenger = self.PassengerOnly
+        elif self.radioFre.isChecked():
+            self.passenger = self.FreightOnly
+        else:
+            self.passenger = self.PassengerAndFreight
+
         self.dialog.close()
         print(self.includes,self.excludes)
         self.FilterChanged.emit()
@@ -451,6 +484,7 @@ class TrainFilter(QtCore.QObject):
         self.useExclude = False
         self.excludes = []
         self.direction = self.DownAndUp
+        self.passenger = self.PassengerAndFreight
         self.showOnly = False
         self.startStations.clear()
         self.startCache.clear()
@@ -507,6 +541,18 @@ class TrainFilter(QtCore.QObject):
                 return False
             return True
 
+    def checkPassenger(self,train):
+        if self.passenger == self.PassengerAndFreight:
+            return True
+        elif self.passenger == self.PassengerOnly:
+            if train.isPassenger(detect=True):
+                return True
+            return False
+        else:
+            if train.isPassenger(detect=True):
+                return False
+            return True
+
     def checkShow(self,train):
         if not self.showOnly or train.isShow():
             return True
@@ -530,7 +576,8 @@ class TrainFilter(QtCore.QObject):
 
 
     def check(self,train):
-        result = (self.checkShow(train) and self.checkDir(train) and self.checkType(train) \
+        result = (self.checkShow(train) and self.checkDir(train) and
+                  self.checkType(train)  and self.checkPassenger(train)
                and (not self.checkExclude(train)) and self.checkStartEnd(train)) \
                or self.checkInclude(train)
         if self.reverse:
