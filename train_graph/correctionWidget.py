@@ -15,9 +15,9 @@ class CorrectionWidget(QtWidgets.QDialog):
     def __init__(self,train:Train,graph:Graph,parent=None):
         super(CorrectionWidget, self).__init__(parent)
         self.originTrain=train
+        self.graph = graph
         self.train=Train(self.graph)
         self.train.coverData(self.originTrain)
-        self.graph=graph
         self.initUI()
         self.setData()
 

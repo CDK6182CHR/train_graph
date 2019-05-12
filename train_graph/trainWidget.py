@@ -130,13 +130,13 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.setItem(now_line, 3, item)
 
         mile = train.localMile(self.graph,fullAsDefault=False)
-        item = QtWidgets.QTableWidgetItem(f"{mile:.1f}")
+        item = QtWidgets.QTableWidgetItem()
         item.setData(Qt.DisplayRole, mile)
         tableWidget.setItem(now_line, 5, item)
 
         # train: Train
         spd = train.localSpeed(self.graph,fullAsDefault=False)
-        item = QtWidgets.QTableWidgetItem(f"{spd:.2f}" if spd!=-1 else 'NA')
+        item = QtWidgets.QTableWidgetItem()
         item.setData(Qt.DisplayRole, spd)
         tableWidget.setItem(now_line, 6, item)
 

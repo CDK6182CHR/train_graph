@@ -34,6 +34,7 @@ from .rulerPaint import rulerPainter
 from .stationvisualize import StationGraphWidget
 from .lineDB import LineDB
 from .intervalWidget import IntervalWidget
+from .intervalCountDialog import IntervaLCountDialog
 from .detectWidget import DetectWidget
 from .changeStationDialog import ChangeStationDialog
 from .batchChangeStationDialog import BatchChangeStationDialog
@@ -54,9 +55,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.1.0"
+        self.version = "V2.1.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190507'
+        self.build = '20190512'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -953,7 +954,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         action = QtWidgets.QAction("自动适配始发终到站",self)
         action.triggered.connect(self._auto_start_end)
-        action.setShortcut('ctrl+M')
+        # action.setShortcut('ctrl+M')
         menu.addAction(action)
 
         action = QtWidgets.QAction("运行图拼接", self)
@@ -979,6 +980,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         actionResetPassenger = QtWidgets.QAction("自动设置是否客车",self)
         actionResetPassenger.triggered.connect(self._reset_passenger)
         menu.addAction(actionResetPassenger)
+
+        actionAutoType = QtWidgets.QAction('重置所有列车类型',self)
+        actionAutoType.triggered.connect(self._auto_type)
+        menu.addAction(actionAutoType)
 
         # 查看
         menu = menubar.addMenu("查看(&I)")
@@ -1671,86 +1676,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         计算区间停站车次数量
         """
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle('区间对数表')
-        dialog.resize(600, 600)
-        layout = QtWidgets.QVBoxLayout()
-        flayout = QtWidgets.QFormLayout()
-
-        hlayout = QtWidgets.QHBoxLayout()
-        radioStart = QtWidgets.QRadioButton('出发站')
-        radioEnd = QtWidgets.QRadioButton('到达站')
-        group = QtWidgets.QButtonGroup(self)
-        group.addButton(radioStart)
-        group.addButton(radioEnd)
-        radioStart.setChecked(True)
-        hlayout.addWidget(radioStart)
-        hlayout.addWidget(radioEnd)
-        flayout.addRow('查询方式', hlayout)
-        dialog.startView = True
-
-        radioStart.toggled.connect(lambda x: self._interval_count_method_changed(dialog, x))
-
-        combo = QtWidgets.QComboBox()
-        combo.setMaximumWidth(120)
-        combo.setEditable(True)
-        for st in self.graph.stations():
-            combo.addItem(st)
-        dialog.combo = combo
-        flayout.addRow('查询车站', combo)
-        layout.addLayout(flayout)
-        dialog.station = ''
-        combo.currentTextChanged.connect(lambda x: self._interval_count_station_changed(dialog, x))
-
-        dialog.filter = TrainFilter(self.graph, dialog)
-        btnFilt = QtWidgets.QPushButton("筛选")
-        btnFilt.setMaximumWidth(120)
-        dialog.filter.FilterChanged.connect(lambda: self._set_interval_count_table(dialog))
-        btnFilt.clicked.connect(dialog.filter.setFilter)
-        flayout.addRow('车次筛选', btnFilt)
-
-        tableWidget = QtWidgets.QTableWidget()
-        dialog.tableWidget = tableWidget
-        tableWidget.setColumnCount(6)
-        tableWidget.setHorizontalHeaderLabels(('发站', '到站', '车次数', '始发数', '终到数', '始发终到'))
-        widths = (80, 80, 80, 80, 80, 80)
-        tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-        for i, s in enumerate(widths):
-            tableWidget.setColumnWidth(i, s)
-        self._set_interval_count_table(dialog)
-        layout.addWidget(tableWidget)
-
-        btnClose = QtWidgets.QPushButton('关闭')
-        btnClose.clicked.connect(dialog.close)
-        layout.addWidget(btnClose)
-        dialog.setLayout(layout)
+        dialog = IntervaLCountDialog(self.graph,self)
         dialog.exec_()
-
-    def _interval_count_method_changed(self, dialog, x):
-        dialog.startView = x
-        self._set_interval_count_table(dialog)
-
-    def _interval_count_station_changed(self, dialog, st):
-        dialog.station = st
-        self._set_interval_count_table(dialog)
-
-    def _set_interval_count_table(self, dialog):
-        tableWidget: QtWidgets.QTableWidget = dialog.tableWidget
-        startView = dialog.startView
-        station = dialog.station
-        if not station:
-            return
-        tableWidget.setRowCount(0)
-        count_list = self.graph.getIntervalCount(station, startView, dialog.filter)
-        for i, s in enumerate(count_list):
-            tableWidget.insertRow(i)
-            tableWidget.setRowHeight(i, self.graph.UIConfigData()['table_row_height'])
-            tableWidget.setItem(i, 0, QtWidgets.QTableWidgetItem(s['from']))
-            tableWidget.setItem(i, 1, QtWidgets.QTableWidgetItem(s['to']))
-            tableWidget.setItem(i, 2, QtWidgets.QTableWidgetItem(str(s['count']) if s['count'] else '-'))
-            tableWidget.setItem(i, 3, QtWidgets.QTableWidgetItem(str(s['countSfz']) if s['countSfz'] else '-'))
-            tableWidget.setItem(i, 4, QtWidgets.QTableWidgetItem(str(s['countZdz']) if s['countZdz'] else '-'))
-            tableWidget.setItem(i, 5, QtWidgets.QTableWidgetItem(str(s['countSfZd']) if s['countSfZd'] else '-'))
 
     def _reverse_graph(self):
         flag = self.qustion("将本线上下行交换，所有里程交换。是否继续？\n"
@@ -2169,6 +2096,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             if train.isPassenger() == train.PassengerAuto:
                 train.setIsPassenger(train.isPassenger(detect=True))
         self.statusOut('自动设置旅客列车信息完毕')
+
+    def _auto_type(self):
+        if not self.qustion('按照所有列车的车次（全车次），根据本系统规定的正则判据，重置所有列车的类型。'
+                            '是否继续？'):
+            return
+        for train in self.graph.trains():
+            train.autoTrainType()
 
     def _view_line_data(self):
         lineDB = LineDB()

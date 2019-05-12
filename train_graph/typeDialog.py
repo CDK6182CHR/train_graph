@@ -4,7 +4,7 @@
 
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-import sys
+import sys,re
 from .train import Train
 from .graph import Graph
 
@@ -132,9 +132,20 @@ class TypeDialog(QtWidgets.QDialog):
         应用更改，这个由上级调用
         """
         self.UIDict['type_regex'].clear()
+        # 检查正则表达式错误问题。
         for row in range(self.tableWidget.rowCount()):
+            rg = self.tableWidget.item(row,1).text()
+            try:
+                re.compile(rg)
+            except Exception as e:
+                QtWidgets.QMessageBox.warning(self,'错误',f'正则表达式错误：第{row+1}行,{rg}。\n'
+                                                        f'{repr(e)}')
+                return
+
+        for row in range(self.tableWidget.rowCount()):
+            rg = self.tableWidget.item(row,1).text()
             self.UIDict['type_regex'].append((
                 self.tableWidget.item(row,0).text(),
-                self.tableWidget.item(row,1).text(),
+                rg,
                 (self.tableWidget.item(row,2).checkState()==Qt.Checked)
             ))

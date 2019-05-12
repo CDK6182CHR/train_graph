@@ -104,7 +104,7 @@ class Graph:
                 ('普快',r'[1-5]\d{3}',True),
                 ('普客',r'6\d{3}',True),
                 ('普客',r'7[1-5]\d{2}',True),
-                ('通勤',r'7\d+{3}',True),
+                ('通勤',r'7\d{3}',True),
                 ('通勤',r'8\d{3}',True),
                 ('旅游',r'Y\d+',True),
                 ('路用', r'57\d+', True),
@@ -302,6 +302,17 @@ class Graph:
             for station in reversed(self.line.stations):
                 yield station["zhanming"]
 
+    def businessStationNames(self,passenger_only:bool,freight_only:bool):
+        """
+        2.1.1版本新增加。对办客和办货做筛选，由intervalCount过程调用。
+        由于stations()函数调用范围太广，怕引起其他问题，故新增本函数。
+        """
+        for st in self.line.stations:
+            if ((not passenger_only) or st.get("passenger",True)) and \
+                    ((not freight_only) or st.get("freight",True)):
+                yield st['zhanming']
+
+
     def stationDicts(self,reverse=False):
         if not reverse:
             for station in self.line.stations:
@@ -384,11 +395,14 @@ class Graph:
         self._config["ordinate"] = ruler
 
     def ordinateRuler(self):
-        try:
-            return self._config["ordinate"]
-        except KeyError:
-            self._config["ordinate"] = None
-            return None
+        """
+        2019.05.09：有时候莫名其妙会是一个str对象，就暴力解决问题。
+        """
+        ruler = self._config.setdefault("ordinate",None)
+        if isinstance(ruler,str):
+            print("Graph::ordinateRuler: ruler is str",ruler)
+            return self.line.rulerByName(ruler)
+        return ruler
 
     def setStationYValue(self,name,y):
         """
@@ -439,10 +453,16 @@ class Graph:
         self.line.name = name
 
     def firstStation(self):
-        return self.line.stations[0]["zhanming"]
+        if self.line.stations:
+            return self.line.stations[0]["zhanming"]
+        else:
+            return None
 
     def lastStation(self):
-        return self.line.stations[-1]["zhanming"]
+        try:
+            return self.line.stations[-1]["zhanming"]
+        except IndexError:
+            return None
 
     def stationInLine(self,name:str,strict=False):
         return self.line.stationInLine(name,strict)
@@ -1255,45 +1275,46 @@ class Graph:
         for train in self.trains():
             if not trainFilter.check(train):
                 continue
-            b1 = train.stationStopBehaviour(start)
-            b2 = train.stationStopBehaviour(end)
-            p1 = train.stationBusiness(train.stationDict(start))
-            p2 = train.stationBusiness(train.stationDict(end))
+            # b1 = train.stationStopBehaviour(start)
+            # b2 = train.stationStopBehaviour(end)
+            start_dict = train.stationDict(start)
+            end_dict = train.stationDict(end)
+            p1 = train.stationBusiness(start_dict)
+            p2 = train.stationBusiness(end_dict)
             if not (p1 and p2):
-                continue
-            if '通过' in b1 or '通过' in b2:
                 continue
             if not train.stationBefore(start,end):
                 continue
-            isSfz = (b1=='始发')
-            isZdz = (b2=='终到')
+            isSfz = train.isSfz(start)
+            isZdz = train.isZdz(end)
             train_dict = {
                 'train':train,
                 'isSfz':isSfz,
                 'isZdz':isZdz,
-                'from':train.stationDict(start)['zhanming'],
-                'to':train.stationDict(end)['zhanming']
+                'from':start_dict['zhanming'],
+                'to':end_dict['zhanming']
             }
             interval_list.append(train_dict)
         return interval_list
 
-    def getIntervalCount(self,fromOrTo, isStart, trainFilter):
+    def getIntervalCount(self,fromOrTo, isStart, trainFilter, passenger_only=False,freight_only=False):
         """
         获取区间对数表。
         :param fromOrTo:发站或到站
         :param isStart: True for start station, vice versa
+        后两个参数：是否仅包括办客和办货的车站。中心站（fromOrTo）不受限制。
         返回数据结构list<dict>
         dict{
         'from'
         """
         infoList = []
         if isStart:
-            for st in self.stations():
+            for st in self.businessStationNames(passenger_only,freight_only):
                 if not stationEqual(fromOrTo,st):
                     infoList.append({'from':fromOrTo,'to':st,'info':self.getIntervalTrains(fromOrTo,st,
                                                                                            trainFilter)})
         else:
-            for st in self.stations():
+            for st in self.businessStationNames(passenger_only,freight_only):
                 if not stationEqual(fromOrTo,st):
                     infoList.append({'to':fromOrTo,'from':st,'info':self.getIntervalTrains(st,fromOrTo,
                                                                                            trainFilter)})
