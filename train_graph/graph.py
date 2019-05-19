@@ -8,6 +8,7 @@ from .train import Train
 from copy import copy
 from Timetable_new.utility import stationEqual
 import json,re
+from datetime import datetime
 
 config_file = 'config.json'
 
@@ -111,6 +112,7 @@ class Graph:
                 ('特快行包',r'X1\d{2}',True),
                 ('动检',r'DJ\d+',True),
                 ('客车底',r'0[GDCZTKY]\d+',True),
+                ('临客',r'L\d+',True),  # 主要解决类型直接定为“临客”的车次。
                 ('客车底',r'0\d{4}',True),
                 ('行包', r'X\d{3}', False),
                 ('班列', r'X\d{4}', False),
@@ -757,9 +759,11 @@ class Graph:
         阅读旧版trc格式的运行图
         """
         fp = open(filename,encoding='utf-8',errors='ignore')
-
+        self.line.forbid.setDifferent(False)
+        self.line.forbid.setShow(True,True)
         inTrainArea = False
         now_list = []
+        last_name = None
         for i,line in enumerate(fp):
             line = line.strip()
             if not line:
@@ -770,7 +774,7 @@ class Graph:
             if line[0] == '-':
                 break
 
-            #处理线路信息部分
+            # 处理线路信息部分
             if not inTrainArea:
                 if line == "***Circuit***":
                     continue
@@ -780,7 +784,17 @@ class Graph:
                     #线路信息部分
                     try:
                         splited = line.split(',')
+                        st_name = splited[0]
                         self.line.addStation_by_info(splited[0],int(splited[1]),int(splited[2]))
+                        if last_name is not None:
+                            try:
+                                start_str,end_str = splited[9].split('-',1)
+                                begin = datetime.strptime(start_str,'%H:%M')
+                                end = datetime.strptime(end_str,'%H:%M')
+                                self.line.forbid.addForbid(last_name,st_name,begin,end)
+                            except Exception as e:
+                                pass
+                        last_name = st_name
                     except:
                         pass
 
@@ -1376,9 +1390,19 @@ class Graph:
         fp.write('***Circuit***\n')
         fp.write(f"{self.lineName() if self.lineName() else '列车运行图'}\n")
         fp.write(f"{int(self.lineLength())}\n")
+        last_dct = None
         for dct in self.stationDicts():
             fp.write(f"{dct['zhanming']},{int(dct['licheng'])},{dct['dengji']},"
-                     f"{'false' if dct.get('show',True) else 'true'},,true\n")
+                     f"{'false' if dct.get('show',True) else 'true'},,true,4,1440,1440,")
+            if last_dct is not None:
+                node = self.line.forbid.getInfo(last_dct['zhanming'],dct['zhanming'])
+                if node is not None and node['begin'] != node['end']:
+                    fp.write(f"{node['begin'].strftime('%H:%M')}-{node['end'].strftime('%H:%M')}\n")
+                else:
+                    fp.write('\n')
+            else:
+                fp.write('\n')
+            last_dct = dct
         for train in self.trains():
             fp.write('===Train===\n')
             fp.write(f"trf2,{train.fullCheci()},{train.downCheci()},{train.upCheci()}\n")

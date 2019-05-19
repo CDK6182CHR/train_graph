@@ -35,6 +35,7 @@ from .stationvisualize import StationGraphWidget
 from .lineDB import LineDB
 from .intervalWidget import IntervalWidget
 from .intervalCountDialog import IntervaLCountDialog
+from .intervalTrainDialog import IntervalTrainDialog
 from .detectWidget import DetectWidget
 from .changeStationDialog import ChangeStationDialog
 from .batchChangeStationDialog import BatchChangeStationDialog
@@ -57,7 +58,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.1.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190512'
+        self.build = '20190519'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -892,8 +893,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         actionSaveAs.setShortcut('F12')
         m1.addAction(actionSaveAs)
 
-        actionToTrc = QtWidgets.QAction("导出为文本运行图（.trc）格式",self)
+        actionToTrc = QtWidgets.QAction("导出为ETRC运行图（.trc）格式",self)
         actionToTrc.triggered.connect(self._toTrc)
+        actionToTrc.setShortcut('ctrl+M')
         m1.addAction(actionToTrc)
 
         actionReset = QtWidgets.QAction("重新读取本运行图", self)
@@ -1207,7 +1209,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
 
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='JSON运行图文件(*.json)\n文本运行图文件(*.trc)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
         if not filename:
             return
 
@@ -1269,7 +1271,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         status.showMessage("正在保存")
         if not self.graph.graphFileName():
             filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
-                                                             filter='JSON运行图文件(*.json)\n所有文件(*.*)')[0]
+                                                             filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')[0]
         self.graph.setVersion(self.version)
         self.graph.save(filename)
         self.graph.setGraphFileName(filename)
@@ -1281,7 +1283,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         另存为
         """
         filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
-                                                         filter='JSON运行图文件(*.json)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')[0]
         self.statusBar().showMessage("正在保存")
         self.graph.setVersion(self.version)
         self.graph.save(filename)
@@ -1294,16 +1296,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         先显示提示信息，然后导出为trc。
         """
-        if self.graph.trainCount() > 600:
-            self._derr(f"提示：运行图可能无法打开。trc格式运行图目前最多支持600个车次，本线有{self.graph.trainCount()}个车次。")
-
-        if self.graph.stationCount() > 100:
-            self._dout(f"提示：运行图可能无法打开。trc格式运行图目前最多支持100个车站，本线有{self.graph.stationCount()}个车次。")
-
         text = "注意：显著的信息丢失。由于文本运行图格式不支持本系统的部分功能，导出的.trc格式运行图包含的信息少于本系统的.json格式运行图。这就是说，若先导出.trc格式，再用本系统读取该文件，仍将造成显著的信息丢失。本功能不改变原运行图，只是导出一个副本。请确认知悉以上内容，并继续。"
         self._dout(text)
         filename,ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.trc',
-                                                         filter='文本运行图文件(*.trc)\n所有文件(*.*)')
+                                                         filter='ETRC运行图文件(*.trc)\n所有文件(*.*)')
         if not ok:
             return
         self.graph.toTrc(filename)
@@ -1719,110 +1715,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _interval_trains(self):
         """
         给出区间车次表，类似12306查询车票
-        :return:
         """
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle('区间车次表')
-        dialog.resize(600, 600)
-        vlayout = QtWidgets.QVBoxLayout()
-        flayout = QtWidgets.QFormLayout()
-
-        comboStart = QtWidgets.QComboBox()
-        comboEnd = QtWidgets.QComboBox()
-        dialog.start = self.graph.firstStation()
-        dialog.end = self.graph.lastStation()
-        for st in self.graph.stations():
-            comboStart.addItem(st)
-            comboEnd.addItem(st)
-        comboStart.setEditable(True)
-        comboStart.setCurrentText(dialog.start)
-        comboEnd.setEditable(True)
-        comboEnd.setCurrentText(dialog.end)
-        comboStart.currentTextChanged.connect(lambda x: self._interval_trains_start_changed(dialog, x))
-        comboEnd.currentTextChanged.connect(lambda x: self._interval_trains_end_changed(dialog, x))
-
-        flayout.addRow('发站', comboStart)
-        flayout.addRow('到站', comboEnd)
-
-        dialog.filter = TrainFilter(self.graph, dialog)
-        btnFilt = QtWidgets.QPushButton("筛选")
-        btnFilt.setMaximumWidth(120)
-        dialog.filter.FilterChanged.connect(lambda: self._interval_trains_table(dialog))
-        btnFilt.clicked.connect(dialog.filter.setFilter)
-        flayout.addRow('车次筛选', btnFilt)
-
-        vlayout.addLayout(flayout)
-
-        tableWidget = QtWidgets.QTableWidget()
-        dialog.tableWidget = tableWidget
-
-        tableWidget.setColumnCount(10)
-        tableWidget.setHorizontalHeaderLabels(('车次', '类型', '发站', '发时', '到站', '到时',
-                                               '历时', '旅速', '始发', '终到'))
-        tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-        for i, s in enumerate((80, 60, 80, 120, 80, 120, 120, 80, 80, 80)):
-            tableWidget.setColumnWidth(i, s)
-        self._interval_trains_table(dialog)
-
-        vlayout.addWidget(tableWidget)
-        btnClose = QtWidgets.QPushButton('关闭')
-        vlayout.addWidget(btnClose)
-        btnClose.clicked.connect(dialog.close)
-
-        dialog.setLayout(vlayout)
+        dialog = IntervalTrainDialog(self.graph,self)
         dialog.exec_()
-
-    def _interval_trains_start_changed(self, dialog, start):
-        dialog.start = start
-        self._interval_trains_table(dialog)
-
-    def _interval_trains_end_changed(self, dialog, end):
-        dialog.end = end
-        self._interval_trains_table(dialog)
-
-    def _interval_trains_table(self, dialog):
-        if dialog.start == dialog.end or not dialog.start or not dialog.end:
-            return
-        tb: QtWidgets.QTableWidget = dialog.tableWidget
-        IT = QtWidgets.QTableWidgetItem
-
-        # ('车次','类型','发站','发时','到站','到时', '历时','旅速','始发','终到')
-        # print(dialog.start,dialog.end)
-        info_dicts = self.graph.getIntervalTrains(dialog.start, dialog.end, dialog.filter)
-        tb.setRowCount(0)
-
-        for i, tr in enumerate(info_dicts):
-            train: Train = tr['train']
-            tb.insertRow(i)
-            tb.setRowHeight(i, self.graph.UIConfigData()['table_row_height'])
-
-            tb.setItem(i, 0, IT(train.fullCheci()))
-            tb.setItem(i, 1, IT(train.type))
-            tb.setItem(i, 2, IT(train.stationDict(dialog.start)['zhanming']))
-            tb.setItem(i, 3, IT(train.stationDict(dialog.start)['cfsj'].strftime('%H:%M:%S')))
-            tb.setItem(i, 4, IT(train.stationDict(dialog.end)['zhanming']))
-            tb.setItem(i, 5, IT(train.stationDict(dialog.end)['ddsj'].strftime('%H:%M:%S')))
-            tm_int = train.gapBetweenStation(dialog.start, dialog.end)
-            tm_int = int(tm_int)
-            tm_str = f"{int(tm_int/3600):02d}:{int(tm_int/60)%60:02d}:{tm_int%60:02d}"
-            try:
-                mile = self.graph.gapBetween(dialog.start, dialog.end)
-                mile_str = f"{mile}"
-            except:
-                mile_str = "NA"
-            try:
-                speed = mile / tm_int * 1000 * 3.6
-                speed_str = f"{speed:.2f}"
-            except:
-                speed = 0
-                speed_str = 'NA'
-            tb.setItem(i, 6, IT(tm_str))
-            item = IT(speed_str)
-            if speed:
-                item.setData(Qt.DisplayRole, speed)
-            tb.setItem(i, 7, item)
-            tb.setItem(i, 8, IT(train.sfz))
-            tb.setItem(i, 9, IT(train.zdz))
 
     def _search_from_menu(self):
         name, ok = QtWidgets.QInputDialog.getText(self, "搜索车次", "请输入车次：")
@@ -2047,7 +1942,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         :return:
         """
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='JSON运行图文件(*.json)\n文本运行图文件(*.trc)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
         if not filename:
             return
 
@@ -2399,7 +2294,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                             "选择“是”以覆盖重复车次，“否”以忽略重复车次。")
 
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='JSON运行图文件(*.json)\n文本运行图文件(*.trc)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
         if not filename:
             return
 
@@ -2422,7 +2317,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
 
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='JSON运行图文件(*.json)\n文本运行图文件(*.trc)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
         if not filename:
             return
 
