@@ -8,7 +8,7 @@ from .line import Line
 from .train import Train
 from datetime import datetime,timedelta
 from Timetable_new.checi3 import Checi
-from Timetable_new.utility import judge_type
+from Timetable_new.utility import judge_type,strToTime
 
 class CurrentWidget(QtWidgets.QWidget):
     def __init__(self,main):
@@ -124,13 +124,12 @@ class CurrentWidget(QtWidgets.QWidget):
         timeTable.setColumnWidth(4, 100)
         timeTable.setColumnWidth(5, 80)
         timeTable.setEditTriggers(timeTable.CurrentChanged)
+        timeTable.itemChanged.connect(self._table_item_changed)
         self.timeTable = timeTable
         actionCpy = QtWidgets.QAction(timeTable)
         actionCpy.setShortcut('Alt+D')
         actionCpy.triggered.connect(lambda: self._copy_time(timeTable))
         timeTable.addAction(actionCpy)
-        # item:QtWidgets.QTableWidgetItem
-        # item.setFlags(Qt.NoItemFlags)
 
         layout.addWidget(timeTable)
 
@@ -380,22 +379,27 @@ class CurrentWidget(QtWidgets.QWidget):
             ddsj: datetime
 
             timeTable.setRowHeight(num, self.graph.UIConfigData()['table_row_height'])
-            item = QtWidgets.QTableWidgetItem(station)
-            timeTable.setItem(num, 0, item)
+            itemStation = QtWidgets.QTableWidgetItem(station)
+            itemStation.setData(Qt.UserRole,st_dict)
+            timeTable.setItem(num, 0, itemStation)
 
             ddsjEdit = QtWidgets.QTimeEdit()
+            ddsjEdit.row = num
             # ddsjQ = QtCore.QTime(ddsj.hour,ddsj.minute,ddsj.second)
             ddsjQ = QtCore.QTime(ddsj.hour, ddsj.minute, ddsj.second)
             ddsjEdit.setDisplayFormat("hh:mm:ss")
             ddsjEdit.setTime(ddsjQ)
             ddsjEdit.setMinimumSize(1,1)
+            ddsjEdit.timeChanged.connect(self._time_changed)
             timeTable.setCellWidget(num, 1, ddsjEdit)
 
             cfsjEdit = QtWidgets.QTimeEdit()
+            cfsjEdit.row = num
             cfsjQ = QtCore.QTime(cfsj.hour, cfsj.minute, cfsj.second)
             cfsjEdit.setDisplayFormat("hh:mm:ss")
             cfsjEdit.setTime(cfsjQ)
             cfsjEdit.setMinimumSize(1,1)
+            cfsjEdit.timeChanged.connect(self._time_changed)
             timeTable.setCellWidget(num, 2, cfsjEdit)
 
             item = QtWidgets.QTableWidgetItem()
@@ -417,6 +421,11 @@ class CurrentWidget(QtWidgets.QWidget):
                 if s:
                     time_str += str(s) + "秒"
 
+            if train.stationBusiness(st_dict):
+                itemStation.setForeground(QtGui.QBrush(Qt.red))
+            elif train.stationStopped(st_dict):
+                itemStation.setForeground(QtGui.QBrush(Qt.blue))
+
             add = ''
             if train.isSfz(station):
                 add = '始'
@@ -435,7 +444,37 @@ class CurrentWidget(QtWidgets.QWidget):
             num += 1
 
 
-    #Slots
+    # Slots
+    def _time_changed(self):
+        row = self.sender().row
+        ddsjEdit:QtWidgets.QTimeEdit = self.timeTable.cellWidget(row,1)
+        cfsjEdit:QtWidgets.QTimeEdit = self.timeTable.cellWidget(row,2)
+        ddsjQ: QtCore.QTime = ddsjEdit.time()
+        ddsj = strToTime(ddsjQ.toString("hh:mm:ss"))
+        cfsjQ = cfsjEdit.time()
+        cfsj = strToTime(cfsjQ.toString("hh:mm:ss"))
+
+        # 设置停靠时间数据
+        dt: timedelta = cfsj - ddsj
+        seconds = dt.seconds
+        if seconds == 0:
+            time_str = ""
+        else:
+            m = int(seconds / 60)
+            s = seconds % 60
+            time_str = "{}分".format(m)
+            if s:
+                time_str += str(s) + "秒"
+        self.timeTable.item(row,5).setText(time_str)
+
+        if self.timeTable.item(row,3).checkState() == Qt.Checked:
+            self.timeTable.item(row,0).setForeground(QtGui.QBrush(Qt.red))
+        elif time_str:
+            self.timeTable.item(row,0).setForeground(QtGui.QBrush(Qt.blue))
+        else:
+            self.timeTable.item(row, 0).setForeground(QtGui.QBrush(Qt.black))
+
+
     def _auto_updown_checi(self):
         """
         自动设置上下行车次
@@ -462,6 +501,20 @@ class CurrentWidget(QtWidgets.QWidget):
         btn.setText("系统默认")
         btn.setStyleSheet("default")
         self.btnDefault.setEnabled(False)
+
+    def _table_item_changed(self,item:QtWidgets.QTableWidgetItem):
+        # print("currentWidget::table_item_changed",item.text(),item.row(),item.column())
+        row = item.row()
+        if item.column() == 3:
+            # 营业列变化
+            itemStation = self.timeTable.item(row,0)
+            if item.checkState() == Qt.Checked:
+                itemStation.setForeground(QtGui.QBrush(Qt.red))
+            elif self.timeTable.cellWidget(row,1).time() != self.timeTable.cellWidget(row,2).time():
+                itemStation.setForeground(QtGui.QBrush(Qt.blue))
+            else:
+                itemStation.setForeground(QtGui.QBrush(Qt.black))
+
 
     def _copy_time(self, timeTable: QtWidgets.QTableWidget):
         row = timeTable.currentRow()
@@ -639,10 +692,10 @@ class CurrentWidget(QtWidgets.QWidget):
                 domain = True
             ddsjSpin: QtWidgets.QTimeEdit = timeTable.cellWidget(row, 1)
             ddsjQ: QtCore.QTime = ddsjSpin.time()
-            ddsj = datetime.strptime(ddsjQ.toString("hh:mm:ss"), "%H:%M:%S")
+            ddsj = strToTime(ddsjQ.toString("hh:mm:ss"))
 
             cfsjSpin = timeTable.cellWidget(row, 2)
-            cfsj = datetime.strptime(cfsjSpin.time().toString("hh:mm:ss"), "%H:%M:%S")
+            cfsj = strToTime(cfsjSpin.time().toString("hh:mm:ss"))
 
             train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()))
 

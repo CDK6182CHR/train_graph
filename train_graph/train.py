@@ -1057,7 +1057,7 @@ class Train():
         return bool(filter(lambda x:stationEqual(name,x,strict),
                            map(lambda x:x['zhanming'],self.timetable)))
 
-    def stationStopped(self,station:dict):
+    def stationStopped(self,station:dict)->bool:
         """
         注意，输入的是字典
         """
