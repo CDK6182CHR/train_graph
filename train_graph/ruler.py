@@ -4,6 +4,7 @@
 from datetime import datetime,timedelta
 from copy import copy
 from Timetable_new.utility import stationEqual
+from .pyETRCExceptions import *
 
 class Ruler():
     """
@@ -317,8 +318,6 @@ class Ruler():
     def totalTime(self,down:bool=True):
         """
         按下行排图，计算标尺总长度。跳过_down_pass中。
-        :param down:
-        :return:
         """
         # print("total time calculate")
         total = 0
@@ -338,7 +337,7 @@ class Ruler():
 
             node = self.getInfo(former_station["zhanming"],st["zhanming"])
             if node is None:
-                raise Exception("Unexpected None node while find station: ",st["zhanming"])
+                raise RulerNotCompleteError(former_station['zhanming'],st['zhanming'])
             total += node["interval"]
             former_station = st
 

@@ -28,6 +28,7 @@ from .trainWidget import TrainWidget
 from .trainFilter import TrainFilter
 from .configWidget import ConfigWidget
 from .typeWidget import TypeWidget
+from .pyETRCExceptions import *
 import json
 from .GraphicWidget import GraphicsWidget, TrainEventType
 from .rulerPaint import rulerPainter
@@ -56,9 +57,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.1.1"
+        self.version = "V2.1.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190521'
+        self.build = '20190529'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -845,8 +846,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         try:
             self.GraphWidget.paintGraph(True)
-        except:
-            self._derr("铺画失败，可能由于排图标尺不符合要求。已自动恢复为按里程排图。")
+        except Exception as e:
+            self._derr("铺画失败，可能由于排图标尺不符合要求。已自动恢复为按里程排图。\n"+str(e))
             self.graph.setOrdinateRuler(None)
             self.GraphWidget.paintGraph()
             self.configWidget.setOrdinateCombo()
@@ -860,8 +861,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         try:
             self.graph.setOrdinateRuler(ruler)
             self.GraphWidget.paintGraph(throw_error=True)
-        except:
-            self._derr("设置排图标尺失败！设为排图纵坐标的标尺必须填满每个区间数据。自动变更为按里程排图。")
+        except RulerNotCompleteError as e:
+            self._derr(f"设置排图标尺失败！设为排图纵坐标的标尺必须填满每个区间数据。自动变更为按里程排图。"
+                       f"\n缺数据区间：{e.start}-{e.end}")
             self.graph.setOrdinateRuler(former)
             self.GraphWidget.paintGraph()
             return False

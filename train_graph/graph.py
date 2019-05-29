@@ -5,6 +5,7 @@
 from .line import Line
 from .ruler import Ruler
 from .train import Train
+from .circuit import Circuit,CircuitNode
 from copy import copy
 from Timetable_new.utility import stationEqual
 import json,re
@@ -20,13 +21,9 @@ class Graph:
     运行图类，数据结构：
     Line line;
     List<Train> _trains=[];
-    List<Dict> _circuit;//交路数据
+    List<Circuit> _circuit;//交路数据
     Dict _config;//系统设置，主要是UI
     str markdown;//附注
-    交路格式：
-    Dict{
-        "name":交路名称,
-        "trains":['G89','G90',...]
     """
     def __init__(self):
         """
@@ -233,7 +230,9 @@ class Graph:
             return
 
         self.line.loadLine(info["line"])
-        self.circuits = info.get("circuits",None)
+        self._circuits = []
+        for c in info.get('circuits',[]):
+            self._circuits.append(Circuit(self,origin=c))
         for dict_train in info["trains"]:
             newtrain = Train(self,origin=dict_train)
             self._trains.append(newtrain)
@@ -283,7 +282,7 @@ class Graph:
 
     def show(self):
         self.line.show()
-        print(self.circuits)
+        # print(self.circuits)
         for train in self._trains:
             train.show()
 
@@ -330,10 +329,12 @@ class Graph:
         graph = {
             "line":self.line.outInfo(),
             "trains":[],
-            "circuits":self._circuits,
+            "circuits":[],
             "config":self._config,
             "version":self._version,
         }
+        for c in self._circuits:
+            graph['circuits'].append(c.outInfo())
         try:
             graph["markdown"] = self._markdown
         except AttributeError:

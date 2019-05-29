@@ -11,6 +11,7 @@ copyright (c) mxy 2018
 """
 import cgitb
 import traceback
+from .pyETRCExceptions import *
 
 cgitb.enable(format='text')
 
@@ -106,14 +107,17 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.setMargin()
         try:
             self.initSecne()
-        except Exception as e:
+        except RulerNotCompleteError as e:
             if throw_error:
                 raise e
             else:
                 # 静默处理错误
-                traceback.print_exc()  #debug only
+                # traceback.print_exc()  #debug only
                 self.graph.setOrdinateRuler(None)
                 self.initSecne()
+        except Exception as e:
+            traceback.print_exc()
+            print("Unexpected Exception while painting graph",repr(e))
 
         self._resetDistanceAxis()
         self._resetTimeAxis()
@@ -375,11 +379,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
                 if info is None:
                     # 标尺不完整，不能用于排图
-                    raise Exception("不完整标尺排图错误:", "区间：{}-{}标尺无数据".format(last_station, name))
-                    y += (mile - last_mile) * UIDict["pixes_per_km"]
+                    raise RulerNotCompleteError(last_station,name)
+                    # y += (mile - last_mile) * UIDict["pixes_per_km"]
                     # labeItem = self.scene.addText("{}km".format(mile-last_mile))
                     # labeItem.setY((y + last_y) / 2 - 13)
-                    self.graph.setStationYValue(name, y)
+                    # self.graph.setStationYValue(name, y)
                 else:
                     y += info["interval"] / UIDict["seconds_per_pix_y"]
                     # labeItem = self.scene.addText("{}s".format(info["interval"]))
