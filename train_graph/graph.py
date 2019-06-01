@@ -10,6 +10,7 @@ from copy import copy
 from Timetable_new.utility import stationEqual
 import json,re
 from datetime import datetime
+from .pyETRCExceptions import *
 
 config_file = 'config.json'
 
@@ -260,9 +261,6 @@ class Graph:
     def setVersion(self,v:str):
         self._version = v
 
-    def addCircuit(self):
-        pass
-
     def addTrain(self,train:Train):
         self._trains.append(train)
         self.fullCheciMap[train.fullCheci()] = train
@@ -270,6 +268,8 @@ class Graph:
 
     def delTrain(self,train:Train):
         try:
+            if train.carriageCircuit() is not None:
+                train.carriageCircuit().removeTrain(train)
             self._trains.remove(train)
             del self.fullCheciMap[train.fullCheci()]
             self.delSingleCheciMap(train)
@@ -424,7 +424,7 @@ class Graph:
         for dct in self.line.stations:
             yield dct['zhanming'],dct['licheng'],dct.get('y_value',None)
 
-    def trainFromCheci(self,checi:str,full_only=False):
+    def trainFromCheci(self,checi:str,full_only=False)->Train:
         """
         根据车次查找Train对象。如果full_only，则仅根据全车次查找；否则返回单车次匹配的第一个结果。
         若不存在，返回None。
@@ -1421,6 +1421,43 @@ class Graph:
             if train.lineWidth() != 0:
                 fp.write(f"{train.fullCheci()},0,{train.lineWidth()}")
         fp.close()
+
+    def circuitByName(self,name:str,*,throwError=True)->Circuit:
+        """
+        根据交路名查找交路对象。如果没有对应交路，抛出CircuitNotFoundError。
+        """
+        for circuit in self._circuits:
+            if circuit.name()==name:
+                return circuit
+        if throwError:
+            raise CircuitNotFoundError(name)
+        else:
+            return None
+
+    def circuits(self):
+        for c in self._circuits:
+            yield c
+
+    def circuitCount(self):
+        return len(self._circuits)
+
+    def addCircuit(self,circuit:Circuit):
+        """
+        若名称已存在，抛出CircuitExistedError
+        """
+        if self.circuitByName(circuit.name(),throwError=False) is not None:
+            raise CircuitExistedError(circuit.name())
+        self._circuits.append(circuit)
+
+    def delCircuit(self,circuit:Circuit):
+        """
+        若不存在，抛出CircuitNotFoundError
+        """
+        assert isinstance(circuit,Circuit)
+        try:
+            self._circuits.remove(circuit)
+        except ValueError:
+            raise CircuitNotFoundError(circuit.name())
 
 if __name__ == '__main__':
     graph = Graph()

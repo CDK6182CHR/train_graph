@@ -1220,9 +1220,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # event_source.sort(key=lambda x: x["mile"])
         # 2019.02.23修改：按里程优先，时间次之的顺序排序。
         train:Train = self.selectedTrain
-        event_source.sort(key=lambda x:(x["mile"],x["time"]))
-        if not train.firstDown():
-            event_source.reverse()
+        if train.firstDown():
+            event_source.sort(key=lambda x:(x["mile"],x["time"]))
+        else:
+            event_source.sort(key=lambda x: (-x["mile"], x["time"]))
 
     def _line_collid(self, pathItem: QtWidgets.QGraphicsPathItem, lineItem: QtWidgets.QGraphicsLineItem, train):
         # TODO 推算时刻

@@ -29,6 +29,7 @@ from .trainFilter import TrainFilter
 from .configWidget import ConfigWidget
 from .typeWidget import TypeWidget
 from .pyETRCExceptions import *
+from .circuitWidget import CircuitWidget
 import json
 from .GraphicWidget import GraphicsWidget, TrainEventType
 from .rulerPaint import rulerPainter
@@ -59,7 +60,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.1.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190529'
+        self.build = '20190601'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -87,6 +88,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.rulerDockWidget = None
         self.guideDockWidget = None
         self.forbidDockWidget = None
+        self.circuitDockWidget = None
         self.to_repaint = False
 
         self.action_widget_dict = {}
@@ -158,6 +160,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initCurrentDock()
         self._initSysDock()
         self._initForbidDock()
+        self._initCircuitDock()
         self.action_widget_dict = {
             '线路编辑': self.lineDockWidget,
             '车次编辑': self.trainDockWidget,
@@ -178,6 +181,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initCurrentWidget()
         self._initSysWidget()
         self._initForbidWidget()
+        self._initCircuitWidget()
         self._initDockShow()
 
     def _initDockShow(self):
@@ -208,6 +212,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.sysWidget.setData()
         self.statusOut('默认面板刷新完毕')
         self.forbidWidget.setData()
+        self.circuitWidget.setData()
         self.statusOut('所有停靠面板刷新完毕')
 
     def _initForbidDock(self):
@@ -218,12 +223,25 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dock.setVisible(False)
         self.forbidDockWidget = dock
 
+    def _initCircuitDock(self):
+        dock = QtWidgets.QDockWidget()
+        dock.setWindowTitle('交路编辑')
+        dock.visibilityChanged.connect(lambda:self._dock_visibility_changed('交路编辑',dock))
+        self.addDockWidget(Qt.RightDockWidgetArea,dock)
+        dock.setVisible(False)
+        self.circuitDockWidget=dock
+
     def _initForbidWidget(self):
         widget = ForbidWidget(self.graph.line.forbid)
         self.forbidWidget = widget
         self.forbidDockWidget.setWidget(widget)
         widget.showForbidChanged.connect(self.GraphWidget.on_show_forbid_changed)
         widget.currentShowedChanged.connect(self.GraphWidget.show_forbid)
+
+    def _initCircuitWidget(self):
+        widget = CircuitWidget(self.graph)
+        self.circuitWidget = widget
+        self.circuitDockWidget.setWidget(widget)
 
     def _initGuideDock(self):
         dock = QtWidgets.QDockWidget()
@@ -1112,10 +1130,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.actionWindow_list = []
         actions = (
             '线路编辑', '车次编辑', '标尺编辑', '选中车次设置', '运行图设置', '系统默认设置',
-            '显示类型设置', '天窗编辑'
+            '显示类型设置', '天窗编辑','交路编辑',
         )
         shorcuts = (
-            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1'
+            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1','4'
         )
         for a, s in zip(actions, shorcuts):
             action = QtWidgets.QAction(a, self)
@@ -1146,6 +1164,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '标尺排图向导': self.guideDockWidget,
             '天窗编辑': self.forbidDockWidget,
             '系统默认设置':self.sysDockWidget,
+            '交路编辑':self.circuitDockWidget,
         }
         dock = widgets[action.text()]
         if dock is None:
@@ -1689,6 +1708,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _line_info_out(self):
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle("线路信息")
+        dialog.resize(400,400)
         layout = QtWidgets.QVBoxLayout()
         text = ""
         text += f"线名：{self.graph.lineName()}\n"
@@ -1706,7 +1726,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         layout.addWidget(textView)
 
         btnClose = QtWidgets.QPushButton("关闭")
-        btnClose.setMaximumWidth(100)
+        # btnClose.setMaximumWidth(100)
         btnClose.clicked.connect(dialog.close)
         layout.addWidget(btnClose)
         layout.setAlignment(Qt.AlignCenter)

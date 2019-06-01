@@ -1,8 +1,10 @@
 """
 2.1.2添加 circuit 交路数据结构
-todo 任何train修改要映射到circuit修改
+交路部分数据域注意事项
+1. 在graph中新增列表_circuits。每个Circuit对象有不同的名字，可以根据名称查找到。在graph中新增函数circuitByName，暂定线性查找，有必要时可以更新为查找表。ok
+2. 在Train中新增“_carriageCircuitName”和"_carriageCircuit"两项属性。后者初始为None。在Train中新增方法carriageCircuit，返回Circuit对象。_carriageCircuitName属性需要向json读写。新增setCarriageCircuit方法。这一对方法只负责管理Train中的引用。ok
+3. 注意删除车次时的处理。ok
 """
-from .train import Train
 from .line import Line
 from .pyETRCExceptions import *
 
@@ -21,8 +23,8 @@ class CircuitNode:
     def __init__(self,graph,*,origin=None,checi=None,train=None,start=None,end=None,link=None):
         self._checi = checi
         self._train = train
-        self.start=start
-        self.end=end
+        self._start=start
+        self._end=end
         self.link=link
         self.graph=graph
         if origin is not None:
@@ -31,18 +33,18 @@ class CircuitNode:
     def parseInfo(self,origin:dict):
         self._checi = origin['checi']
         self.link = origin['link']
-        self.start = origin['start']
-        self.end = origin['end']
+        self._start = origin['start']
+        self._end = origin['end']
 
     def outInfo(self)->dict:
         return {
             "checi":self._checi,
-            "start":self.start,
-            "end":self.end,
+            "start":self._start,
+            "end":self._end,
             "link":self.link,
         }
 
-    def train(self)->Train:
+    def train(self):
         """
         保证checi是有效的。否则直接raise.
         """
@@ -64,9 +66,21 @@ class CircuitNode:
     def setCheci(self,checi:str):
         self._checi=checi
 
-    def setTrain(self,train:Train):
+    def setTrain(self,train):
         self._train = train
         self._checi = train.fullCheci()
+
+    def startStation(self)->str:
+        if self.train() is not None:
+            return self.train().localFirst(self.graph)
+        else:
+            return None
+
+    def endStation(self)->str:
+        if self.train() is not None:
+            return self.train().localLast(self.graph)
+        else:
+            return None
 
 class Circuit:
     """
@@ -116,3 +130,34 @@ class Circuit:
     def setNote(self,note:str):
         self._note = note
 
+    def removeTrain(self,train):
+        for node in self._order:
+            if node.train() is train:
+                self._order.remove(train)
+                train.setCarriageCircuit(None)
+                return
+
+    def addTrain(self,train,index=None):
+        """
+        要求train不能属于其他交路。否则抛出TrainHasCircuitError。
+        """
+        if train.carriageCircuit() is not None:
+            raise TrainHasCircuitError(train,train.carriageCircuit())
+        if index is None:
+            self._order.append(CircuitNode(self.graph,train=train))
+        else:
+            self._order.insert(index,CircuitNode(self.graph,train=train))
+        train.setCarriageCircuit(self)
+
+    def __str__(self):
+        return f"Circuit<{self.name()}>"
+
+    def orderStr(self)->str:
+        return '-'.join(map(lambda x:x.train().fullCheci(),self._order))
+
+    def trainCount(self)->int:
+        return len(self._order)
+
+    def nodes(self):
+        for node in self._order:
+            yield node

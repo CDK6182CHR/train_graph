@@ -13,6 +13,8 @@ from datetime import datetime,timedelta
 from Timetable_new.utility import judge_type,stationEqual,strToTime
 import re,bisect
 from typing import Iterable,Union
+from .circuit import Circuit
+from .pyETRCExceptions import *
 
 import cgitb
 cgitb.enable(format='text')
@@ -65,6 +67,8 @@ class Train():
         self._localLast=None
         self._yToStationMap = []  # 数据结构：List<tuple<float,dict>>
         self._passenger=passenger
+        self._carriageCircuitName = None
+        self._carriageCircuit = None
         if origin is not None:
             #从既有字典读取数据
             self.loadTrain(origin)
@@ -99,6 +103,7 @@ class Train():
         self._itemInfo = origin.get("itemInfo",[])
         self._autoItem = origin.get("autoItem",True)
         self._passenger = origin.get("passenger",True)
+        self._carriageCircuitName = origin.get("carriageCircuit",None)
 
         try:
             origin["shown"]
@@ -319,6 +324,7 @@ class Train():
             "autoItem":self._autoItem,
             "itemInfo":self._itemInfo,
             "passenger":self._passenger,
+            "carriageCircuit":self._carriageCircuitName,
         }
         for dict in self.timetable:
             ddsj:datetime = dict["ddsj"]
@@ -1238,6 +1244,25 @@ class Train():
             # 第一个站
             return self._yToStationMap[idx_left][1],None
         return self._yToStationMap[idx_left-1][1],self._yToStationMap[idx_left][1]
+
+    def carriageCircuit(self)->Circuit:
+        """
+        如果没有交路信息，返回None. 如果交路名称无效，抛出异常。
+        """
+        if self._carriageCircuit is not None:
+            return self._carriageCircuit
+        elif self._carriageCircuitName is None:
+            return None
+        return self.graph.circuitByName(self._carriageCircuitName)
+
+    def setCarriageCircuit(self,circuit:Circuit):
+        if circuit is None:
+            self._carriageCircuit=None
+            self._carriageCircuitName=None
+        else:
+            self._carriageCircuit=circuit
+            self._carriageCircuitName=circuit.name()
+
 
     @staticmethod
     def dt(tm1:datetime,tm2:datetime)->int:
