@@ -6,8 +6,10 @@ from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from .graph import Graph
 from .train import Train
+from .circuit import Circuit
 from Timetable_new.utility import stationEqual
 import re
+from typing import List
 
 class TrainFilter(QtCore.QObject):
     DownOnly = 1
@@ -37,7 +39,10 @@ class TrainFilter(QtCore.QObject):
         self.endStations = []
         self.useStart = False
         self.useEnd = False
-        self.startCache = [] # 全程不允许创建空对象
+        self.circuits = []
+        self.useCircuit = False
+        self.circuitCache = [] # type: List[Circuit]
+        self.startCache = []  # 全程不允许创建空对象
         self.endCache = []
         self.reverse = False
 
@@ -87,6 +92,14 @@ class TrainFilter(QtCore.QObject):
         btnEnd.clicked.connect(lambda:self._select_start_or_end(self.endStations,self.endCache,'终到站'))
         btnEnd.setMaximumWidth(120)
         flayout.addRow(endCheck,btnEnd)
+
+        circuitCheck = QtWidgets.QCheckBox('属于交路')
+        self.checkCircuit = circuitCheck
+        circuitCheck.setChecked(self.useCircuit)
+        btnCircuit = QtWidgets.QPushButton('选择交路')
+        btnCircuit.clicked.connect(self._select_circuit)
+        btnCircuit.setMaximumWidth(120)
+        flayout.addRow(circuitCheck,btnCircuit)
 
         radioDown = QtWidgets.QRadioButton('下行')
         radioUp = QtWidgets.QRadioButton('上行')
@@ -144,7 +157,7 @@ class TrainFilter(QtCore.QObject):
         btnOk = QtWidgets.QPushButton("确定")
         btnClear = QtWidgets.QPushButton("清空")
         btnCancel = QtWidgets.QPushButton("取消")
-        btnOk.clicked.connect(self._ok_cliecked)
+        btnOk.clicked.connect(self._ok_clicked)
         btnCancel.clicked.connect(dialog.close)
         btnClear.clicked.connect(self.clear)
         hlayout.addWidget(btnOk)
@@ -430,7 +443,51 @@ class TrainFilter(QtCore.QObject):
                 cache.append(txt)
         dialog.close()
 
-    def _ok_cliecked(self):
+    def _select_circuit(self):
+        """
+
+        """
+        dialog = QtWidgets.QDialog(self.dialog)
+        self.circuitDialog = dialog
+        dialog.setWindowTitle('交路选择')
+        layout = QtWidgets.QVBoxLayout()
+
+        if self.circuitCache is None:
+            self.circuitCache = self.circuits[:]
+        circuitList = QtWidgets.QListWidget()
+        self.circuitList = circuitList
+        self.circuitList.setSelectionMode(circuitList.MultiSelection)
+
+        item = QtWidgets.QListWidgetItem('(无交路)')
+        item.setData(Qt.UserRole,None)
+        self.circuitList.addItem(item)
+        for circuit in self.graph.circuits():
+            item = QtWidgets.QListWidgetItem(circuit.name())
+            item.setData(Qt.UserRole,circuit)
+            if circuit in self.circuitCache:
+                item.setSelected(True)
+            circuitList.addItem(item)
+        layout.addWidget(circuitList)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton("确定")
+        btnCancel = QtWidgets.QPushButton("取消")
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnCancel)
+        btnCancel.clicked.connect(dialog.close)
+        btnOk.clicked.connect(self._select_circuit_ok)
+        layout.addLayout(hlayout)
+        dialog.setLayout(layout)
+
+        dialog.exec_()
+
+    def _select_circuit_ok(self):
+        self.circuitCache = []
+        for item in self.circuitList.selectedItems():
+            self.circuitCache.append(item.data(Qt.UserRole))
+        self.circuitDialog.close()
+
+    def _ok_clicked(self):
         if self.includesCache is not None:
             self.includes = self.includesCache
             self.includesCache=None
@@ -440,6 +497,9 @@ class TrainFilter(QtCore.QObject):
         if self.typesCache is not None:
             self.types = self.typesCache
             self.typesCache = None
+        if self.circuitCache is not None:
+            self.circuits = self.circuitCache[:]
+            self.circuitCache = []
         self.startStations = self.startCache[:]
         self.endStations = self.endCache[:]
         self.startCache.clear()
@@ -452,6 +512,7 @@ class TrainFilter(QtCore.QObject):
         self.useEnd = self.endCheck.isChecked()
         self.showOnly = self.checkShowOnly.isChecked()
         self.reverse = self.checkReverse.isChecked()
+        self.useCircuit = self.checkCircuit.isChecked()
 
         if self.radioDown.isChecked():
             self.direction = self.DownOnly
@@ -483,6 +544,8 @@ class TrainFilter(QtCore.QObject):
         self.includes = []
         self.useExclude = False
         self.excludes = []
+        self.useCircuit = False
+        self.circuits = []
         self.direction = self.DownAndUp
         self.passenger = self.PassengerAndFreight
         self.showOnly = False
@@ -574,11 +637,20 @@ class TrainFilter(QtCore.QObject):
                 return False
         return True
 
+    def checkCircuitIncluded(self,train)->bool:
+        if not self.useCircuit:
+            return True
+        for circuit in self.circuits:
+            if train.carriageCircuit() is circuit:
+                return True
+        return False
+
 
     def check(self,train):
         result = (self.checkShow(train) and self.checkDir(train) and
                   self.checkType(train)  and self.checkPassenger(train)
-               and (not self.checkExclude(train)) and self.checkStartEnd(train)) \
+               and (not self.checkExclude(train)) and self.checkStartEnd(train) and
+                  self.checkCircuitIncluded(train)) \
                or self.checkInclude(train)
         if self.reverse:
             return not result

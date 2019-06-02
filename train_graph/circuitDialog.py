@@ -251,6 +251,7 @@ class CircuitDialog(QtWidgets.QDialog):
                            end=self.endEdit.text(),link=self.checkLink.isChecked())
         self.addDialog.close()
         self.tableWidget.insertRow(row)
+        self.tableWidget.setCurrentCell(row,0)
         self.setTableRow(row,node)
 
     def _add_train_cancel(self,row:int):

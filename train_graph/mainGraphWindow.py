@@ -58,9 +58,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.1.2"
+        self.version = "V2.2.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190601'
+        self.build = '20190602'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -1248,7 +1248,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             elif self.graph.version() > self.version:
                 if not self.qustion(f'此文件可能由高于当前软件版本的pyETRC保存。如果继续打开并保存此文件，'
                                     f'可能损失一些新版本的信息。是否确认打开此文件？'
-                                    f'当前软件版本：{self.version}；文件标记版本：{self.graph.version}'):
+                                    f'当前软件版本：{self.version}；文件标记版本：{self.graph.version()}'):
                     return
             self.GraphWidget.setGraph(self.graph)
             self._system["last_file"] = filename

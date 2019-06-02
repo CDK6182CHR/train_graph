@@ -4,6 +4,7 @@
 from .ruler import Ruler
 from .forbid import Forbid
 from typing import Union
+from Timetable_new.utility import stationEqual
 
 class Line():
     """
@@ -221,7 +222,6 @@ class Line():
         """
         判断给定的区间是否为下行区间
         """
-        from utility import stationEqual
         s1 = None
         s2 = None
         for st in self.stations:
