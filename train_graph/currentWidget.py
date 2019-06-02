@@ -111,6 +111,19 @@ class CurrentWidget(QtWidgets.QWidget):
         flayout.addRow("运行线宽度", spinWidth)
         spinWidth.setToolTip("设置本次车运行线宽度。使用0代表使用系统默认。")
 
+        hlayout = QtWidgets.QHBoxLayout()
+        circuitEdit = QtWidgets.QLineEdit()
+        self.circuitEdit = circuitEdit
+        circuitEdit.setFocusPolicy(Qt.NoFocus)
+        hlayout.addWidget(circuitEdit)
+
+        btnEditCircuit = QtWidgets.QPushButton('编辑')
+        self.btnEditCircuit = btnEditCircuit
+        btnEditCircuit.setEnabled(False)
+        hlayout.addWidget(btnEditCircuit)
+        btnEditCircuit.clicked.connect(self._edit_circuit)
+        flayout.addRow('车底交路',hlayout)
+
         layout.addLayout(flayout)
 
         timeTable = QtWidgets.QTableWidget()
@@ -368,6 +381,13 @@ class CurrentWidget(QtWidgets.QWidget):
         self.checkShow.setChecked(train.isShow())
         self.checkAutoItem.setChecked(train.autoItem())
         self.checkPassenger.setCheckState(train.isPassenger())
+
+        if self.train.carriageCircuit() is not None:
+            self.circuitEdit.setText(self.train.carriageCircuit().name())
+            self.btnEditCircuit.setEnabled(True)
+        else:
+            self.circuitEdit.setText('')
+            self.btnEditCircuit.setEnabled(False)
 
         timeTable: QtWidgets.QTableWidget = self.timeTable
         timeTable.setRowCount(0)
@@ -741,4 +761,10 @@ class CurrentWidget(QtWidgets.QWidget):
     def _auto_business(self):
         self.train.autoBusiness()
         self.setData(self.train)
+
+    def _edit_circuit(self):
+        circuit = self.train.carriageCircuit()
+        if circuit is None:
+            return
+        self.main.circuitWidget.editCircuit(circuit)
 

@@ -102,15 +102,22 @@ class Circuit:
         if origin is not None:
             self.parseInfo(origin)
 
-    def parseInfo(self,origin:list):
-        for n in origin:
+    def parseInfo(self,origin:dict):
+        self._name = origin.get('name','')
+        self._note = origin.get('note','')
+        for n in origin.get('order',[]):
             self._order.append(CircuitNode(self.graph,origin=n))
 
     def outInfo(self)->list:
+        dct = {
+            "name":self._name,
+            "note":self._note,
+        }
         lst = []
         for node in self._order:
             lst.append(node.outInfo())
-        return lst
+        dct['order'] = lst
+        return dct
 
     def name(self)->str:
         return self._name
@@ -161,3 +168,42 @@ class Circuit:
     def nodes(self):
         for node in self._order:
             yield node
+
+    def clear(self):
+        self._order.clear()
+
+    def addNode(self,node:CircuitNode):
+        self._order.append(node)
+
+    def preorderLinked(self,train):
+        """
+        返回有Link的前一个车次。如果本车次没有Link，则返回None。
+        线性算法。
+        """
+        preNode = None
+        for node in self.nodes():
+            if node.train() is train:
+                if preNode is None:
+                    return None
+                elif not node.link:
+                    return None
+                else:
+                    return preNode.train()
+            preNode = node
+
+
+    def postorderLinked(self,train):
+        """
+        返回后续连接的车次。如果没有后续或者后续没有勾选link，返回None.
+        """
+        found = False
+        for node in self.nodes():
+            if node.train() is train:
+                found=True
+                continue
+            if found:
+                if not node.link:
+                    return None
+                else:
+                    return node.train()
+        return None

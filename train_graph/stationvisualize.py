@@ -1,6 +1,5 @@
 """
 车站股道占用情况可视化图表。
-暂时不考虑单线情况。
 """
 
 import sys
@@ -11,6 +10,17 @@ from datetime import datetime,timedelta
 
 class StationGraphWidget(QtWidgets.QGraphicsView):
     def __init__(self,station_list,graph,station_name,mainWindow):
+        """
+        station_list由graph.stationTimetable给出。
+        list<dict>
+        dict{
+            "station_name":str,
+            "ddsj":datetime,
+            "cfsj":datetime,
+            "down":bool,
+            "train":Train,
+        }
+        """
         super().__init__()
         self.scene = QtWidgets.QGraphicsScene()
         self.station_name = station_name
@@ -30,9 +40,9 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         self.setAlignment(Qt.AlignLeft|Qt.AlignTop)
         self.graph = graph
 
-        self._doubleLine = True  #按双线铺画
-        self._allowMainStay = False  #正线停车准许
-        self._sameSplitTime = 0  #单位：分钟
+        self._doubleLine = True  # 按双线铺画
+        self._allowMainStay = False  # 正线停车准许
+        self._sameSplitTime = 0  # 单位：分钟
         self._oppositeSplitTime = 0
 
         self.station_list = station_list
@@ -77,7 +87,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
 
     def _makeList(self):
         """
-        将数据分别放入list中
+        将数据分别放入list中. 数据准备.
         list<dict>
         dict{
             "ddsj":datetime,
@@ -85,16 +95,15 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             "down":bool,
             "train":Train,
         }
-        :return:
         """
-        self.down_list = [[],]
+        self.down_list = [[],]  # 下行股道表，每个元素（list）是一个股道的占用次序。
         self.up_list = [[],]
         self.single_list = [[],]
         for train_dict in self.station_list:
             train_dict["ddsj"].date().replace(1900,1,1)
             train_dict["cfsj"].date().replace(1900,1,1)
             if train_dict["cfsj"] < train_dict["ddsj"]:
-                #跨日处理
+                # 跨日处理
                 new_dict = {
                     "ddsj":datetime(1900,1,1,0,0,0),
                     "cfsj":train_dict["cfsj"],

@@ -1,9 +1,6 @@
 """
 具体的一个交路的编辑界面。
 由circuitWidget管理其实例，只在程序初始化时构建一个实例，其他时候只setData。模式类似currentWidget，但用对话框形式。
-todo 2019年6月1日 18:59:21
-apply时要先清除原有信息在车次中的映射再重新建立。检查是否重名、名称是否为空。
-注意特别处理同一个交路中可能的车次重复问题。
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
@@ -13,11 +10,14 @@ from .graph import Graph
 from .train import Train
 
 class CircuitDialog(QtWidgets.QDialog):
+    CircuitChangeApplied = QtCore.pyqtSignal(Circuit)
+    NewCircuitAdded = QtCore.pyqtSignal(Circuit)
     def __init__(self,graph:Graph,parent=None):
         super(CircuitDialog, self).__init__(parent)
         self.graph=graph
         self.toAddTrain=None
         self.circuit=None
+        self.isNewCircuit = False  # 状态值，表征当前页面上的数据是否是一个新的Circuit。保证准确。
         self.resize(600,600)
         self.initUI()
 
@@ -85,7 +85,12 @@ class CircuitDialog(QtWidgets.QDialog):
         self.circuit=circuit
         if circuit is None:
             circuit=self.circuit=Circuit(self.graph)
+            self.isNewCircuit = True
+        else:
+            self.isNewCircuit = False
         self.tableWidget.setRowCount(circuit.trainCount())
+        self.nameEdit.setText(circuit.name())
+        self.noteEdit.setText(circuit.note())
         for row,node in enumerate(circuit.nodes()):
             self.setTableRow(row,node)
 
@@ -135,11 +140,21 @@ class CircuitDialog(QtWidgets.QDialog):
         vlayout = QtWidgets.QVBoxLayout()
         flayout = QtWidgets.QFormLayout()
 
+        label = QtWidgets.QLabel('请先输入车次，然后在右侧的下拉列表中选择准确的车次。可按Tab键切换。'
+                                 '下拉列表中选择的车次才是有效的。')
+        label.setWordWrap(True)
+        vlayout.addWidget(label)
+
         comboCheci = QtWidgets.QComboBox()
-        comboCheci.addItems(map(lambda x:x.fullCheci(),self.graph.trains()))
-        comboCheci.setEditable(True)
-        comboCheci.setCurrentText("")
-        flayout.addRow('车次',comboCheci)
+        self.comboCheci = comboCheci
+        checiEdit = QtWidgets.QLineEdit()
+        # checiEdit.editingFinished.connect(lambda:self.checiEdit.setFocus())
+        checiEdit.editingFinished.connect(self._add_train_checi_line_changed)
+        self.checiEdit = checiEdit
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(checiEdit)
+        hlayout.addWidget(comboCheci)
+        flayout.addRow('车次',hlayout)
 
         sfzEdit = QtWidgets.QLineEdit()
         self.sfzEdit = sfzEdit
@@ -185,7 +200,22 @@ class CircuitDialog(QtWidgets.QDialog):
         dialog.exec_()
 
     # slots for add-dialog
+    def _add_train_checi_line_changed(self):
+        """
+        由lineEdit触发。设置combo中的车次。
+        """
+        checi = self.checiEdit.text()
+        if not checi:
+            return
+        self.comboCheci.setFocus()
+        trains = self.graph.multiSearch(checi)
+        self.comboCheci.clear()
+        self.comboCheci.addItems(map(lambda x:x.fullCheci(),trains))
+
     def _add_train_checi_changed(self,checi:str):
+        """
+        由combo触发。
+        """
         train = self.graph.trainFromCheci(checi,full_only=True)
         if train is None:
             self.sfzEdit.setText('')
@@ -193,15 +223,21 @@ class CircuitDialog(QtWidgets.QDialog):
             self.startEdit.setText('')
             self.endEdit.setText('')
             self.toAddTrain = None
+            return
         elif train.carriageCircuit() is not None and train.carriageCircuit() is not self.circuit:
             QtWidgets.QMessageBox.warning(self.addDialog,'警告',f'车次{train.fullCheci()}已有交路信息:{train.carriageCircuit()}。')
             return
-        else:
-            self.sfzEdit.setText(train.sfz)
-            self.zdzEdit.setText(train.zdz)
-            self.startEdit.setText(train.localFirst(self.graph))
-            self.endEdit.setText(train.localLast(self.graph))
-            self.toAddTrain = train
+        # 检查车次是否在本交路表中已经出现过
+        for row in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(row,0).data(Qt.UserRole).train() is train:
+                QtWidgets.QMessageBox.warning(self.addDialog,'错误',f'车次{train.fullCheci()}已在本交路中'
+                                                                  f'出现过，不能重复添加！')
+                return
+        self.sfzEdit.setText(train.sfz)
+        self.zdzEdit.setText(train.zdz)
+        self.startEdit.setText(train.localFirst(self.graph))
+        self.endEdit.setText(train.localLast(self.graph))
+        self.toAddTrain = train
 
     def _add_train_ok(self,row:int):
         """
@@ -262,6 +298,42 @@ class CircuitDialog(QtWidgets.QDialog):
         self.setData(self.circuit)
 
     def _apply(self):
-        pass
+        """
+        提交更改。原则上信息都可以直接提交，不会有问题。故不作考虑。
+        先清除原有信息在车次中的映射再重新建立。检查是否重名、名称是否为空。
+        """
+        name = self.nameEdit.text()
+        if not name:
+            QtWidgets.QMessageBox.warning(self,'错误','交路名称不能为空！')
+            return
+        for circuit in self.graph.circuits():
+            if circuit.name() == name and circuit is not self.circuit:
+                QtWidgets.QMessageBox.warning(self,'错误',f'交路名称{name}已存在，不能重复添加！')
+                return
+        if self.circuit is None:
+            self.isNewCircuit = True
+            self.circuit = Circuit(self.graph)
+        self.circuit.setName(name)
+        self.circuit.setNote(self.noteEdit.toPlainText())
+
+        for node in self.circuit.nodes():
+            node.train().setCarriageCircuit(None)
+        self.circuit.clear()
+
+        tw = self.tableWidget
+        for row in range(tw.rowCount()):
+            node = tw.item(row,0).data(Qt.UserRole)
+            if not isinstance(node,CircuitNode):
+                print("CircuitDialog::Apply: Unexpected node")
+                continue
+            self.circuit.addNode(node)
+            node.train().setCarriageCircuit(self.circuit)
+        if self.isNewCircuit:
+            self.NewCircuitAdded.emit(self.circuit)
+            self.graph.addCircuit(self.circuit)
+        else:
+            self.CircuitChangeApplied.emit(self.circuit)
+        self.close()
+
 
 

@@ -100,11 +100,16 @@ class Graph:
                 ('直达特快',r'Z\d+',True),
                 ('特快',r'T\d+',True),
                 ('快速',r'K\d+',True),
-                ('普快',r'[1-5]\d{3}',True),
-                ('普客',r'6\d{3}',True),
-                ('普客',r'7[1-5]\d{2}',True),
-                ('通勤',r'7\d{3}',True),
-                ('通勤',r'8\d{3}',True),
+                ('普快',r'[1-5]\d{3}$',True), # 非复用
+                ('普快',r'[1-5]\d{3}\D',True), # 复用
+                ('普客',r'6\d{3}$',True),
+                ('普客', r'6\d{3}\D', True),
+                ('普客',r'7[1-5]\d{2}$',True),
+                ('普客', r'7[1-5]\d{2}\D', True),
+                ('通勤',r'7\d{3}$',True),
+                ('通勤', r'7\d{3}\D', True),
+                ('通勤',r'8\d{3}$',True),
+                ('通勤', r'8\d{3}\D', True),
                 ('旅游',r'Y\d+',True),
                 ('路用', r'57\d+', True),
                 ('特快行包',r'X1\d{2}',True),
@@ -112,7 +117,8 @@ class Graph:
                 ('客车底',r'0[GDCZTKY]\d+',True),
                 ('临客',r'L\d+',True),  # 主要解决类型直接定为“临客”的车次。
                 ('客车底',r'0\d{4}',True),
-                ('行包', r'X\d{3}', False),
+                ('行包', r'X\d{3}\D', False),
+                ('行包', r'X\d{3}$', False),
                 ('班列', r'X\d{4}', False),
                 ('直达',r'1\d{4}',False),
                 ('直货',r'2\d{4}',False),
@@ -1458,6 +1464,11 @@ class Graph:
             self._circuits.remove(circuit)
         except ValueError:
             raise CircuitNotFoundError(circuit.name())
+        for node in circuit.nodes():
+            try:
+                node.train().setCarriageCircuit(None)
+            except AttributeError:
+                print("Graph::delCircuit: Unexcpeted node.train",node)
 
 if __name__ == '__main__':
     graph = Graph()

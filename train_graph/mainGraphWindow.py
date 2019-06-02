@@ -170,6 +170,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '显示类型设置': self.typeDockWidget,
             '标尺编辑': self.rulerDockWidget,
             '天窗编辑': self.forbidDockWidget,
+            '交路编辑':self.circuitDockWidget,
         }
 
     def _initDockWidgetContents(self):

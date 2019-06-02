@@ -1263,6 +1263,20 @@ class Train():
             self._carriageCircuit=circuit
             self._carriageCircuitName=circuit.name()
 
+    def highlightItems(self):
+        for item in self.items():
+            try:
+                item.select()
+            except:
+                pass
+
+    def unHighlightItems(self):
+        for item in self.items():
+            try:
+                item.unSelect()
+            except:
+                pass
+
 
     @staticmethod
     def dt(tm1:datetime,tm2:datetime)->int:
