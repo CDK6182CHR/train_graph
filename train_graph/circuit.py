@@ -20,7 +20,7 @@ class CircuitNode:
     dict outInfo();
     Graph& graph;
     """
-    def __init__(self,graph,*,origin=None,checi=None,train=None,start=None,end=None,link=None):
+    def __init__(self,graph,*,origin=None,checi=None,train=None,start=None,end=None,link=True):
         self._checi = checi
         self._train = train
         self._start=start
@@ -207,3 +207,12 @@ class Circuit:
                 else:
                     return node.train()
         return None
+
+    def trainOrderNum(self,train)->int:
+        """
+        车次在交路中的位置序号，从0起始。如果不存在，抛出TrainNotInCircuitError。
+        """
+        for i,node in enumerate(self._order):
+            if node.train() is train:
+                return i
+        raise TrainNotInCircuitError(train,self)

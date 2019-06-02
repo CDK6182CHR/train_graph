@@ -771,6 +771,7 @@ class Graph:
         inTrainArea = False
         now_list = []
         last_name = None
+        circuit_dict = {}
         for i,line in enumerate(fp):
             line = line.strip()
             if not line:
@@ -788,7 +789,7 @@ class Graph:
                 elif i == 1:
                     self.setLineName(line)
                 else:
-                    #线路信息部分
+                    # 线路信息部分
                     try:
                         splited = line.split(',')
                         st_name = splited[0]
@@ -805,26 +806,50 @@ class Graph:
                     except:
                         pass
 
-            #处理列车信息部分
+            # 处理列车信息部分
             else:
                 #这部分从trc_check_new中复制过来
                 if line != '===Train===':
                     now_list.append(line)
                 else:
-                    self._decodeTrcTrain(now_list)
+                    self._decodeTrcTrain(now_list,circuit_dict)
                     now_list = []
-        self._decodeTrcTrain(now_list)
+        self._decodeTrcTrain(now_list,circuit_dict)
+        self._decodeTrcCircuit(circuit_dict)
         self.setGraphFileName('')
 
-    def _decodeTrcTrain(self,now_list:list):
+    def _decodeTrcTrain(self,now_list:list,circuit_dict:dict):
         """
-        阅读trc中单个车次的信息，不含===Train===标志头
+        阅读trc中单个车次的信息，不含===Train===标志头。
+        circuit_dict: 抽取车次中含有的交路信息。数据结构为
+        Dict<List<Tuple<int,Train>>>
+        eg.
+        {
+            "CRH380-2081":[
+                (0, Train<G1>),
+                (1, Train<G4>),
+                ...
+            ],
+            ...
+        }
+        交路数据保证只有一个下划线“_”，且split之后是一个整数。
         """
         train = Train(self)
         for i,line in enumerate(now_list):
             if i == 0:
                 splited = line.split(',')
                 train.setCheci(splited[1],splited[2],splited[3])
+                if len(splited) >= 5:
+                    circuit_str = splited[4]
+                    try:
+                        num = int(circuit_str.split('_')[-1])
+                        name = circuit_str.split('_')[0]
+                    except ValueError:
+                        if circuit_str not in ('NA',''):
+                            print("Graph::decodeTrcTrain: Unexpected circuit info:",circuit_str)
+                    else:
+                        circuit_dict.setdefault(name,[]).append((num,train))
+
 
             elif i == 1:
                 train.setStartEnd(sfz=line)
@@ -836,6 +861,17 @@ class Graph:
         train.autoTrainType()
         if train.timetable:
             self.addTrain(train)
+
+    def _decodeTrcCircuit(self,circuit_dict:dict):
+        """
+        解析从前面收集到的交路数据，生成交路对象。
+        """
+        for name,lst in circuit_dict.items():
+            lst.sort()
+            circuit = Circuit(self,name)
+            for _,train in lst:
+                circuit.addTrain(train)
+            self.addCircuit(circuit)
 
     def jointGraph(self,graph,former:bool,reverse:bool,line_only:bool):
         """
@@ -1412,7 +1448,12 @@ class Graph:
             last_dct = dct
         for train in self.trains():
             fp.write('===Train===\n')
-            fp.write(f"trf2,{train.fullCheci()},{train.downCheci()},{train.upCheci()}\n")
+            fp.write(f"trf2,{train.fullCheci()},{train.downCheci()},{train.upCheci()}")
+            circuit = train.carriageCircuit()
+            if isinstance(circuit,Circuit):
+                fp.write(f",{circuit.name().replace('_','-')}_{circuit.trainOrderNum(train)}\n")
+            else:
+                fp.write(',NA\n')
             fp.write(f"{train.sfz if train.sfz else 'null'}\n")
             fp.write(f"{train.zdz if train.zdz else 'null'}\n")
             for name,ddsj,cfsj in train.station_infos():

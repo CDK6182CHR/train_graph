@@ -47,3 +47,11 @@ class TrainHasCircuitError(Exception):
     def __str__(self):
         return f"列车{self.train}已有交路信息{self.circuit}"
 
+class TrainNotInCircuitError(Exception):
+    def __init__(self,train,circuit):
+        self.train=train
+        self.circuit = circuit
+
+    def __str__(self):
+        return f"列车{self.train}不在交路{self.circuit}中！"
+
