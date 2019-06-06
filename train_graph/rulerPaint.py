@@ -113,7 +113,7 @@ class rulerPainter(QtWidgets.QWidget):
         self.appendValidLabel = label
         comboAppend.setToolTip('将当前排图信息追加到车次，覆盖该车次已存在的站点时刻表。请注意，只能向后追加，不能倒推。'
                                '留空或车次非法表示铺画新车次运行图。')
-        flayout.addRow("附加到车次",hlayout)
+        flayout.addRow("附加到车次(选填)",hlayout)
 
         group = QtWidgets.QButtonGroup(self)
         radioBegin = QtWidgets.QRadioButton("添加到开头")

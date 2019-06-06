@@ -4,6 +4,8 @@
 1. 在graph中新增列表_circuits。每个Circuit对象有不同的名字，可以根据名称查找到。在graph中新增函数circuitByName，暂定线性查找，有必要时可以更新为查找表。ok
 2. 在Train中新增“_carriageCircuitName”和"_carriageCircuit"两项属性。后者初始为None。在Train中新增方法carriageCircuit，返回Circuit对象。_carriageCircuitName属性需要向json读写。新增setCarriageCircuit方法。这一对方法只负责管理Train中的引用。ok
 3. 注意删除车次时的处理。ok
+2019.06.03备忘：
+注意导入车次、线路拼接时交路的处理。（跨graph对象引起的Train->Graph牵连问题）
 """
 from .line import Line
 from .pyETRCExceptions import *

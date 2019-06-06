@@ -355,6 +355,7 @@ class CurrentWidget(QtWidgets.QWidget):
         # if train is self.train:
         #     # 此逻辑不确定
         #     return
+        print("current::setData",train)
         self.train = train
         if train is None:
             # 2019.01.29修改：取消return，空列车信息按空白处置

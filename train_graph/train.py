@@ -414,6 +414,8 @@ class Train():
         调用了线性算法。需要依赖于线路上的y_value，这就是说必须保证本站是铺画了的。
         """
         idx = self.stationIndexByName(station)
+        if idx == -1:
+            return None
         y = graph.stationYValue(station)
         if y == -1:
             return None

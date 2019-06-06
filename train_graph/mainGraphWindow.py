@@ -60,13 +60,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190602'
+        self.build = '20190606'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         self.showMaximized()
         self._readSystemSetting()
 
+        self._selectedTrain = None
         self.graph = Graph()
         self._initGraph(filename)
         self.GraphWidget = GraphicsWidget(self.graph,self)
@@ -139,6 +140,16 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                 pass
             else:
                 return
+
+    def currentTrain(self)->Train:
+        """
+        2019.06.06新增函数。将选中列车作为main窗口封装的属性之一。
+        增加的动机：GraphWidget.selectedTrain无法满足无运行线车次的选择状态记录功能。
+        """
+        return self._selectedTrain
+
+    def setCurrentTrain(self,train:Train):
+        self._selectedTrain = train
 
     def _initUI(self):
         self.statusBar().showMessage("系统正在初始化……")
@@ -292,7 +303,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         self.currentDockWidget.setWidget(scroll)
         self.currentDockWidget.visibilityChanged.connect(
-            lambda: self.currentWidget.setData(self.GraphWidget.selectedTrain))
+            lambda: self.currentWidget.setData(self.currentTrain()))
+        # 2019.06.06注：如果对应列车没有运行线，则这一步的selectedTrain有问题！
 
     def _check_ruler(self, train: Train):
         """
@@ -767,6 +779,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         print("double clicked!")
         train.setIsShow(True, affect_item=True)
+        self.setCurrentTrain(train)
         self.GraphWidget.setTrainShow(train,True)
         for item in train.items():
             self.GraphWidget._line_selected(item)
@@ -787,6 +800,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.GraphWidget.addTrainLine(train)
 
         self.GraphWidget._line_selected(train.firstItem(), ensure_visible=True)
+        self.setCurrentTrain(train)
 
     def _train_show_changed(self, train: Train, show: bool):
         """
@@ -1398,6 +1412,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         # 这是为了避免间接递归。若不加检查，这里取消后再次引发改变，则item选中两次。
         if self.GraphWidget.selectedTrain is not train:
             self.GraphWidget._line_un_selected()
+        self.setCurrentTrain(train)
         self.GraphWidget._line_selected(train.firstItem(), True)  # 函数会检查是否重复选择
         if self.currentWidget.isVisible():
             self.currentWidget.setData(train)
@@ -1778,6 +1793,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.GraphWidget.addTrainLine(train)
 
         self.GraphWidget._line_selected(train.item, ensure_visible=True)
+        self.setCurrentTrain(train)
 
     def closeEvent(self, event):
         """
@@ -1802,7 +1818,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._saveSystemSetting()
 
     def _train_info(self):
-        train: Train = self.GraphWidget.selectedTrain
+        train: Train = self.currentTrain()
         if train is None:
             self._derr("当前车次为空！")
             return
@@ -1840,6 +1856,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         except ZeroDivisionError:
             running_speed_str = 'NA'
         text += f"本线技术速度：{running_speed_str}km/h\n"
+        circuit = train.carriageCircuit()
+        if circuit is None:
+            text += f"本次列车没有交路信息\n"
+        else:
+            text += f"交路名称：{circuit.name()}\n"
+            text += f"套跑序列：{circuit.orderStr()}\n"
+            text += f"交路备注：{circuit.note()}\n"
 
         textBrowser = QtWidgets.QTextBrowser()
         textBrowser.setText(text)
@@ -1854,7 +1877,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.exec_()
 
     def _check_ruler_from_menu(self):
-        train = self.GraphWidget.selectedTrain
+        train = self.currentTrain()
         if train is None:
             self._derr("当前没有选中车次！")
             return
@@ -1870,9 +1893,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _get_interval_info(self):
         """
         计算当前车次在选定区间内的主要性质，参见ctrl+Q面板。sample:
-        :return:
         """
-        train = self.GraphWidget.selectedTrain
+        train = self.currentTrain()
         if train is None:
             self._derr("当前没有选中车次！")
             return
@@ -2032,7 +2054,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle('调整当前车次时刻')
-        train = self.GraphWidget.selectedTrain
+        train = self.currentTrain()
         if train is None:
             self._derr("当前没有选中车次！")
             return
@@ -2100,7 +2122,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.exec_()
 
     def _adjust_ok(self, dialog):
-        train: Train = self.GraphWidget.selectedTrain
+        train: Train = self.currentTrain()
         spinMin: QtWidgets.QSpinBox = dialog.spinMin
         spinSec: QtWidgets.QSpinBox = dialog.spinSec
         radio: QtWidgets.QRadioButton = dialog.radio
@@ -2393,7 +2415,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _correction_timetable(self,train=None):
         if not isinstance(train,Train):
-            train = self.GraphWidget.selectedTrain
+            train = self.currentTrain()
         if train is None:
             self._derr('当前车次时刻表重排：当前没有选中车次！')
             return
@@ -2418,13 +2440,12 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _batch_copy_train(self):
         """
         批量复制列车运行线
-        :return:
         """
-        if self.GraphWidget.selectedTrain is None:
+        if self.currentTrain() is None:
             self._derr("批量复制当前运行线：当前没有选中车次！")
             return
 
-        train: Train = self.GraphWidget.selectedTrain
+        train: Train = self.currentTrain()
 
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle(f'批量复制运行线*{train.fullCheci()}')
@@ -2485,7 +2506,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _add_batch_train_ok(self, dialog):
         tableWidget: QtWidgets.QTableWidget = dialog.tableWidget
-        train: Train = self.GraphWidget.selectedTrain
+        train: Train = self.currentTrain()
         start_time = train.start_time()
 
         failed = []
