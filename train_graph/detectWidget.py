@@ -78,7 +78,7 @@ class DetectWidget(QtWidgets.QDialog):
                 self.ruler=ruler
             rulerCombo.addItem(ruler.name())
         rulerCombo.currentTextChanged.connect(self._ruler_changed)
-        rulerCombo.setMaximumWidth(150)
+        # rulerCombo.setMaximumWidth(150)
         flayout.addRow("标尺选择",rulerCombo)
 
         checkStart=QtWidgets.QCheckBox()
@@ -218,7 +218,7 @@ class DetectWidget(QtWidgets.QDialog):
         self._setConfirmTable()
 
     def _ruler_changed(self,rulerName:str):
-        self.ruler=rulerName
+        self.ruler=self.graph.line.rulerByName(rulerName)
 
     def _to_start_changed(self,status:bool):
         self.toStart=status

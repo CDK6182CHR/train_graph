@@ -28,6 +28,7 @@ from .trainWidget import TrainWidget
 from .trainFilter import TrainFilter
 from .configWidget import ConfigWidget
 from .typeWidget import TypeWidget
+from .trainInfoWidget import TrainInfoWidget
 from .pyETRCExceptions import *
 from .circuitWidget import CircuitWidget
 import json
@@ -60,7 +61,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190606'
+        self.build = '20190610'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -90,6 +91,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.guideDockWidget = None
         self.forbidDockWidget = None
         self.circuitDockWidget = None
+        self.trainInfoDockWidget = None
         self.to_repaint = False
 
         self.action_widget_dict = {}
@@ -172,6 +174,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initSysDock()
         self._initForbidDock()
         self._initCircuitDock()
+        self._initTrainInfoDock()
         self.action_widget_dict = {
             '线路编辑': self.lineDockWidget,
             '车次编辑': self.trainDockWidget,
@@ -182,6 +185,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '标尺编辑': self.rulerDockWidget,
             '天窗编辑': self.forbidDockWidget,
             '交路编辑':self.circuitDockWidget,
+            '车次信息':self.trainInfoDockWidget,
         }
 
     def _initDockWidgetContents(self):
@@ -194,6 +198,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initSysWidget()
         self._initForbidWidget()
         self._initCircuitWidget()
+        self._initTrainInfoWidget()
+
         self._initDockShow()
 
     def _initDockShow(self):
@@ -225,6 +231,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut('默认面板刷新完毕')
         self.forbidWidget.setData()
         self.circuitWidget.setData()
+        self.trainInfoWidget.setData()
         self.statusOut('所有停靠面板刷新完毕')
 
     def _initForbidDock(self):
@@ -243,6 +250,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dock.setVisible(False)
         self.circuitDockWidget=dock
 
+    def _initTrainInfoDock(self):
+        dock = QtWidgets.QDockWidget()
+        dock.setWindowTitle('车次信息')
+        dock.visibilityChanged.connect(lambda:self._dock_visibility_changed('车次信息',dock))
+        self.addDockWidget(Qt.LeftDockWidgetArea,dock)
+        dock.setVisible(False)
+        self.trainInfoDockWidget = dock
+
     def _initForbidWidget(self):
         widget = ForbidWidget(self.graph.line.forbid)
         self.forbidWidget = widget
@@ -255,6 +270,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.circuitWidget = widget
         self.circuitDockWidget.setWidget(widget)
 
+    def _initTrainInfoWidget(self):
+        w = TrainInfoWidget(self.graph,self)
+        self.trainInfoWidget = w
+        self.trainInfoDockWidget.setWidget(w)
+
     def _initGuideDock(self):
         dock = QtWidgets.QDockWidget()
         dock.setWindowTitle("标尺排图向导")
@@ -266,6 +286,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _initGuideWidget(self):
         widget = rulerPainter(self.GraphWidget)
         widget.trainOK.connect(self.currentWidget.setData)
+        widget.trainOK.connect(self.trainInfoWidget.setData)
         self.guideDockWidget.setWidget(widget)
 
     def _initSysDock(self):
@@ -304,7 +325,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.currentDockWidget.setWidget(scroll)
         self.currentDockWidget.visibilityChanged.connect(
             lambda: self.currentWidget.setData(self.currentTrain()))
-        # 2019.06.06注：如果对应列车没有运行线，则这一步的selectedTrain有问题！
+        self.trainInfoDockWidget.visibilityChanged.connect(
+            lambda: self.trainInfoWidget.setData(self.currentTrain())
+        )
 
     def _check_ruler(self, train: Train):
         """
@@ -1030,10 +1053,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._line_info_out)
         menu.addAction(action)
 
-        action = QtWidgets.QAction("当前车次信息", self)
-        action.setShortcut('ctrl+Q')
-        action.triggered.connect(self._train_info)
-        menu.addAction(action)
+        # action = QtWidgets.QAction("当前车次信息", self)
+        # action.setShortcut('ctrl+Q')
+        # action.triggered.connect(self._train_info)
+        # menu.addAction(action)
 
         action = QtWidgets.QAction("当前车次标尺对照", self)
         action.setShortcut('ctrl+W')
@@ -1145,10 +1168,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.actionWindow_list = []
         actions = (
             '线路编辑', '车次编辑', '标尺编辑', '选中车次设置', '运行图设置', '系统默认设置',
-            '显示类型设置', '天窗编辑','交路编辑',
+            '显示类型设置', '天窗编辑','交路编辑','车次信息'
         )
         shorcuts = (
-            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1','4'
+            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1','4','Q'
         )
         for a, s in zip(actions, shorcuts):
             action = QtWidgets.QAction(a, self)
@@ -1180,6 +1203,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '天窗编辑': self.forbidDockWidget,
             '系统默认设置':self.sysDockWidget,
             '交路编辑':self.circuitDockWidget,
+            '车次信息':self.trainInfoDockWidget,
         }
         dock = widgets[action.text()]
         if dock is None:
@@ -1416,6 +1440,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget._line_selected(train.firstItem(), True)  # 函数会检查是否重复选择
         if self.currentWidget.isVisible():
             self.currentWidget.setData(train)
+        if self.trainInfoWidget.isVisible():
+            self.trainInfoWidget.setData(train)
 
     def _add_train_by_ruler(self):
         """
@@ -1428,6 +1454,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         painter = rulerPainter(self.GraphWidget)
         self.rulerPainter = painter
         painter.trainOK.connect(self.currentWidget.setData)
+        painter.trainOK.connect(self.trainInfoWidget.setData)
         painter.trainOK.connect(self.trainWidget.addTrain)
         dock = QtWidgets.QDockWidget()
         dock.setWindowTitle("标尺排图向导")
@@ -1817,64 +1844,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self._system.setdefault("dock_show",{})[name]=dock.isVisible()
         self._saveSystemSetting()
 
-    def _train_info(self):
-        train: Train = self.currentTrain()
-        if train is None:
-            self._derr("当前车次为空！")
-            return
-
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle("车次信息")
-        dialog.resize(400,400)
-        layout = QtWidgets.QVBoxLayout()
-        text = ""
-
-        text += f"车次：{train.fullCheci()}\n"
-        text += f"分方向车次：{train.downCheci()}/{train.upCheci()}\n"
-        text += f"始发终到：{train.sfz}->{train.zdz}\n"
-        text += f"列车种类：{train.trainType()}\n"
-        text += f"本线运行入图方向：{train.firstDownStr()}\n"
-        text += f"本线运行出图方向：{train.lastDownStr()}\n"
-        text += f"本线入图点：{train.localFirst(self.graph)}\n"
-        text += f"本线出图点：{train.localLast(self.graph)}\n"
-        text += f"本线图定站点数：{train.localCount(self.graph)}\n"
-        text += f"本线运行里程：{train.localMile(self.graph)}\n"
-        running, stay = train.localRunStayTime(self.graph)
-        time = running + stay
-        text += f"本线运行时间：{'%d:%02d:%02d'%(int(time/3600),int((time%3600)/60),int(time%60))}\n"
-        try:
-            speed = 1000 * train.localMile(self.graph) / time * 3.6
-            speed_str = "%.2fkm/h" % (speed)
-        except ZeroDivisionError:
-            speed_str = 'NA'
-        text += f"本线旅行速度：{speed_str}\n"
-        text += f"本线纯运行时间：{'%d:%02d:%02d'%(int(running/3600),int((running%3600)/60),int(running%60))}\n"
-        text += f"本线总停站时间：{'%d:%02d:%02d'%(int(stay/3600),int((stay%3600)/60),int(stay%60))}\n"
-        try:
-            running_speed = 1000 * train.localMile(self.graph) / running * 3.6
-            running_speed_str = "%.2f" % running_speed
-        except ZeroDivisionError:
-            running_speed_str = 'NA'
-        text += f"本线技术速度：{running_speed_str}km/h\n"
-        circuit = train.carriageCircuit()
-        if circuit is None:
-            text += f"本次列车没有交路信息\n"
-        else:
-            text += f"交路名称：{circuit.name()}\n"
-            text += f"套跑序列：{circuit.orderStr()}\n"
-            text += f"交路备注：{circuit.note()}\n"
-
-        textBrowser = QtWidgets.QTextBrowser()
-        textBrowser.setText(text)
-
-        layout.addWidget(textBrowser)
-
-        btnClose = QtWidgets.QPushButton("关闭")
-        btnClose.clicked.connect(dialog.close)
-        layout.addWidget(btnClose)
-
-        dialog.setLayout(layout)
-        dialog.exec_()
 
     def _check_ruler_from_menu(self):
         train = self.currentTrain()
@@ -2425,6 +2394,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _correction_ok(self,train):
         self.currentWidget.setData(train)
+        self.trainInfoWidget.setData(train)
         self.GraphWidget.delTrainLine(train)
         self.GraphWidget.addTrainLine(train)
 

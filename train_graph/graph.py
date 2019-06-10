@@ -5,17 +5,19 @@
 from .line import Line
 from .ruler import Ruler
 from .train import Train
-from .circuit import Circuit,CircuitNode
+from .circuit import Circuit, CircuitNode
 from copy import copy
 from Timetable_new.utility import stationEqual
-import json,re
+import json, re
 from datetime import datetime
 from .pyETRCExceptions import *
 
 config_file = 'config.json'
 
 import cgitb
+
 cgitb.enable(format='text')
+
 
 class Graph:
     """
@@ -26,6 +28,7 @@ class Graph:
     Dict _config;//系统设置，主要是UI
     str markdown;//附注
     """
+
     def __init__(self):
         """
         构造空类，不考虑读文件
@@ -38,22 +41,22 @@ class Graph:
         self._config = None
         self._sysConfig = None
         self.readSysConfig()  # 初始化并校验系统默认配置文件
-        self.typeList = [] # public data
+        self.typeList = []  # public data
         self.initGraphConfig()
         self._markdown = ''
-        self.fullCheciMap = {} # 全车次查找表 str|->Train
-        self.singleCheciMap = {} # 单车次查找表str|->list<Train>
+        self.fullCheciMap = {}  # 全车次查找表 str|->Train
+        self.singleCheciMap = {}  # 单车次查找表str|->list<Train>
 
     def readSysConfig(self):
         """
         1.4新定义函数。读取并检查系统默认设置。
         """
         try:
-            with open(config_file,encoding='utf-8',errors='ignore') as fp:
+            with open(config_file, encoding='utf-8', errors='ignore') as fp:
                 self._sysConfig = json.load(fp)
         except:
             print("配置文件config.json加载失败，使用系统默认设置。")
-            self._sysConfig={}
+            self._sysConfig = {}
         self.checkSysConfig()
 
     def checkSysConfig(self):
@@ -73,16 +76,16 @@ class Graph:
             "minutes_per_vertical_line": 10.0,
             "bold_line_level": 2,
             "show_line_in_station": True,
-            "start_label_height":30,
-            "end_label_height":15,
-            "table_row_height":30,
-            "show_time_mark":1, # 显示详细停点。0-不显示，1-仅显示选中车次，2-显示所有车次
-            "max_passed_stations":3,  # 至多跨越站数。超过这个数将被分成两段运行图。
+            "start_label_height": 30,
+            "end_label_height": 15,
+            "table_row_height": 30,
+            "show_time_mark": 1,  # 显示详细停点。0-不显示，1-仅显示选中车次，2-显示所有车次
+            "max_passed_stations": 3,  # 至多跨越站数。超过这个数将被分成两段运行图。
             "default_colors": {"快速": "#FF0000", "特快": "#0000FF",
                                "直达特快": "#FF00FF", "动车组": "#804000", "动车": "#804000",
                                "高速": "#FF00BE", "城际": "#FF33CC", "default": "#008000"
-            },
-            "margins":{
+                               },
+            "margins": {
                 "left_white": 15,  # 左侧白边，不能有任何占用的区域
                 "right_white": 10,
                 "left": 325,
@@ -93,41 +96,41 @@ class Graph:
                 "mile_label_width": 50,
                 "ruler_label_width": 100,
             },
-            "type_regex":[
-                ('高速',r'G\d+',True),
-                ('动车组',r'D\d+',True),
-                ('城际',r'C\d+',True),
-                ('直达特快',r'Z\d+',True),
-                ('特快',r'T\d+',True),
-                ('快速',r'K\d+',True),
-                ('普快',r'[1-5]\d{3}$',True), # 非复用
-                ('普快',r'[1-5]\d{3}\D',True), # 复用
-                ('普客',r'6\d{3}$',True),
+            "type_regex": [
+                ('高速', r'G\d+', True),
+                ('动车组', r'D\d+', True),
+                ('城际', r'C\d+', True),
+                ('直达特快', r'Z\d+', True),
+                ('特快', r'T\d+', True),
+                ('快速', r'K\d+', True),
+                ('普快', r'[1-5]\d{3}$', True),  # 非复用
+                ('普快', r'[1-5]\d{3}\D', True),  # 复用
+                ('普客', r'6\d{3}$', True),
                 ('普客', r'6\d{3}\D', True),
-                ('普客',r'7[1-5]\d{2}$',True),
+                ('普客', r'7[1-5]\d{2}$', True),
                 ('普客', r'7[1-5]\d{2}\D', True),
-                ('通勤',r'7\d{3}$',True),
+                ('通勤', r'7\d{3}$', True),
                 ('通勤', r'7\d{3}\D', True),
-                ('通勤',r'8\d{3}$',True),
+                ('通勤', r'8\d{3}$', True),
                 ('通勤', r'8\d{3}\D', True),
-                ('旅游',r'Y\d+',True),
+                ('旅游', r'Y\d+', True),
                 ('路用', r'57\d+', True),
-                ('特快行包',r'X1\d{2}',True),
-                ('动检',r'DJ\d+',True),
-                ('客车底',r'0[GDCZTKY]\d+',True),
-                ('临客',r'L\d+',True),  # 主要解决类型直接定为“临客”的车次。
-                ('客车底',r'0\d{4}',True),
+                ('特快行包', r'X1\d{2}', True),
+                ('动检', r'DJ\d+', True),
+                ('客车底', r'0[GDCZTKY]\d+', True),
+                ('临客', r'L\d+', True),  # 主要解决类型直接定为“临客”的车次。
+                ('客车底', r'0\d{4}', True),
                 ('行包', r'X\d{3}\D', False),
                 ('行包', r'X\d{3}$', False),
                 ('班列', r'X\d{4}', False),
-                ('直达',r'1\d{4}',False),
-                ('直货',r'2\d{4}',False),
-                ('区段',r'3\d{4}',False),
-                ('摘挂',r'4[0-4]\d{3}',False),
-                ('小运转',r'4[5-9]\d{3}',False),
-                ('单机',r'5[0-2]\d{3}',False),
-                ('补机',r'5[3-4]\d{3}',False),
-                ('试运转',r'55\d{3}',False),
+                ('直达', r'1\d{4}', False),
+                ('直货', r'2\d{4}', False),
+                ('区段', r'3\d{4}', False),
+                ('摘挂', r'4[0-4]\d{3}', False),
+                ('小运转', r'4[5-9]\d{3}', False),
+                ('单机', r'5[0-2]\d{3}', False),
+                ('补机', r'5[3-4]\d{3}', False),
+                ('试运转', r'55\d{3}', False),
             ]  # 类型对应正则表达式，list<tuple>有序三元列表。数据结构为类型，正则，是否客车。优先级递减。
         }
         default_config.update(self._sysConfig)
@@ -137,8 +140,8 @@ class Graph:
         """
         1.4版本新增函数。保证进入本函数时系统设置是有效的。
         """
-        with open(config_file,'w',encoding='utf-8',errors='ignore') as fp:
-            json.dump(self._sysConfig,fp,ensure_ascii=False)
+        with open(config_file, 'w', encoding='utf-8', errors='ignore') as fp:
+            json.dump(self._sysConfig, fp, ensure_ascii=False)
 
     def initGraphConfig(self):
         """
@@ -146,8 +149,8 @@ class Graph:
         precondition: sysConfig已经读取并校验完毕。
         """
         self._config = {
-            "ordinate":None,
-            "not_show_types":[],
+            "ordinate": None,
+            "not_show_types": [],
         }
         self._config.update(self._sysConfig)
 
@@ -156,10 +159,10 @@ class Graph:
         1.4新增函数，由loadGraph调用（初始化时可以用更加暴力的方法）。
         检查并更新graphConfig。precondition: self._config存在且是dict；sysConfig已经初始化并检查完毕。
         """
-        self._config.setdefault("ordinate",None)
-        self._config.setdefault("not_show_types",[])
-        for key,value in self._sysConfig.items():
-            self._config.setdefault(key,value)
+        self._config.setdefault("ordinate", None)
+        self._config.setdefault("not_show_types", [])
+        for key, value in self._sysConfig.items():
+            self._config.setdefault(key, value)
 
     def resetGraphConfigFromConfigWidget(self):
         """
@@ -176,21 +179,21 @@ class Graph:
         设置全车次查找表。
         """
         for train in self.trains():
-            self.fullCheciMap[train.fullCheci()]=train
+            self.fullCheciMap[train.fullCheci()] = train
 
     def setSingleCheciMap(self):
         for train in self.trains():
-            for cc in (train.downCheci(),train.upCheci()):
+            for cc in (train.downCheci(), train.upCheci()):
                 if cc:
-                    self.singleCheciMap.setdefault(cc,[]).append(train)
+                    self.singleCheciMap.setdefault(cc, []).append(train)
 
-    def addSingleCheciMap(self,train):
-        for cc in (train.downCheci(),train.upCheci()):
+    def addSingleCheciMap(self, train):
+        for cc in (train.downCheci(), train.upCheci()):
             if cc:
-                self.singleCheciMap.setdefault(cc,[]).append(train)
+                self.singleCheciMap.setdefault(cc, []).append(train)
 
-    def delSingleCheciMap(self,train):
-        for cc in (train.downCheci(),train.upCheci()):
+    def delSingleCheciMap(self, train):
+        for cc in (train.downCheci(), train.upCheci()):
             if cc:
                 lst = self.singleCheciMap.get(cc)
                 if len(lst) > 1:
@@ -198,19 +201,19 @@ class Graph:
                 else:
                     del self.singleCheciMap[cc]
 
-    def changeTrainCheci(self,train:Train,full:str,down:str,up:str):
+    def changeTrainCheci(self, train: Train, full: str, down: str, up: str):
         """
         2019.02.24新增加，更新车次，并更新查找表。
         """
-        f,d,u = train.checi
-        if full != f and self.fullCheciMap.get(f,None) is not None:
+        f, d, u = train.checi
+        if full != f and self.fullCheciMap.get(f, None) is not None:
             del self.fullCheciMap[f]
-            self.fullCheciMap[full]=train
+            self.fullCheciMap[full] = train
         reset = False
         if d != down or u != up:
             self.delSingleCheciMap(train)
             reset = True
-        train.setCheci(full,down,up)
+        train.setCheci(full, down, up)
         if reset:
             self.addSingleCheciMap(train)
 
@@ -223,12 +226,12 @@ class Graph:
         self.line.setNameMap()
         self.line.setFieldMap()
 
-    def loadGraph(self,filename:str):
+    def loadGraph(self, filename: str):
         """
         暂定直接打开json文件读
         """
         self.filename = filename
-        fp = open(filename,encoding='utf8',errors='ignore')
+        fp = open(filename, encoding='utf8', errors='ignore')
         try:
             info = json.load(fp)
         except json.JSONDecodeError:
@@ -238,20 +241,20 @@ class Graph:
 
         self.line.loadLine(info["line"])
         self._circuits = []
-        for c in info.get('circuits',[]):
-            self._circuits.append(Circuit(self,origin=c))
+        for c in info.get('circuits', []):
+            self._circuits.append(Circuit(self, origin=c))
         for dict_train in info["trains"]:
-            newtrain = Train(self,origin=dict_train)
+            newtrain = Train(self, origin=dict_train)
             self._trains.append(newtrain)
 
-        self._config = info.get("config",{})
-        if not isinstance(self._config,dict):
+        self._config = info.get("config", {})
+        if not isinstance(self._config, dict):
             self._config = {}
         if self._config.get('ordinate') is not None:
             self._config["ordinate"] = self.line.rulerByName(self._config["ordinate"])
         self.checkGraphConfig()
 
-        self._markdown = info.get("markdown",'')
+        self._markdown = info.get("markdown", '')
         try:
             self._version = info['version']
         except KeyError:
@@ -261,26 +264,28 @@ class Graph:
         self.setFullCheciMap()
         self.setSingleCheciMap()
 
-    def version(self)->str:
+    def version(self) -> str:
         return self._version
 
-    def setVersion(self,v:str):
+    def setVersion(self, v: str):
         self._version = v
 
-    def addTrain(self,train:Train):
+    def addTrain(self, train: Train):
         self._trains.append(train)
         self.fullCheciMap[train.fullCheci()] = train
         self.addSingleCheciMap(train)
 
-    def delTrain(self,train:Train):
+    def delTrain(self, train: Train):
+        # import traceback
         try:
             if train.carriageCircuit() is not None:
                 train.carriageCircuit().removeTrain(train)
             self._trains.remove(train)
             del self.fullCheciMap[train.fullCheci()]
             self.delSingleCheciMap(train)
-        except:
-            print("del train: No such train!",train.fullCheci())
+        except Exception as e:
+            print("del train: No such train!", train.fullCheci())
+            # traceback.print_exc()
 
     def trains(self):
         for train in self._trains:
@@ -292,7 +297,7 @@ class Graph:
         for train in self._trains:
             train.show()
 
-    def setLine(self,line:Line):
+    def setLine(self, line: Line):
         self.line = line
 
     def lineLength(self):
@@ -301,7 +306,7 @@ class Graph:
         except IndexError:
             return 0
 
-    def stations(self,reverse=False):
+    def stations(self, reverse=False):
         if not reverse:
             for station in self.line.stations:
                 yield station["zhanming"]
@@ -309,18 +314,17 @@ class Graph:
             for station in reversed(self.line.stations):
                 yield station["zhanming"]
 
-    def businessStationNames(self,passenger_only:bool,freight_only:bool):
+    def businessStationNames(self, passenger_only: bool, freight_only: bool):
         """
         2.1.1版本新增加。对办客和办货做筛选，由intervalCount过程调用。
         由于stations()函数调用范围太广，怕引起其他问题，故新增本函数。
         """
         for st in self.line.stations:
-            if ((not passenger_only) or st.get("passenger",True)) and \
-                    ((not freight_only) or st.get("freight",True)):
+            if ((not passenger_only) or st.get("passenger", True)) and \
+                    ((not freight_only) or st.get("freight", True)):
                 yield st['zhanming']
 
-
-    def stationDicts(self,reverse=False):
+    def stationDicts(self, reverse=False):
         if not reverse:
             for station in self.line.stations:
                 yield station
@@ -328,16 +332,16 @@ class Graph:
             for station in reversed(self.line.stations):
                 yield station
 
-    def save(self,filename:str):
+    def save(self, filename: str):
         """
         保存运行图文件
         """
         graph = {
-            "line":self.line.outInfo(),
-            "trains":[],
-            "circuits":[],
-            "config":self._config,
-            "version":self._version,
+            "line": self.line.outInfo(),
+            "trains": [],
+            "circuits": [],
+            "config": self._config,
+            "version": self._version,
         }
         for c in self._circuits:
             graph['circuits'].append(c.outInfo())
@@ -347,7 +351,7 @@ class Graph:
             self._markdown = ''
             graph["markdown"] = ''
         if graph["config"]["ordinate"] is not None:
-            if isinstance(graph["config"]["ordinate"],str):
+            if isinstance(graph["config"]["ordinate"], str):
                 pass
             else:
                 graph["config"]["ordinate"] = graph["config"]["ordinate"].name()
@@ -355,9 +359,9 @@ class Graph:
         for train in self._trains:
             graph["trains"].append(train.outInfo())
 
-        with open(filename,'w', encoding='utf8', errors='ignore') as fp:
+        with open(filename, 'w', encoding='utf8', errors='ignore') as fp:
             # print(graph["line"]["rulers"])
-            json.dump(graph,fp,ensure_ascii=False)
+            json.dump(graph, fp, ensure_ascii=False)
 
     def UIConfigData(self):
         return self._config
@@ -373,21 +377,21 @@ class Graph:
         生成器，返回 dict["zhanming"],dict["licheng"]
         """
         for dict in self.line.stations:
-            yield dict["zhanming"],dict["licheng"]
+            yield dict["zhanming"], dict["licheng"]
 
     def line_station_mile_levels(self):
         for dict in self.line.stations:
-            yield dict["zhanming"],dict["licheng"],dict["dengji"]
+            yield dict["zhanming"], dict["licheng"], dict["dengji"]
 
-    def addEmptyRuler(self,name:str,different:bool=False):
-        ruler = Ruler(name=name,different=different,line=self.line)
+    def addEmptyRuler(self, name: str, different: bool = False):
+        ruler = Ruler(name=name, different=different, line=self.line)
         self.line.rulers.append(ruler)
         return ruler
 
-    def addRuler(self,ruler:Ruler):
+    def addRuler(self, ruler: Ruler):
         self.line.rulers.append(ruler)
 
-    def delRuler(self,ruler:Ruler):
+    def delRuler(self, ruler: Ruler):
         """
         返回被删除的标尺是否是排图标尺
         """
@@ -400,52 +404,52 @@ class Graph:
             return True
         return False
 
-    def setOrdinateRuler(self,ruler:Ruler):
+    def setOrdinateRuler(self, ruler: Ruler):
         self._config["ordinate"] = ruler
 
     def ordinateRuler(self):
         """
         2019.05.09：有时候莫名其妙会是一个str对象，就暴力解决问题。
         """
-        ruler = self._config.setdefault("ordinate",None)
-        if isinstance(ruler,str):
-            print("Graph::ordinateRuler: ruler is str",ruler)
+        ruler = self._config.setdefault("ordinate", None)
+        if isinstance(ruler, str):
+            print("Graph::ordinateRuler: ruler is str", ruler)
             return self.line.rulerByName(ruler)
         return ruler
 
-    def setStationYValue(self,name,y):
+    def setStationYValue(self, name, y):
         """
         设置某个站的纵坐标值。2019.02.02移植到line类并删除线性算法。
         """
-        self.line.setStationYValue(name,y)
+        self.line.setStationYValue(name, y)
 
-    def stationYValue(self,name:str):
+    def stationYValue(self, name: str):
         st_dict = self.stationByDict(name)
         if st_dict is not None:
-            return st_dict.get('y_value',-1)
+            return st_dict.get('y_value', -1)
         else:
             return -1
 
     def stationMileYValues(self):
         for dct in self.line.stations:
-            yield dct['zhanming'],dct['licheng'],dct.get('y_value',None)
+            yield dct['zhanming'], dct['licheng'], dct.get('y_value', None)
 
-    def trainFromCheci(self,checi:str,full_only=False)->Train:
+    def trainFromCheci(self, checi: str, full_only=False) -> Train:
         """
         根据车次查找Train对象。如果full_only，则仅根据全车次查找；否则返回单车次匹配的第一个结果。
         若不存在，返回None。
         2019.02.03删除线性算法。
         """
-        t = self.fullCheciMap.get(checi,None)
+        t = self.fullCheciMap.get(checi, None)
         if t is not None:
             return t
         if not full_only:
-            selected = self.singleCheciMap.get(checi,None)
+            selected = self.singleCheciMap.get(checi, None)
             if selected is not None:
                 return selected[0]
         return None
 
-    def multiSearch(self,checi:str):
+    def multiSearch(self, checi: str):
         """
         非严格搜索。线性算法。
         """
@@ -458,7 +462,7 @@ class Graph:
     def lineName(self):
         return self.line.name
 
-    def setLineName(self,name:str):
+    def setLineName(self, name: str):
         self.line.name = name
 
     def firstStation(self):
@@ -473,30 +477,30 @@ class Graph:
         except IndexError:
             return None
 
-    def stationInLine(self,name:str,strict=False):
-        return self.line.stationInLine(name,strict)
+    def stationInLine(self, name: str, strict=False):
+        return self.line.stationInLine(name, strict)
 
-    def setStationIsShow(self,name:str,show:bool):
+    def setStationIsShow(self, name: str, show: bool):
         """
         不支持域解析符。2019.02.02删除线性算法。
         """
-        st = self.line.stationDictByName(name,True)
+        st = self.line.stationDictByName(name, True)
         if st is None:
             raise Exception("setStationIsShow: no such station")
         else:
             st['show'] = show
 
-    def stationIsShow(self,name:str):
+    def stationIsShow(self, name: str):
         dct = self.line.stationDictByName(name)
         if dct is None:
             raise Exception("No such station")
-        return dct.setdefault('show',True)
+        return dct.setdefault('show', True)
 
     def graphFileName(self):
         return self.filename
 
-    def setGraphFileName(self,filename:str):
-        self.filename=filename
+    def setGraphFileName(self, filename: str):
+        self.filename = filename
 
     def isEmpty(self):
         if self.line.stations:
@@ -511,10 +515,10 @@ class Graph:
         del self.line.stations
         self.line.stations = []
 
-    def stationExisted(self,name:str):
+    def stationExisted(self, name: str):
         self.line.stationExisted(name)
 
-    def addStationDict(self,info:dict):
+    def addStationDict(self, info: dict):
         self.line.stations.append(info)
 
     def adjustLichengTo0(self):
@@ -522,7 +526,7 @@ class Graph:
             return
         start_mile = self.line.stations[0]["licheng"]
         for st in self.line.stations:
-            st["licheng"] = st["licheng"]-start_mile
+            st["licheng"] = st["licheng"] - start_mile
 
     def trainCount(self):
         return len(self._trains)
@@ -531,7 +535,7 @@ class Graph:
         for ruler in self.line.rulers:
             yield ruler
 
-    def gapBetween(self,st1:str,st2:str):
+    def gapBetween(self, st1: str, st2: str):
         """
         计算两个站间距离
         """
@@ -539,9 +543,9 @@ class Graph:
         station2 = self.stationByDict(st2)
 
         if station1 is None or station2 is None:
-            raise Exception("No such station",st1,st2)
+            raise Exception("No such station", st1, st2)
 
-        return abs(station1["licheng"]-station2["licheng"])
+        return abs(station1["licheng"] - station2["licheng"])
 
     def lineSplited(self):
         """
@@ -552,22 +556,22 @@ class Graph:
             return True
         return False
 
-    def rulerNameExisted(self,name,ignore:Ruler=None):
+    def rulerNameExisted(self, name, ignore: Ruler = None):
         for r in self.line.rulers:
             if r is not ignore and r.name() == name:
                 return True
         return False
 
-    def isNewRuler(self,ruler:Ruler):
+    def isNewRuler(self, ruler: Ruler):
         for r in self.line.rulers:
             if ruler is r:
                 return False
         return True
 
-    def stationDirection(self,name:str):
+    def stationDirection(self, name: str):
         return self.line.stationViaDirection(name)
 
-    def lineStationBusiness(self,name:str,passenger:int,default=False)->bool:
+    def lineStationBusiness(self, name: str, passenger: int, default=False) -> bool:
         """
         2.0.2新增，返回车站是否办理业务。passenger是Train中规定的枚举常量，标志是否办客。
         如果找不到，返回default。
@@ -579,12 +583,12 @@ class Graph:
 
         if passenger == Train.PassengerTrue:
             # print("graph::lineStationBusiness passengerTrue",dct.get('passenger',"无数据"))
-            return dct.get('passenger',True)
+            return dct.get('passenger', True)
         else:
             # print("graph::lineStationBusiness passengerFalse",dct.get("freight","无数据"))
-            return dct.get("freight",True)
+            return dct.get("freight", True)
 
-    def formerBothStation(self,name:str):
+    def formerBothStation(self, name: str):
         """
         寻找本站往前的第一个【下行方向通过】的站。
         TODO 2019.02.02 保留线性算法。下一个函数同。
@@ -598,7 +602,7 @@ class Graph:
                 former_dict = st
         raise Exception("No former station")
 
-    def latterBothStation(self,name:str):
+    def latterBothStation(self, name: str):
         start = False
         for st in self.line.stations:
             if st["zhanming"] == name:
@@ -607,32 +611,32 @@ class Graph:
                 return st
         raise Exception("No latter station")
 
-    def stationLevel(self,name:str):
+    def stationLevel(self, name: str):
         """
         返回车站等级。若不存在，返回None；若没有这个字段，设为并返回4. 不支持域解析符
         """
-        st = self.line.stationDictByName(name,strict=True)
+        st = self.line.stationDictByName(name, strict=True)
         if st is None:
             return None
-        return st.setdefault('dengji',4)
+        return st.setdefault('dengji', 4)
 
-    def setNotShowTypes(self,not_show):
+    def setNotShowTypes(self, not_show):
         self.UIConfigData()["not_show_types"] = not_show
         for train in self.trains():
             if train.type in not_show:
-                train.setIsShow(False,affect_item=False)
+                train.setIsShow(False, affect_item=False)
             else:
-                train.setIsShow(True,affect_item=False)
+                train.setIsShow(True, affect_item=False)
 
-    def setDirShow(self,down,show):
+    def setDirShow(self, down, show):
         """
         约定此处指入图时的上下行
         """
         for train in self.trains():
             if train.firstDown() == down and train.type not in self.UIConfigData()['not_show_types']:
-                train.setIsShow(show,affect_item=False)
+                train.setIsShow(show, affect_item=False)
 
-    def trainExisted(self,train:Train,ignore:Train=None):
+    def trainExisted(self, train: Train, ignore: Train = None):
         """
         比较Train对象，线性算法
         """
@@ -641,7 +645,7 @@ class Graph:
                 return True
         return False
 
-    def checiExisted(self,checi:str,ignore:Train=None):
+    def checiExisted(self, checi: str, ignore: Train = None):
         """
         比较全车次。2019.02.03替换掉线性算法。
         """
@@ -649,41 +653,41 @@ class Graph:
         #     if t is not ignore and t.fullCheci() == checi:
         #         return True
         # return False
-        t = self.fullCheciMap.get(checi,None)
-        if t is not None and t is not ignore:
+        t = self.fullCheciMap.get(checi, None)
+        if t is not None and (ignore is None or t is not ignore):
             return True
         return False
 
     def rulerCount(self):
         return len(self.line.rulers)
 
-    def checiType(self,checi:str)->str:
+    def checiType(self, checi: str) -> str:
         """
         2.0.2新增。根据系统设置的判断规则，返回车次对应的类型。如果不符合任何一个，返回 其他。
         """
-        for nm,rg,_ in self.UIConfigData()['type_regex']:
-            if re.match(rg,checi):
+        for nm, rg, _ in self.UIConfigData()['type_regex']:
+            if re.match(rg, checi):
                 return nm
         return '其他'
 
-    def checiTypePassenger(self,checi:str)->(str,int):
+    def checiTypePassenger(self, checi: str) -> (str, int):
         """
         根据车次返回类型以及是否是客车。是否是客车按照Train中定义的常量。
         如果不符合任何一个，返回 其他, PassengerAuto。
         """
-        for nm,rg,ps in self.UIConfigData()['type_regex']:
-            if re.match(rg,checi):
+        for nm, rg, ps in self.UIConfigData()['type_regex']:
+            if re.match(rg, checi):
                 if ps:
-                    return nm,Train.PassengerTrue
+                    return nm, Train.PassengerTrue
                 else:
-                    return nm,Train.PassengerFalse
-        return '其他',Train.PassengerAuto
+                    return nm, Train.PassengerFalse
+        return '其他', Train.PassengerAuto
 
-    def typePassenger(self,tp:str,default=Train.PassengerAuto)->int:
+    def typePassenger(self, tp: str, default=Train.PassengerAuto) -> int:
         """
         根据类型返回是否为客车。返回是Train中的PassengerTrue或PassengerFalse，如果找不到返回默认。
         """
-        for name,_,ps in self.UIConfigData()['type_regex']:
+        for name, _, ps in self.UIConfigData()['type_regex']:
             if name == tp:
                 if ps:
                     return Train.PassengerTrue
@@ -691,7 +695,7 @@ class Graph:
                     return Train.PassengerFalse
         return default
 
-    def stationTimeTable(self,name:str):
+    def stationTimeTable(self, name: str):
         """
         返回车站的图定时刻表
         list<dict>
@@ -710,22 +714,24 @@ class Graph:
                 continue
             else:
                 node = {
-                    "ddsj":st_dict["ddsj"],
-                    "cfsj":st_dict["cfsj"],
-                    "station_name":st_dict["zhanming"],
-                    "down":train.stationDown(st_dict['zhanming'],self),
-                    "note":st_dict.get("note",''),
-                    "train":train,
+                    "ddsj": st_dict["ddsj"],
+                    "cfsj": st_dict["cfsj"],
+                    "station_name": st_dict["zhanming"],
+                    "down": train.stationDown(st_dict['zhanming'], self),
+                    "note": st_dict.get("note", ''),
+                    "train": train,
                 }
                 timeTable.append(node)
 
-        #排序
-        for i in range(len(timeTable)-1):
+        # 排序
+        for i in range(len(timeTable) - 1):
             t = i
-            for j in range(i+1,len(timeTable)):
+            for j in range(i + 1, len(timeTable)):
                 if timeTable[j]["ddsj"] < timeTable[t]["ddsj"]:
                     t = j
-            temp = timeTable[t];timeTable[t] = timeTable[i];timeTable[i]=temp
+            temp = timeTable[t];
+            timeTable[t] = timeTable[i];
+            timeTable[i] = temp
         return timeTable
 
     def reverse(self):
@@ -734,50 +740,50 @@ class Graph:
         """
         length = self.lineLength()
 
-        #里程调整
+        # 里程调整
         for st_dict in self.line.stations:
             st_dict["licheng"] = length - st_dict["licheng"]
         self.line.stations.reverse()
 
-        #列车上下行调整、上下行车次交换
+        # 列车上下行调整、上下行车次交换
         for train in self._trains:
-            #上下行交换
+            # 上下行交换
             train.reverseAllItemDown()
 
-            #车次交换
-            temp = train.setCheci(train.fullCheci(),train.upCheci(),train.downCheci())
+            # 车次交换
+            temp = train.setCheci(train.fullCheci(), train.upCheci(), train.downCheci())
 
     def downTrainCount(self):
         count = 0
         for train in self.trains():
             if train.firstDown() is True:
-                count+=1
+                count += 1
         return count
 
     def upTrainCount(self):
         count = 0
         for train in self.trains():
             if train.firstDown() is False:
-                count+=1
+                count += 1
         return count
 
-    def loadTrcGraph(self,filename):
+    def loadTrcGraph(self, filename):
         """
         阅读旧版trc格式的运行图
         """
-        fp = open(filename,encoding='utf-8',errors='ignore')
+        fp = open(filename, encoding='utf-8', errors='ignore')
         self.line.forbid.setDifferent(False)
-        self.line.forbid.setShow(True,True)
+        self.line.forbid.setShow(True, True)
         inTrainArea = False
         now_list = []
         last_name = None
         circuit_dict = {}
-        for i,line in enumerate(fp):
+        for i, line in enumerate(fp):
             line = line.strip()
             if not line:
                 continue
             if not inTrainArea and line == "===Train===":
-                inTrainArea=True
+                inTrainArea = True
 
             if line[0] == '-':
                 break
@@ -793,13 +799,13 @@ class Graph:
                     try:
                         splited = line.split(',')
                         st_name = splited[0]
-                        self.line.addStation_by_info(splited[0],int(splited[1]),int(splited[2]))
+                        self.line.addStation_by_info(splited[0], int(splited[1]), int(splited[2]))
                         if last_name is not None:
                             try:
-                                start_str,end_str = splited[9].split('-',1)
-                                begin = datetime.strptime(start_str,'%H:%M')
-                                end = datetime.strptime(end_str,'%H:%M')
-                                self.line.forbid.addForbid(last_name,st_name,begin,end)
+                                start_str, end_str = splited[9].split('-', 1)
+                                begin = datetime.strptime(start_str, '%H:%M')
+                                end = datetime.strptime(end_str, '%H:%M')
+                                self.line.forbid.addForbid(last_name, st_name, begin, end)
                             except Exception as e:
                                 pass
                         last_name = st_name
@@ -808,17 +814,17 @@ class Graph:
 
             # 处理列车信息部分
             else:
-                #这部分从trc_check_new中复制过来
+                # 这部分从trc_check_new中复制过来
                 if line != '===Train===':
                     now_list.append(line)
                 else:
-                    self._decodeTrcTrain(now_list,circuit_dict)
+                    self._decodeTrcTrain(now_list, circuit_dict)
                     now_list = []
-        self._decodeTrcTrain(now_list,circuit_dict)
+        self._decodeTrcTrain(now_list, circuit_dict)
         self._decodeTrcCircuit(circuit_dict)
         self.setGraphFileName('')
 
-    def _decodeTrcTrain(self,now_list:list,circuit_dict:dict):
+    def _decodeTrcTrain(self, now_list: list, circuit_dict: dict):
         """
         阅读trc中单个车次的信息，不含===Train===标志头。
         circuit_dict: 抽取车次中含有的交路信息。数据结构为
@@ -835,20 +841,20 @@ class Graph:
         交路数据保证只有一个下划线“_”，且split之后是一个整数。
         """
         train = Train(self)
-        for i,line in enumerate(now_list):
+        for i, line in enumerate(now_list):
             if i == 0:
                 splited = line.split(',')
-                train.setCheci(splited[1],splited[2],splited[3])
+                train.setCheci(splited[1], splited[2], splited[3])
                 if len(splited) >= 5:
                     circuit_str = splited[4]
                     try:
                         num = int(circuit_str.split('_')[-1])
                         name = circuit_str.split('_')[0]
                     except ValueError:
-                        if circuit_str not in ('NA',''):
-                            print("Graph::decodeTrcTrain: Unexpected circuit info:",circuit_str)
+                        if circuit_str not in ('NA', ''):
+                            print("Graph::decodeTrcTrain: Unexpected circuit info:", circuit_str)
                     else:
-                        circuit_dict.setdefault(name,[]).append((num,train))
+                        circuit_dict.setdefault(name, []).append((num, train))
 
 
             elif i == 1:
@@ -857,23 +863,23 @@ class Graph:
                 train.setStartEnd(zdz=line)
             else:
                 splited = line.split(',')
-                train.addStation(splited[0],splited[1],splited[2])
+                train.addStation(splited[0], splited[1], splited[2])
         train.autoTrainType()
         if train.timetable:
             self.addTrain(train)
 
-    def _decodeTrcCircuit(self,circuit_dict:dict):
+    def _decodeTrcCircuit(self, circuit_dict: dict):
         """
         解析从前面收集到的交路数据，生成交路对象。
         """
-        for name,lst in circuit_dict.items():
+        for name, lst in circuit_dict.items():
             lst.sort()
-            circuit = Circuit(self,name)
-            for _,train in lst:
+            circuit = Circuit(self, name)
+            for _, train in lst:
                 circuit.addTrain(train)
             self.addCircuit(circuit)
 
-    def jointGraph(self,graph,former:bool,reverse:bool,line_only:bool):
+    def jointGraph(self, graph, former: bool, reverse: bool, line_only: bool):
         """
         拼接两运行图。
         :param graph: 另一运行图
@@ -905,7 +911,7 @@ class Graph:
                             down = train_append.firstDown()
                     if down is None:
                         # 如果都无法判断，直接判断为下行车次
-                        print("cannot judge down. use default.",train_main.fullCheci())
+                        print("cannot judge down. use default.", train_main.fullCheci())
                         down = True
 
                     train_former = not (down ^ former)
@@ -914,14 +920,14 @@ class Graph:
                 else:
                     self.addTrain(train_append)
 
-        #线路连接
+        # 线路连接
         if former:
             for station in self.stationDicts():
                 station["licheng"] += graph.lineLength()
 
             for st in reversed(graph.line.stations):
                 if not self.stationExisted(st["zhanming"]):
-                    self.line.addStation_by_origin(st,index=0)
+                    self.line.addStation_by_origin(st, index=0)
         else:
             length = self.lineLength()
             for st in graph.stationDicts():
@@ -941,7 +947,7 @@ class Graph:
         for train in self.trains():
             train.setItem(None)
 
-    def stationMile(self,name:str):
+    def stationMile(self, name: str):
         """
         返回车站的里程数据，若不存在返回-1.不支持域解析符。2019.02.03删除线性算法。
         2019.02.23改为：支持域解析符。
@@ -951,33 +957,33 @@ class Graph:
             return -1
         return st["licheng"]
 
-    def adjacentStation(self,name:str,ignore:list):
+    def adjacentStation(self, name: str, ignore: list):
         index = self.stationIndex(name)
-        if index>0:
-            if self.line.stations[index-1]['zhanming'] not in ignore:
+        if index > 0:
+            if self.line.stations[index - 1]['zhanming'] not in ignore:
                 # 2019.02.23修改，条件少了zhanming，not in的判断相当于没用
-                return self.line.stations[index-1]["zhanming"]
+                return self.line.stations[index - 1]["zhanming"]
 
-        if index<len(self.line.stations)-1:
-            if self.line.stations[index+1]['zhanming'] not in ignore:
-                return self.line.stations[index+1]["zhanming"]
+        if index < len(self.line.stations) - 1:
+            if self.line.stations[index + 1]['zhanming'] not in ignore:
+                return self.line.stations[index + 1]["zhanming"]
         print("no adj")
         return None
 
-    def stationIndex(self,name:str):
-        for i,st in enumerate(self.line.stations):
-            if stationEqual(st["zhanming"] , name):
+    def stationIndex(self, name: str):
+        for i, st in enumerate(self.line.stations):
+            if stationEqual(st["zhanming"], name):
                 return i
-        raise Exception("No such station",name)
+        raise Exception("No such station", name)
 
-    def stationByDict(self,name:str,strict=False):
+    def stationByDict(self, name: str, strict=False):
         """
         根据站名返回dict对象，函数名写错了。支持域解析符。
         2019.02.02删除线性算法。
         """
-        return self.line.stationDictByName(name,strict)
+        return self.line.stationDictByName(name, strict)
 
-    def passedStationCount(self,st1:str,st2:str,down:bool)->int:
+    def passedStationCount(self, st1: str, st2: str, down: bool) -> int:
         """
         检查以st1为发站，st2为到站，方向为down的区间内有多少个站。2.0新增。
         """
@@ -985,28 +991,28 @@ class Graph:
         s2 = self.stationIndex(st2)
         dir_ = 0b1 if down else 0b10
         cnt = 0
-        t1 = min((s1,s2))
-        t2 = max((s1,s2))
+        t1 = min((s1, s2))
+        t2 = max((s1, s2))
         # print("t1 t2",t1,t2)
-        for i in range(t1+1,t2):
+        for i in range(t1 + 1, t2):
             dct = self.line.stationDictByIndex(i)
-            if dir_ & dct.get('direction',0b11):
-                cnt+= 1
+            if dir_ & dct.get('direction', 0b11):
+                cnt += 1
         # print("passedStationCount",st1,st2,down,cnt)
         return cnt
 
-    def resetStationName(self,old,new,auto_field=False):
+    def resetStationName(self, old, new, auto_field=False):
         old_dict = self.stationByDict(old)
         if old_dict is not None:
             old_dict["zhanming"] = new if not auto_field else new.split('::')[0]
 
         for ruler in self.line.rulers:
-            ruler.changeStationName(old,new)
+            ruler.changeStationName(old, new)
         for train in self.trains():
             if train.isSfz(old):
-                train.sfz=new
+                train.sfz = new
             if train.isZdz(old):
-                train.zdz=new
+                train.zdz = new
             if train._localFirst == old:
                 train._localFirst = new
             elif train._localLast == old:
@@ -1014,9 +1020,9 @@ class Graph:
             st_dict = train.stationDict(old)
             if st_dict is not None:
                 st_dict["zhanming"] = new
-        self.line.changeStationNameUpdateMap(old,new)
+        self.line.changeStationNameUpdateMap(old, new)
 
-    def addTrainByGraph(self,graph,cover=False):
+    def addTrainByGraph(self, graph, cover=False):
         """
         添加车次，返回数量
         """
@@ -1034,7 +1040,7 @@ class Graph:
 
         return num
 
-    def setMarkdown(self,mark:str):
+    def setMarkdown(self, mark: str):
         self._markdown = mark
 
     def markdown(self):
@@ -1044,62 +1050,62 @@ class Graph:
             self._markdown = ""
             return ''
 
-    def save_excel(self,filename:str):
+    def save_excel(self, filename: str):
         try:
             import openpyxl
-            from openpyxl.styles import Font,Alignment
+            from openpyxl.styles import Font, Alignment
         except ImportError:
             return
-        wb=openpyxl.Workbook()
-        ws=wb.active
-        ws['A1']=f'{self.firstStation()}-{self.lastStation()}间列车时刻表'
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws['A1'] = f'{self.firstStation()}-{self.lastStation()}间列车时刻表'
 
-        #写入左侧表头
-        ws['A3']='始发站'
+        # 写入左侧表头
+        ws['A3'] = '始发站'
         ws.merge_cells('A3:A4')
-        ws['A5']='终到站'
+        ws['A5'] = '终到站'
         ws.merge_cells('A5:A6')
-        ws['A7']='列车种类'
+        ws['A7'] = '列车种类'
         ws.merge_cells('A7:A8')
-        ws['A9']='车次'
-        ws['A10']='车站'
-        for row in range(3,9):
+        ws['A9'] = '车次'
+        ws['A10'] = '车站'
+        for row in range(3, 9):
             ws.row_dimensions[row].font = Font(name='SimSum', size=9)
-            ws.row_dimensions[row].alignment=Alignment(horizontal='center',vertical='center')
+            ws.row_dimensions[row].alignment = Alignment(horizontal='center', vertical='center')
             ws.row_dimensions[row].height = 9.7
 
-        start=11  #从第11行开始表格
-        #写入车站
-        station_row_dict={}
-        cur=11
+        start = 11  # 从第11行开始表格
+        # 写入车站
+        station_row_dict = {}
+        cur = 11
         for station in self.stations():
-            ws.cell(row=cur,column=1,value=station)
-            ws.merge_cells(start_row=cur,end_row=cur+1,start_column=1,end_column=1)
-            station_row_dict[station]=cur
-            ws.row_dimensions[cur].height=9.7
-            ws.row_dimensions[cur+1].height=9.7
+            ws.cell(row=cur, column=1, value=station)
+            ws.merge_cells(start_row=cur, end_row=cur + 1, start_column=1, end_column=1)
+            station_row_dict[station] = cur
+            ws.row_dimensions[cur].height = 9.7
+            ws.row_dimensions[cur + 1].height = 9.7
             ws.row_dimensions[cur].alignment = Alignment(horizontal='center', vertical='center')
-            ws.row_dimensions[cur+1].alignment = Alignment(horizontal='center', vertical='center')
+            ws.row_dimensions[cur + 1].alignment = Alignment(horizontal='center', vertical='center')
             cur += 2
-        ws.column_dimensions['A'].width=12
+        ws.column_dimensions['A'].width = 12
 
-        #写入车次，先下行
-        last_merge_sfz,last_merge_zdz,last_merge_type=1,1,1
+        # 写入车次，先下行
+        last_merge_sfz, last_merge_zdz, last_merge_type = 1, 1, 1
         col = 2
-        last_train=None
+        last_train = None
         for train in self.trains():
             for dct in train.itemInfo():
                 if not dct['down']:
                     continue
-                if last_train and train.sfz==last_train.sfz:
+                if last_train and train.sfz == last_train.sfz:
                     try:
                         ws.unmerge_cells(start_row=3, end_row=4, start_column=last_merge_sfz, end_column=col - 1)
                     except:
                         pass
-                    ws.merge_cells(start_row=3,end_row=4,start_column=last_merge_sfz,end_column=col)
+                    ws.merge_cells(start_row=3, end_row=4, start_column=last_merge_sfz, end_column=col)
                 else:
                     ws.merge_cells(start_row=3, end_row=4, start_column=col, end_column=col)
-                    last_merge_sfz=col
+                    last_merge_sfz = col
                 ws.cell(row=3, column=col, value=train.sfz)
 
                 if last_train and train.zdz == last_train.zdz:
@@ -1110,104 +1116,104 @@ class Graph:
                     ws.merge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col)
                 else:
                     ws.merge_cells(start_row=5, end_row=6, start_column=col, end_column=col)
-                    last_merge_zdz=col
-                c=ws.cell(row=5, column=col, value=train.zdz)
-                col_str=c.column
-                ws.column_dimensions[col_str].width=6  #设置列宽为5
+                    last_merge_zdz = col
+                c = ws.cell(row=5, column=col, value=train.zdz)
+                col_str = c.column
+                ws.column_dimensions[col_str].width = 6  # 设置列宽为5
 
                 if last_train and train.type == last_train.type:
                     try:
-                        ws.unmerge_cells(start_row=7,end_row=8,start_column=last_merge_type,end_column=col-1)
+                        ws.unmerge_cells(start_row=7, end_row=8, start_column=last_merge_type, end_column=col - 1)
                     except:
                         pass
                     ws.merge_cells(start_row=7, end_row=8, start_column=last_merge_type, end_column=col)
                 else:
                     ws.merge_cells(start_row=7, end_row=8, start_column=col, end_column=col)
-                    last_merge_type=col
+                    last_merge_type = col
                 ws.cell(row=7, column=col, value=train.type)
 
-                checi=train.fullCheci()
+                checi = train.fullCheci()
                 if '/' in checi:
-                    ws.cell(row=9,column=col,value=checi.split('/')[0])
-                    ws.cell(row=10,column=col,value='/'+checi.split('/',maxsplit=1)[1])
+                    ws.cell(row=9, column=col, value=checi.split('/')[0])
+                    ws.cell(row=10, column=col, value='/' + checi.split('/', maxsplit=1)[1])
                 else:
-                    ws.cell(row=9,column=col,value=checi)
-                    ws.merge_cells(start_row=9,end_row=10,start_column=col,end_column=col)
+                    ws.cell(row=9, column=col, value=checi)
+                    ws.merge_cells(start_row=9, end_row=10, start_column=col, end_column=col)
 
-                last_dict=None
+                last_dict = None
 
                 # 时刻表循环
                 for st_dict in train.timetable:
-                    for i,s in station_row_dict.items():
-                        if stationEqual(i,st_dict['zhanming']):
-                            row=s
+                    for i, s in station_row_dict.items():
+                        if stationEqual(i, st_dict['zhanming']):
+                            row = s
                             break
                     else:
                         continue
 
                     if train.isSfz(st_dict['zhanming']):
-                        ws.cell(row=row,column=col,value='')
-                        ws.cell(row=row+1,column=col,value=self.outTime(st_dict['cfsj'],True))
+                        ws.cell(row=row, column=col, value='')
+                        ws.cell(row=row + 1, column=col, value=self.outTime(st_dict['cfsj'], True))
 
                     elif train.isZdz(st_dict["zhanming"]):
-                        ws.cell(row=row,column=col,value=self.outTime(st_dict['ddsj'],True))
-                        ws.cell(row=row+1,column=col,value='    --')
+                        ws.cell(row=row, column=col, value=self.outTime(st_dict['ddsj'], True))
+                        ws.cell(row=row + 1, column=col, value='    --')
 
                     elif train.stationStopped(st_dict):
-                        #本站停车，无条件写入完整到达时刻和不完整出发时刻
-                        ddsj_str=f'{st_dict["ddsj"].hour:2d}:{st_dict["ddsj"].minute:02d}'
-                        sec=st_dict['ddsj'].second
+                        # 本站停车，无条件写入完整到达时刻和不完整出发时刻
+                        ddsj_str = f'{st_dict["ddsj"].hour:2d}:{st_dict["ddsj"].minute:02d}'
+                        sec = st_dict['ddsj'].second
                         if sec:
-                            ddsj_str+=f"{sec:02d}"
+                            ddsj_str += f"{sec:02d}"
                         else:
-                            ddsj_str+='  '
-                        ws.cell(row=row,column=col,value=ddsj_str)
-                        if st_dict['ddsj'].hour==st_dict['cfsj'].hour:
-                            cfsj_str='   '
+                            ddsj_str += '  '
+                        ws.cell(row=row, column=col, value=ddsj_str)
+                        if st_dict['ddsj'].hour == st_dict['cfsj'].hour:
+                            cfsj_str = '   '
                         else:
-                            cfsj_str=f"{st_dict['cfsj'].hour:2d}:"
-                        cfsj_str+=f'{st_dict["cfsj"].minute:02d}'
+                            cfsj_str = f"{st_dict['cfsj'].hour:2d}:"
+                        cfsj_str += f'{st_dict["cfsj"].minute:02d}'
                         sec = st_dict['cfsj'].second
                         if sec:
                             ddsj_str += f"{sec:02d}"
                         else:
                             ddsj_str += '  '
-                        ws.cell(row=row+1, column=col, value=cfsj_str)
+                        ws.cell(row=row + 1, column=col, value=cfsj_str)
 
                     else:
-                        give_hour=False
+                        give_hour = False
                         if not last_dict:
-                            give_hour=True
+                            give_hour = True
                         elif last_dict['cfsj'].hour != st_dict['ddsj'].hour:
-                            give_hour=True
-                        ws.cell(row=row,column=col,value='   ...')
-                        tgsj_str=f'{st_dict["ddsj"].hour:2d}:' if give_hour else '   '
-                        tgsj_str+=f'{st_dict["ddsj"].minute:02d}'
+                            give_hour = True
+                        ws.cell(row=row, column=col, value='   ...')
+                        tgsj_str = f'{st_dict["ddsj"].hour:2d}:' if give_hour else '   '
+                        tgsj_str += f'{st_dict["ddsj"].minute:02d}'
                         sec = st_dict['ddsj'].second
                         if sec:
                             tgsj_str += f"{sec:02d}"
                         else:
                             tgsj_str += '  '
-                        ws.cell(row=row+1, column=col, value=tgsj_str)
-                    last_dict=st_dict
-                col+=1
-                last_train=train
+                        ws.cell(row=row + 1, column=col, value=tgsj_str)
+                    last_dict = st_dict
+                col += 1
+                last_train = train
 
-        #上行
+        # 上行
         for train in self.trains():
             for dct in train.itemInfo():
                 if dct['down']:
                     continue
-                if last_train and train.sfz==last_train.sfz:
+                if last_train and train.sfz == last_train.sfz:
                     try:
                         ws.unmerge_cells(start_row=3, end_row=4, start_column=last_merge_sfz, end_column=col - 1)
                     except:
                         pass
-                    ws.merge_cells(start_row=3,end_row=4,start_column=last_merge_sfz,end_column=col)
+                    ws.merge_cells(start_row=3, end_row=4, start_column=last_merge_sfz, end_column=col)
                 else:
                     ws.merge_cells(start_row=3, end_row=4, start_column=col, end_column=col)
-                    last_merge_sfz=col
-                c=ws.cell(row=3, column=col, value=train.sfz)
+                    last_merge_sfz = col
+                c = ws.cell(row=3, column=col, value=train.sfz)
                 col_str = c.column
                 ws.column_dimensions[col_str].width = 6  # 设置列宽为5
 
@@ -1219,60 +1225,60 @@ class Graph:
                     ws.merge_cells(start_row=5, end_row=6, start_column=last_merge_zdz, end_column=col)
                 else:
                     ws.merge_cells(start_row=5, end_row=6, start_column=col, end_column=col)
-                    last_merge_zdz=col
+                    last_merge_zdz = col
                 ws.cell(row=5, column=col, value=train.zdz)
 
                 if last_train and train.type == last_train.type:
                     try:
-                        ws.unmerge_cells(start_row=7,end_row=8,start_column=last_merge_type,end_column=col-1)
+                        ws.unmerge_cells(start_row=7, end_row=8, start_column=last_merge_type, end_column=col - 1)
                     except:
                         pass
                     ws.merge_cells(start_row=7, end_row=8, start_column=last_merge_type, end_column=col)
                 else:
                     ws.merge_cells(start_row=7, end_row=8, start_column=col, end_column=col)
-                    last_merge_type=col
+                    last_merge_type = col
                 ws.cell(row=7, column=col, value=train.type)
 
-                checi=train.fullCheci()
+                checi = train.fullCheci()
                 if '/' in checi:
-                    ws.cell(row=9,column=col,value=checi.split('/')[0])
-                    ws.cell(row=10,column=col,value='/'+checi.split('/',maxsplit=1)[1])
+                    ws.cell(row=9, column=col, value=checi.split('/')[0])
+                    ws.cell(row=10, column=col, value='/' + checi.split('/', maxsplit=1)[1])
                 else:
-                    ws.cell(row=9,column=col,value=checi)
-                    ws.merge_cells(start_row=9,end_row=10,start_column=col,end_column=col)
+                    ws.cell(row=9, column=col, value=checi)
+                    ws.merge_cells(start_row=9, end_row=10, start_column=col, end_column=col)
 
-                last_dict=None
-                #时刻表循环
+                last_dict = None
+                # 时刻表循环
                 for st_dict in train.timetable:
-                    for i,s in station_row_dict.items():
-                        if stationEqual(i,st_dict['zhanming']):
-                            row=s
+                    for i, s in station_row_dict.items():
+                        if stationEqual(i, st_dict['zhanming']):
+                            row = s
                             break
                     else:
                         continue
 
                     if train.isSfz(st_dict['zhanming']):
-                        ws.cell(row=row+1,column=col,value='')
-                        ws.cell(row=row,column=col,value=self.outTime(st_dict['cfsj'],True))
+                        ws.cell(row=row + 1, column=col, value='')
+                        ws.cell(row=row, column=col, value=self.outTime(st_dict['cfsj'], True))
 
                     elif train.isZdz(st_dict["zhanming"]):
-                        ws.cell(row=row+1,column=col,value=self.outTime(st_dict['ddsj'],True))
-                        ws.cell(row=row,column=col,value='    --')
+                        ws.cell(row=row + 1, column=col, value=self.outTime(st_dict['ddsj'], True))
+                        ws.cell(row=row, column=col, value='    --')
 
                     elif train.stationStopped(st_dict):
-                        #本站停车，无条件写入完整到达时刻和不完整出发时刻
-                        ddsj_str=f'{st_dict["ddsj"].hour:2d}:{st_dict["ddsj"].minute:02d}'
-                        sec=st_dict['ddsj'].second
+                        # 本站停车，无条件写入完整到达时刻和不完整出发时刻
+                        ddsj_str = f'{st_dict["ddsj"].hour:2d}:{st_dict["ddsj"].minute:02d}'
+                        sec = st_dict['ddsj'].second
                         if sec:
-                            ddsj_str+=f"{sec:02d}"
+                            ddsj_str += f"{sec:02d}"
                         else:
-                            ddsj_str+='  '
-                        ws.cell(row=row+1,column=col,value=ddsj_str)
-                        if st_dict['ddsj'].hour==st_dict['cfsj'].hour:
-                            cfsj_str='   '
+                            ddsj_str += '  '
+                        ws.cell(row=row + 1, column=col, value=ddsj_str)
+                        if st_dict['ddsj'].hour == st_dict['cfsj'].hour:
+                            cfsj_str = '   '
                         else:
-                            cfsj_str=f"{st_dict['cfsj'].hour:2d}:"
-                        cfsj_str+=f'{st_dict["cfsj"].minute:02d}'
+                            cfsj_str = f"{st_dict['cfsj'].hour:2d}:"
+                        cfsj_str += f'{st_dict["cfsj"].minute:02d}'
                         sec = st_dict['cfsj'].second
                         if sec:
                             ddsj_str += f"{sec:02d}"
@@ -1281,33 +1287,32 @@ class Graph:
                         ws.cell(row=row, column=col, value=cfsj_str)
 
                     else:
-                        give_hour=False
+                        give_hour = False
                         if not last_dict:
-                            give_hour=True
+                            give_hour = True
                         elif last_dict['cfsj'].hour != st_dict['ddsj'].hour:
-                            give_hour=True
-                        ws.cell(row=row+1,column=col,value='   ...')
-                        tgsj_str=f'{st_dict["ddsj"].hour:2d}:' if give_hour else '   '
-                        tgsj_str+=f'{st_dict["ddsj"].minute:02d}'
+                            give_hour = True
+                        ws.cell(row=row + 1, column=col, value='   ...')
+                        tgsj_str = f'{st_dict["ddsj"].hour:2d}:' if give_hour else '   '
+                        tgsj_str += f'{st_dict["ddsj"].minute:02d}'
                         sec = st_dict['ddsj'].second
                         if sec:
                             tgsj_str += f"{sec:02d}"
                         else:
                             tgsj_str += '  '
                         ws.cell(row=row, column=col, value=tgsj_str)
-                col+=1
-                last_train=train
+                col += 1
+                last_train = train
 
-        for row in range(1,ws.max_row+1):
-            for col in range(1,ws.max_column+1):
-                ws.cell(row=row,column=col).alignment=Alignment(horizontal='center',
-                                                                vertical='center',shrink_to_fit=True)
-                ws.cell(row=row,column=col).font=Font(name='宋体',size=9)
-
+        for row in range(1, ws.max_row + 1):
+            for col in range(1, ws.max_column + 1):
+                ws.cell(row=row, column=col).alignment = Alignment(horizontal='center',
+                                                                   vertical='center', shrink_to_fit=True)
+                ws.cell(row=row, column=col).font = Font(name='宋体', size=9)
 
         wb.save(filename)
 
-    def outTime(self,tgsj,give_hour:bool):
+    def outTime(self, tgsj, give_hour: bool):
         tgsj_str = f'{tgsj.hour:2d}:' if give_hour else '   '
         tgsj_str += f'{tgsj.minute:02d}'
         sec = tgsj.second
@@ -1317,7 +1322,7 @@ class Graph:
             tgsj_str += '  '
         return tgsj_str
 
-    def getIntervalTrains(self,start,end,trainFilter):
+    def getIntervalTrains(self, start, end, trainFilter):
         """
         返回某个区间办客车次列表。数据结构为list<dict>。
         2.1版本修改逻辑为：两站皆办理业务才被选入。
@@ -1340,21 +1345,21 @@ class Graph:
             p2 = train.stationBusiness(end_dict)
             if not (p1 and p2):
                 continue
-            if not train.stationBefore(start,end):
+            if not train.stationBefore(start, end):
                 continue
             isSfz = train.isSfz(start)
             isZdz = train.isZdz(end)
             train_dict = {
-                'train':train,
-                'isSfz':isSfz,
-                'isZdz':isZdz,
-                'from':start_dict['zhanming'],
-                'to':end_dict['zhanming']
+                'train': train,
+                'isSfz': isSfz,
+                'isZdz': isZdz,
+                'from': start_dict['zhanming'],
+                'to': end_dict['zhanming']
             }
             interval_list.append(train_dict)
         return interval_list
 
-    def getIntervalCount(self,fromOrTo, isStart, trainFilter, passenger_only=False,freight_only=False):
+    def getIntervalCount(self, fromOrTo, isStart, trainFilter, passenger_only=False, freight_only=False):
         """
         获取区间对数表。
         :param fromOrTo:发站或到站
@@ -1366,15 +1371,15 @@ class Graph:
         """
         infoList = []
         if isStart:
-            for st in self.businessStationNames(passenger_only,freight_only):
-                if not stationEqual(fromOrTo,st):
-                    infoList.append({'from':fromOrTo,'to':st,'info':self.getIntervalTrains(fromOrTo,st,
-                                                                                           trainFilter)})
+            for st in self.businessStationNames(passenger_only, freight_only):
+                if not stationEqual(fromOrTo, st):
+                    infoList.append({'from': fromOrTo, 'to': st, 'info': self.getIntervalTrains(fromOrTo, st,
+                                                                                                trainFilter)})
         else:
-            for st in self.businessStationNames(passenger_only,freight_only):
-                if not stationEqual(fromOrTo,st):
-                    infoList.append({'to':fromOrTo,'from':st,'info':self.getIntervalTrains(st,fromOrTo,
-                                                                                           trainFilter)})
+            for st in self.businessStationNames(passenger_only, freight_only):
+                if not stationEqual(fromOrTo, st):
+                    infoList.append({'to': fromOrTo, 'from': st, 'info': self.getIntervalTrains(st, fromOrTo,
+                                                                                                trainFilter)})
 
         count_list = []
         for info_dict in infoList:
@@ -1384,17 +1389,17 @@ class Graph:
             countZdz = len([1 for st in info if st['isZdz']])
             countSfZd = len([1 for st in info if st['isZdz'] and st['isSfz']])
             int_dict = {
-                'from':info_dict['from'],
-                'to':info_dict['to'],
-                'count':count,
-                'countSfz':countSfz,
-                'countZdz':countZdz,
-                'countSfZd':countSfZd
+                'from': info_dict['from'],
+                'to': info_dict['to'],
+                'count': count,
+                'countSfz': countSfz,
+                'countZdz': countZdz,
+                'countSfZd': countSfZd
             }
             count_list.append(int_dict)
         return count_list
 
-    def stationByIndex(self,idx):
+    def stationByIndex(self, idx):
         return self.line.stations[idx]
 
     def resetAllTrainsLocalFirstLast(self):
@@ -1405,7 +1410,7 @@ class Graph:
             train.updateLocalFirst(self)
             train.updateLocalLast(self)
 
-    def setMargin(self,ruler_label,mile_label,station_label,left_and_right,top_and_bottom,system=False)->bool:
+    def setMargin(self, ruler_label, mile_label, station_label, left_and_right, top_and_bottom, system=False) -> bool:
         """
         1.4版本修改
         用户设置页边距。注意参数含义与本系统内部使用的不同。返回是否变化。
@@ -1413,23 +1418,23 @@ class Graph:
         left_white = 15
         right_white = 10
         margins = {
-            "left_white":left_white,
-            "right_white":right_white,
-            "left": ruler_label+mile_label+station_label+left_and_right+left_white,
+            "left_white": left_white,
+            "right_white": right_white,
+            "left": ruler_label + mile_label + station_label + left_and_right + left_white,
             "up": top_and_bottom,
             "down": top_and_bottom,
-            "right": left_and_right+station_label+right_white,
+            "right": left_and_right + station_label + right_white,
             "label_width": station_label,
             "mile_label_width": mile_label,
             "ruler_label_width": ruler_label,
         }
         UIDict = self.UIConfigData() if not system else self.sysConfigData()
-        changed = UIDict.get('margins',None) != margins
+        changed = UIDict.get('margins', None) != margins
         UIDict["margins"] = margins
         return changed
 
-    def toTrc(self,filename):
-        fp = open(filename,'w',encoding='utf-8',errors='ignore')
+    def toTrc(self, filename):
+        fp = open(filename, 'w', encoding='utf-8', errors='ignore')
         fp.write('***Circuit***\n')
         fp.write(f"{self.lineName() if self.lineName() else '列车运行图'}\n")
         fp.write(f"{int(self.lineLength())}\n")
@@ -1438,7 +1443,7 @@ class Graph:
             fp.write(f"{dct['zhanming']},{int(dct['licheng'])},{dct['dengji']},"
                      f"{'false' if dct.get('show',True) else 'true'},,true,4,1440,1440,")
             if last_dct is not None:
-                node = self.line.forbid.getInfo(last_dct['zhanming'],dct['zhanming'])
+                node = self.line.forbid.getInfo(last_dct['zhanming'], dct['zhanming'])
                 if node is not None and node['begin'] != node['end']:
                     fp.write(f"{node['begin'].strftime('%H:%M')}-{node['end'].strftime('%H:%M')}\n")
                 else:
@@ -1450,13 +1455,13 @@ class Graph:
             fp.write('===Train===\n')
             fp.write(f"trf2,{train.fullCheci()},{train.downCheci()},{train.upCheci()}")
             circuit = train.carriageCircuit()
-            if isinstance(circuit,Circuit):
+            if isinstance(circuit, Circuit):
                 fp.write(f",{circuit.name().replace('_','-')}_{circuit.trainOrderNum(train)}\n")
             else:
                 fp.write(',NA\n')
             fp.write(f"{train.sfz if train.sfz else 'null'}\n")
             fp.write(f"{train.zdz if train.zdz else 'null'}\n")
-            for name,ddsj,cfsj in train.station_infos():
+            for name, ddsj, cfsj in train.station_infos():
                 fp.write(f"{name},{ddsj.strftime('%H:%M:%S')},{cfsj.strftime('%H:%M:%S')},true,NA\n")
         fp.write('---Color---\n')
         for train in self.trains():
@@ -1469,12 +1474,12 @@ class Graph:
                 fp.write(f"{train.fullCheci()},0,{train.lineWidth()}")
         fp.close()
 
-    def circuitByName(self,name:str,*,throwError=True)->Circuit:
+    def circuitByName(self, name: str, *, throwError=True) -> Circuit:
         """
         根据交路名查找交路对象。如果没有对应交路，抛出CircuitNotFoundError。
         """
         for circuit in self._circuits:
-            if circuit.name()==name:
+            if circuit.name() == name:
                 return circuit
         if throwError:
             raise CircuitNotFoundError(name)
@@ -1488,19 +1493,19 @@ class Graph:
     def circuitCount(self):
         return len(self._circuits)
 
-    def addCircuit(self,circuit:Circuit):
+    def addCircuit(self, circuit: Circuit):
         """
         若名称已存在，抛出CircuitExistedError
         """
-        if self.circuitByName(circuit.name(),throwError=False) is not None:
+        if self.circuitByName(circuit.name(), throwError=False) is not None:
             raise CircuitExistedError(circuit.name())
         self._circuits.append(circuit)
 
-    def delCircuit(self,circuit:Circuit):
+    def delCircuit(self, circuit: Circuit):
         """
         若不存在，抛出CircuitNotFoundError
         """
-        assert isinstance(circuit,Circuit)
+        assert isinstance(circuit, Circuit)
         try:
             self._circuits.remove(circuit)
         except ValueError:
@@ -1509,7 +1514,8 @@ class Graph:
             try:
                 node.train().setCarriageCircuit(None)
             except AttributeError:
-                print("Graph::delCircuit: Unexcpeted node.train",node)
+                print("Graph::delCircuit: Unexcpeted node.train", node)
+
 
 if __name__ == '__main__':
     graph = Graph()

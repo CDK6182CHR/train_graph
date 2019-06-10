@@ -435,7 +435,7 @@ class Train():
         # 如果左边没有了，向右查找
         i = idx
         rightY = -1
-        while i < len(self.timetable):
+        while i < len(self.timetable)-1:
             i += 1
             rightY = graph.stationYValue(self.stationNameByIndex(i))
             if rightY != -1:
@@ -466,7 +466,11 @@ class Train():
         """
         保证数据有效。
         """
-        return self.timetable[idx]['zhanming']
+        try:
+            return self.timetable[idx]['zhanming']
+        except IndexError:
+            print("train::stationNameByIndex: index error",idx,len(self.timetable))
+            raise Exception("Exception in train.py line 473")
 
     def setUI(self,color=None,width=None):
         if color is not None:
@@ -582,7 +586,9 @@ class Train():
                     self._localFirst = name
                     return name
 
-    def localFirst(self,graph):
+    def localFirst(self,graph=None):
+        if graph is None:
+            graph = self.graph
         if self._localFirst is not None:
             return self._localFirst
         else:
@@ -599,7 +605,9 @@ class Train():
                     self._localLast = name
                     return name
 
-    def localLast(self,graph):
+    def localLast(self,graph=None):
+        if graph is None:
+            graph = self.graph
         if self._localLast is not None:
             return self._localLast
         else:
@@ -620,10 +628,12 @@ class Train():
                 break
         return count
 
-    def localCount(self,graph):
+    def localCount(self,graph=None):
         """
         只由车次信息计算过程调用，暂时保留线性算法
         """
+        if graph is None:
+            graph = self.graph
         count = 0
         for st in self.timetable:
             name = st["zhanming"]

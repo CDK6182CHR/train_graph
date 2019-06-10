@@ -142,7 +142,7 @@ class Circuit:
     def removeTrain(self,train):
         for node in self._order:
             if node.train() is train:
-                self._order.remove(train)
+                self._order.remove(node)
                 train.setCarriageCircuit(None)
                 return
 
