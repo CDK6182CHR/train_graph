@@ -61,7 +61,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190610'
+        self.build = '20190621'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -97,6 +97,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.action_widget_dict = {}
 
         self._initUI()
+        self._checkGraph()
         self.rulerPainter = None
 
     def _readSystemSetting(self):
@@ -161,6 +162,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         self._initDockFrames()
         self._initDockWidgetContents()
+        self._initDockShow()
 
         self.statusBar().showMessage("就绪")
 
@@ -199,8 +201,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initForbidWidget()
         self._initCircuitWidget()
         self._initTrainInfoWidget()
-
-        self._initDockShow()
 
     def _initDockShow(self):
         """
@@ -1191,6 +1191,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._about)
         menu.addAction(action)
 
+    def _checkGraph(self):
+        """
+        2019.06.21新增，打开运行图时检查文件，输出错误信息。
+        """
+        report = self.graph.checkGraph()
+        if report:
+            self._dout(report)
+
     def _window_menu_triggered(self, action: QtWidgets.QAction):
         widgets = {
             '线路编辑': self.lineDockWidget,
@@ -1297,6 +1305,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         else:
             self._initDockWidgetContents()
             self.setWindowTitle(f"{self.title} {self.graph.filename if self.graph.filename else '新运行图'}")
+            self._checkGraph()
 
     def _outputGraph(self):
         filename, ok = QtWidgets.QFileDialog.getSaveFileName(self,
@@ -1398,7 +1407,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def statusOut(self, note: str, seconds: int = 0):
         try:
-            self.statusBar().showMessage(note, seconds)
+            self.statusBar().showMessage(f"{datetime.now().strftime('%H:%M:%S')} {note}", seconds)
         except:
             traceback.print_exc()
 
@@ -2292,6 +2301,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.trainWidget.updateAllTrains()
         self.lineWidget.updateData()
         self.rulerWidget.setData()
+        self.forbidWidget.setData()
 
         self.statusOut("站名变更成功")
 

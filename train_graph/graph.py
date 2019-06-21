@@ -666,7 +666,12 @@ class Graph:
         2.0.2新增。根据系统设置的判断规则，返回车次对应的类型。如果不符合任何一个，返回 其他。
         """
         for nm, rg, _ in self.UIConfigData()['type_regex']:
-            if re.match(rg, checi):
+            try:
+                rgx = re.compile(rg)
+            except:
+                print("Invalid Regex! ",rg)
+                continue
+            if re.match(rgx, checi):
                 return nm
         return '其他'
 
@@ -1515,6 +1520,35 @@ class Graph:
                 node.train().setCarriageCircuit(None)
             except AttributeError:
                 print("Graph::delCircuit: Unexcpeted node.train", node)
+
+    def checkGraph(self)->str:
+        """
+        对运行图文件可能出现的问题做启动时的检查。返回是报错的字符串。没有其他影响。
+        如果没有问题，返回空串。
+        """
+        report = ""
+        # 检查正则表达式的问题
+        i = 0
+        found = False
+        for name,rg,_ in self.UIConfigData()['type_regex']:
+            try:
+                re.compile(rg)
+            except:
+                if rg == r'7\d+{3}':
+                    self.UIConfigData()['type_regex'][i] = (name,r'7\d{3}',_)
+                else:
+                    found=True
+                    report += f"列车类型[{name}]的正则表达式[{rg}]错误！\n"
+            else:
+                pass
+            i+=1
+        if found:
+            report += "请至“运行图设置”（ctrl+G）面板中“类型管理”中修正错误的正则表达式。\n"
+
+        if report:
+            report += "此信息提示当前运行图文件可能不符合此版本软件的要求。您可以忽略此提示，但有可能导致" \
+                      "程序运行异常。下次打开本文件时，如果仍未解决，此消息仍会显示。\n"
+        return report
 
 
 if __name__ == '__main__':

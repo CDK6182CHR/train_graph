@@ -83,6 +83,7 @@ class ForbidWidget(QtWidgets.QWidget):
         self.checkDifferent.setChecked(self.data.different())
         self.checkDownShow.setChecked(self.data.downShow())
         self.checkUpShow.setChecked(self.data.upShow())
+        self._setTableWidget()  # 此处效率问题较明显
 
     def _setTableWidget(self):
         tableWidget = self.tableWidget
@@ -233,7 +234,7 @@ class ForbidWidget(QtWidgets.QWidget):
             return
         self.initUI()
 
-    def qustion(self, note: str, default=True):
+    def question(self, note: str, default=True):
         flag = QtWidgets.QMessageBox.question(self, '天窗编辑', note,
                                               QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
         if flag == QtWidgets.QMessageBox.Yes:
