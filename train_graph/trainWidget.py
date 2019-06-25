@@ -202,6 +202,8 @@ class TrainWidget(QtWidgets.QWidget):
         将车次表末尾的count个添加到表格中，已知其他车次信息不变。
         called when: 从运行图添加车次。
         """
+        if count==0:
+            return
         for train in self.graph._trains[-count:]:
             self.addTrain(train)
 

@@ -718,7 +718,9 @@ class CurrentWidget(QtWidgets.QWidget):
             cfsjSpin = timeTable.cellWidget(row, 2)
             cfsj = strToTime(cfsjSpin.time().toString("hh:mm:ss"))
 
-            train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()))
+            note = timeTable.item(row,4).text()
+
+            train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()),note=note)
 
         self.setData(train)
 

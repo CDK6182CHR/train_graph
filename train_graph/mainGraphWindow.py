@@ -61,7 +61,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190621'
+        self.build = '20190625'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -155,7 +155,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._selectedTrain = train
 
     def _initUI(self):
-        self.statusBar().showMessage("系统正在初始化……")
+        self.statusOut("系统正在初始化……")
         self.setCentralWidget(self.GraphWidget)
         self._initMenuBar()
         self._initToolBar()
@@ -164,7 +164,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initDockWidgetContents()
         self._initDockShow()
 
-        self.statusBar().showMessage("就绪")
+        self.statusOut("就绪")
 
     def _initDockFrames(self):
         self._initTrainDock()
@@ -1336,15 +1336,17 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _saveGraph(self):
         filename = self.graph.graphFileName()
-        status: QtWidgets.QStatusBar = self.statusBar()
-        status.showMessage("正在保存")
+        # status: QtWidgets.QStatusBar = self.statusBar()
+        self.statusOut("正在保存")
         if not self.graph.graphFileName():
-            filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
-                                                             filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')[0]
+            filename,ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
+                                                             filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')
+            if not ok:
+                return
         self.graph.setVersion(self.version)
         self.graph.save(filename)
         self.graph.setGraphFileName(filename)
-        status.showMessage("保存成功")
+        self.statusOut("保存成功")
         self.setWindowTitle(f"{self.title} {self.graph.filename if self.graph.filename else '新运行图'}")
 
     def _saveGraphAs(self):
@@ -1353,11 +1355,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
                                                          filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')[0]
-        self.statusBar().showMessage("正在保存")
+        self.statusOut("正在保存")
         self.graph.setVersion(self.version)
         self.graph.save(filename)
         self.graph.setGraphFileName(filename)
-        self.statusBar().showMessage("保存成功")
+        self.statusOut("保存成功")
         self._system["last_file"] = filename
         self.setWindowTitle(f"{self.title} {self.graph.filename if self.graph.filename else '新运行图'}")
 
@@ -2437,7 +2439,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         flayout = QtWidgets.QFormLayout()
         lineEdit = QtWidgets.QLineEdit()
-        lineEdit.setEnabled(False)
+        lineEdit.setFocusPolicy(Qt.NoFocus)
         lineEdit.setText(train.fullCheci())
         flayout.addRow("当前车次", lineEdit)
         vlayout.addLayout(flayout)
@@ -2510,6 +2512,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.GraphWidget.addTrainLine(new_train)
 
         cnt = tableWidget.rowCount() - len(failed)
+        print("to add to checi-list:",cnt)
         self.trainWidget.addTrainsFromBottom(cnt)
 
         text = f"成功复制{cnt}个车次。"

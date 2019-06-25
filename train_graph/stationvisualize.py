@@ -95,13 +95,24 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             "down":bool,
             "train":Train,
         }
+        2019.06.24处理bug: 在0:00前后半分钟内通过的列车引起问题。解决方案：先将通过者处理成1分钟，
+        再处理跨日。在train_dict中新增关于是否是通过的判据。
         """
         self.down_list = [[],]  # 下行股道表，每个元素（list）是一个股道的占用次序。
         self.up_list = [[],]
         self.single_list = [[],]
         for train_dict in self.station_list:
-            train_dict["ddsj"].date().replace(1900,1,1)
-            train_dict["cfsj"].date().replace(1900,1,1)
+            train_dict.setdefault('isPassed',self._isPassed(train_dict))
+            if self._isPassed(train_dict):
+                train_dict['ddsj']-=timedelta(days=0,seconds=30)
+                train_dict['cfsj']+=timedelta(days=0,seconds=30)
+            # datetime.date().replace()不能有效改变日期
+            o:datetime = train_dict['ddsj']
+            train_dict["ddsj"]=datetime(1900,1,1,o.hour,o.minute,o.second)
+            o: datetime = train_dict['cfsj']
+            train_dict["cfsj"]=datetime(1900,1,1,o.hour,o.minute,o.second)
+            if train_dict['train'].fullCheci() == 'D941/4/1':
+                print("D941/4/1", train_dict)
             if train_dict["cfsj"] < train_dict["ddsj"]:
                 # 跨日处理
                 new_dict = {
@@ -109,12 +120,13 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
                     "cfsj":train_dict["cfsj"],
                     "down":train_dict["down"],
                     "train":train_dict["train"],
-                    "station_name":train_dict["station_name"]
+                    "station_name":train_dict["station_name"],
+                    "isPassed":train_dict['isPassed'],
                 }
                 train_dict["cfsj"] = datetime(1900, 1, 1, 23, 59, 59)
                 self.station_list.append(new_dict)
 
-            if self._isPassed(train_dict):
+            if train_dict['isPassed']:
                 self._addPassTrain(train_dict)
             else:
                 self._addStopTrain(train_dict)
@@ -129,7 +141,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         down = train_dict["down"]
         added = False
         if self._doubleLine:
-            #双线铺画
+            # 双线铺画
             if down:
                 for i,rail in enumerate(self.down_list):
                     if self._isIdle(rail,train_dict):
@@ -149,7 +161,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
                     new_rail = [train_dict,]
                     self.up_list.append(new_rail)
         else:
-            #单线铺画
+            # 单线铺画
             for i,rail in enumerate(self.single_list):
                 if self._isIdle(rail,train_dict):
                     rail.append(train_dict)
@@ -353,14 +365,16 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         dd_x = self._xValueCount(ddsj)
         cf_x = self._xValueCount(cfsj)
         train = train_dict["train"]
+        if train.fullCheci()=='D941/4/1':
+            print(train_dict)
         color = QtGui.QColor(train.color(self.graph))
         width = cf_x - dd_x
         rectItem: QtWidgets.QGraphicsRectItem = self.scene.addRect(dd_x, start_y, width, self.row_height)
         rectItem.setBrush(QtGui.QBrush(color))
 
         text = f"{train.fullCheci()} {train.stationDownStr(self.station_name,self.graph)} "
-        if self._isPassed(train_dict):
-            text += f"通过  {train_dict['ddsj'].strftime('%H:%M:%S')}"
+        if train_dict.get('isPassed',False):
+            text += f"通过  {(train_dict['ddsj']+timedelta(days=0,seconds=30)).strftime('%H:%M:%S')}"
         else:
             text += f"停车  {ddsj.strftime('%H:%M:%S')} — {cfsj.strftime('%H:%M:%S')}"
         text += f" {train_dict['station_name']}"

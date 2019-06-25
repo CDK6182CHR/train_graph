@@ -184,7 +184,7 @@ class Train():
         else:
             return self.checi[2]
 
-    def addStation(self,name:str,ddsj,cfsj,*,business=None,auto_cover=False,to_end=True):
+    def addStation(self,name:str,ddsj,cfsj,*,business=None,auto_cover=False,to_end=True,note=''):
         # 增加站。暂定到达时间、出发时间用datetime类。
         if isinstance(ddsj,str):
             ddsj = strToTime(ddsj)
@@ -195,6 +195,7 @@ class Train():
             "zhanming":name,
             "ddsj":ddsj,
             "cfsj":cfsj,
+            "note":note,
         }
         if business is None:
             business = self.graph.lineStationBusiness(name,
@@ -911,7 +912,7 @@ class Train():
 
         return newtrain
 
-    def start_time(self):
+    def start_time(self)->datetime:
         return self.timetable[0]["ddsj"]
 
     def delNonLocal(self,graph):
