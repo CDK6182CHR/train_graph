@@ -34,7 +34,6 @@ from .circuitWidget import CircuitWidget
 import json
 from .GraphicWidget import GraphicsWidget, TrainEventType
 from .rulerPaint import rulerPainter
-from .stationvisualize import StationGraphWidget
 from .lineDB import LineDB
 from .intervalWidget import IntervalWidget
 from .intervalCountDialog import IntervaLCountDialog
@@ -44,6 +43,9 @@ from .changeStationDialog import ChangeStationDialog
 from .batchChangeStationDialog import BatchChangeStationDialog
 from .trainComparator import TrainComparator
 from .correctionWidget import CorrectionWidget
+from .stationTimetable import StationTimetable
+from .trainTimetable import TrainTimetable
+from .helpDialog import HelpDialog
 import time
 from .thread import ThreadDialog
 import traceback
@@ -54,12 +56,11 @@ cgitb.enable(format='text')
 system_file = "system.json"
 
 class mainGraphWindow(QtWidgets.QMainWindow):
-    stationVisualSizeChanged = QtCore.pyqtSignal(int)
 
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.2.1"
+        self.version = "V2.2.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
         self.build = '20190625'
         self._system = None
@@ -92,6 +93,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.forbidDockWidget = None
         self.circuitDockWidget = None
         self.trainInfoDockWidget = None
+        self.trainTimetableDockWidget = None
         self.to_repaint = False
 
         self.action_widget_dict = {}
@@ -177,6 +179,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initForbidDock()
         self._initCircuitDock()
         self._initTrainInfoDock()
+        self._initTrainTimetableDock()
         self.action_widget_dict = {
             '线路编辑': self.lineDockWidget,
             '车次编辑': self.trainDockWidget,
@@ -188,6 +191,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '天窗编辑': self.forbidDockWidget,
             '交路编辑':self.circuitDockWidget,
             '车次信息':self.trainInfoDockWidget,
+            '车次时刻表':self.trainTimetableDockWidget,
         }
 
     def _initDockWidgetContents(self):
@@ -201,6 +205,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initForbidWidget()
         self._initCircuitWidget()
         self._initTrainInfoWidget()
+        self._initTrainTimetableWidget()
 
     def _initDockShow(self):
         """
@@ -232,6 +237,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.forbidWidget.setData()
         self.circuitWidget.setData()
         self.trainInfoWidget.setData()
+        self.trainTimetableWidget.setData()
         self.statusOut('所有停靠面板刷新完毕')
 
     def _initForbidDock(self):
@@ -258,6 +264,19 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dock.setVisible(False)
         self.trainInfoDockWidget = dock
 
+    def _initTrainTimetableDock(self):
+        dock = QtWidgets.QDockWidget()
+        dock.setWindowTitle('车次时刻表')
+        dock.visibilityChanged.connect(lambda:self._dock_visibility_changed('车次时刻表',dock))
+        self.addDockWidget(Qt.RightDockWidgetArea,dock)
+        dock.setVisible(False)
+        self.trainTimetableDockWidget = dock
+
+    def _initTrainTimetableWidget(self):
+        widget = TrainTimetable(self.graph,self)
+        self.trainTimetableDockWidget.setWidget(widget)
+        self.trainTimetableWidget = widget
+
     def _initForbidWidget(self):
         widget = ForbidWidget(self.graph.line.forbid)
         self.forbidWidget = widget
@@ -271,9 +290,16 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.circuitDockWidget.setWidget(widget)
 
     def _initTrainInfoWidget(self):
-        w = TrainInfoWidget(self.graph,self)
+        widget = QtWidgets.QScrollArea()
+        w = TrainInfoWidget(self.graph, self)
+        widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        widget.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        widget.setWidgetResizable(True)
+        widget.setWidget(w)
         self.trainInfoWidget = w
-        self.trainInfoDockWidget.setWidget(w)
+        self.trainInfoDockWidget.setWidget(widget)
+        w.editTrain.connect(self._train_table_doubleClicked)
+        w.showTimeTable.connect(self._show_timetable)
 
     def _initGuideDock(self):
         dock = QtWidgets.QDockWidget()
@@ -287,6 +313,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         widget = rulerPainter(self.GraphWidget)
         widget.trainOK.connect(self.currentWidget.setData)
         widget.trainOK.connect(self.trainInfoWidget.setData)
+        widget.trainOK.connect(self.trainTimetableWidget.setData)
         self.guideDockWidget.setWidget(widget)
 
     def _initSysDock(self):
@@ -327,6 +354,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             lambda: self.currentWidget.setData(self.currentTrain()))
         self.trainInfoDockWidget.visibilityChanged.connect(
             lambda: self.trainInfoWidget.setData(self.currentTrain())
+        )
+        self.trainTimetableDockWidget.visibilityChanged.connect(
+            lambda:self.trainTimetableWidget.setData(self.currentTrain())
         )
 
     def _check_ruler(self, train: Train):
@@ -810,6 +840,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dock: QtWidgets.QDockWidget = self.currentDockWidget
         dock.setVisible(True)
 
+    def _show_timetable(self,train:Train):
+        """
+        2019.06.25新增，强制显示时刻表。
+        """
+        self.trainTimetableDockWidget.setVisible(True)
+        self.trainTimetableWidget.setData(train)
+
     def _search_train(self, checi: str):
         if not checi:
             return
@@ -1168,10 +1205,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.actionWindow_list = []
         actions = (
             '线路编辑', '车次编辑', '标尺编辑', '选中车次设置', '运行图设置', '系统默认设置',
-            '显示类型设置', '天窗编辑','交路编辑','车次信息'
+            '显示类型设置', '天窗编辑','交路编辑','车次信息','车次时刻表'
         )
         shorcuts = (
-            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1','4','Q'
+            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1','4','Q','Y'
         )
         for a, s in zip(actions, shorcuts):
             action = QtWidgets.QAction(a, self)
@@ -1189,6 +1226,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         action = QtWidgets.QAction("关于", self)
         action.triggered.connect(self._about)
+        menu.addAction(action)
+
+        action = QtWidgets.QAction("简明功能表",self)
+        action.triggered.connect(self._function_list)
+        action.setShortcut('F1')
         menu.addAction(action)
 
     def _checkGraph(self):
@@ -1212,6 +1254,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '系统默认设置':self.sysDockWidget,
             '交路编辑':self.circuitDockWidget,
             '车次信息':self.trainInfoDockWidget,
+            '车次时刻表':self.trainTimetableDockWidget,
         }
         dock = widgets[action.text()]
         if dock is None:
@@ -1407,6 +1450,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         text += '\n本系统官方交流群：865211882'
         QtWidgets.QMessageBox.about(self, '关于', text)
 
+    def _function_list(self):
+        dialog = HelpDialog(self.graph,self)
+        dialog.exec_()
+
     def statusOut(self, note: str, seconds: int = 0):
         try:
             self.statusBar().showMessage(f"{datetime.now().strftime('%H:%M:%S')} {note}", seconds)
@@ -1453,6 +1500,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.currentWidget.setData(train)
         if self.trainInfoWidget.isVisible():
             self.trainInfoWidget.setData(train)
+        if self.trainTimetableWidget.isVisible():
+            self.trainTimetableWidget.setData(train)
 
     def _add_train_by_ruler(self):
         """
@@ -1466,6 +1515,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.rulerPainter = painter
         painter.trainOK.connect(self.currentWidget.setData)
         painter.trainOK.connect(self.trainInfoWidget.setData)
+        painter.trainOK.connect(self.trainTimetableWidget.setData)
         painter.trainOK.connect(self.trainWidget.addTrain)
         dock = QtWidgets.QDockWidget()
         dock.setWindowTitle("标尺排图向导")
@@ -1498,6 +1548,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         layout.addLayout(hlayout)
         btnCancel.clicked.connect(dialog.close)
         btnOk.clicked.connect(lambda: self._station_timetable_ok(listWidget))
+        listWidget.itemDoubleClicked.connect(btnOk.click)
 
         dialog.setLayout(layout)
         dialog.exec_()
@@ -1509,239 +1560,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         except:
             self._derr("请先选择车站！")
             return
-        timetable_dicts = self.graph.stationTimeTable(station_name)
 
-        dialog = QtWidgets.QDialog(self)
-        dialog.resize(600, 600)
-        dialog.setWindowTitle(f"车站时刻表*{station_name}")
-        layout = QtWidgets.QVBoxLayout()
-
-        checkStopOnly = QtWidgets.QCheckBox('不显示通过列车')
-        layout.addWidget(checkStopOnly)
-        checkStopOnly.toggled.connect(lambda x: self._station_timetable_stop_only_changed(timetable_dicts,
-                                                                                          tableWidget, station_name, x))
-
-        label = QtWidgets.QLabel(f"*{station_name}*在本线时刻表如下：")
-        layout.addWidget(label)
-
-        tableWidget = QtWidgets.QTableWidget()
-        tableWidget.setColumnCount(10)
-        tableWidget.setHorizontalHeaderLabels(['车次', '站名', '到点', '开点',
-                                               '类型', '停站', '方向', '始发', '终到','备注'])
-        tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-
-        header: QtWidgets.QHeaderView = tableWidget.horizontalHeader()
-        header.setSortIndicator(0, Qt.AscendingOrder)
-        header.setSortIndicatorShown(True)
-        header.setSectionsClickable(True)
-        header.sectionClicked.connect(tableWidget.sortByColumn)
-
-        column_width = (80, 100, 100, 100, 80, 80, 80, 90, 90,90)
-        for i, s in enumerate(column_width):
-            tableWidget.setColumnWidth(i, s)
-
-        self._setStationTimetable(timetable_dicts, tableWidget, station_name, False)
-
-        layout.addWidget(tableWidget)
-        hlayout = QtWidgets.QHBoxLayout()
-        btnOut = QtWidgets.QPushButton("导出")
-        btnVisual = QtWidgets.QPushButton("可视化")
-        btnClose = QtWidgets.QPushButton("关闭")
-        btnClose.clicked.connect(dialog.close)
-        btnOut.clicked.connect(lambda: self._station_timetable_out(tableWidget))
-        btnVisual.clicked.connect(lambda: self._station_visualize(timetable_dicts, station_name))
-        hlayout.addWidget(btnOut)
-        hlayout.addWidget(btnVisual)
-        hlayout.addWidget(btnClose)
-        layout.addLayout(hlayout)
-
-        dialog.setLayout(layout)
+        dialog = StationTimetable(self.graph,station_name,self)
+        dialog.showStatusInfo.connect(self.statusOut)
         dialog.exec_()
-
-    def _setStationTimetable(self, timetable_dicts, tableWidget, station_name, stop_only):
-        tableWidget.setRowCount(0)
-        row = -1
-        for _, node in enumerate(timetable_dicts):
-            train = node["train"]
-            stop_text = train.stationStopBehaviour(station_name)
-            if stop_only and stop_text in ('通过', '不通过'):
-                # print(train.fullCheci(),stop_text)
-                continue
-
-            row += 1
-            tableWidget.insertRow(row)
-            tableWidget.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
-
-            item = QtWidgets.QTableWidgetItem(train.fullCheci())
-            tableWidget.setItem(row, 0, item)
-
-            item = QtWidgets.QTableWidgetItem(node["station_name"])
-            tableWidget.setItem(row, 1, item)
-
-            item = QtWidgets.QTableWidgetItem(node["ddsj"].strftime('%H:%M:%S'))
-            tableWidget.setItem(row, 2, item)
-
-            item = QtWidgets.QTableWidgetItem(node["cfsj"].strftime('%H:%M:%S'))
-            tableWidget.setItem(row, 3, item)
-
-            item = QtWidgets.QTableWidgetItem(train.trainType())
-            tableWidget.setItem(row, 4, item)
-
-            tableWidget.setItem(row, 5, QtWidgets.QTableWidgetItem(stop_text))
-
-            down = train.stationDown(station_name,self.graph)
-            text = '下行' if  down is True else ('上行' if down is False else '未知')
-            item = QtWidgets.QTableWidgetItem(text)
-            tableWidget.setItem(row, 6, item)
-
-            text = train.sfz
-            item = QtWidgets.QTableWidgetItem(text)
-            tableWidget.setItem(row, 7, item)
-
-            text = train.zdz
-            item = QtWidgets.QTableWidgetItem(text)
-            tableWidget.setItem(row, 8, item)
-
-            text = node['note']
-            item = QtWidgets.QTableWidgetItem(text)
-            tableWidget.setItem(row, 9, item)
-
-
-    def _station_timetable_stop_only_changed(self, timetable_dicts, tableWidget, station_name,
-                                             stopOnly: bool):
-        self._setStationTimetable(timetable_dicts, tableWidget, station_name, stopOnly)
-
-    def _station_visualize(self, station_dicts: list, station_name):
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle(f"车站停车示意图*{station_name}")
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel("说明：此功能将各个车次在本线到开时间可视化，绘出股道占用时间图。"
-                                 "本图只是提供一种可能的情况，并不代表实际情况，如有雷同，纯属巧合；"
-                                 "本图默认采用双线股道铺排模式，Ⅰ、Ⅱ为上下行正线，其他为侧线；"
-                                 "所有下行车安排在下行股道；且通过车优先安排在正线，停车列车只安排在侧线。")
-        label.setWordWrap(True)
-        layout.addWidget(label)
-
-        slider = QtWidgets.QSlider(Qt.Horizontal)
-        slider.setRange(1, 120)
-        # slider.valueChanged.connect(lambda x:print(x))
-        slider.setMaximumWidth(800)
-        slider.setValue(20)
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(QtWidgets.QLabel("水平缩放"))
-        hlayout.addStretch(10)
-        hlayout.addWidget(QtWidgets.QLabel("大"))
-        hlayout.addStretch(2)
-        hlayout.addWidget(slider)
-        hlayout.addStretch(2)
-        hlayout.addWidget(QtWidgets.QLabel("小"))
-        hlayout.addStretch(20)
-        btnAdvance = QtWidgets.QPushButton("高级")
-        hlayout.addWidget(btnAdvance)
-
-        slider.valueChanged.connect(lambda x: self.stationVisualSizeChanged.emit(x))
-        layout.addLayout(hlayout)
-
-        widget = StationGraphWidget(station_dicts, self.graph,station_name, self)
-        btnAdvance.clicked.connect(lambda: self._station_visualize_advance(widget))
-        layout.addWidget(widget)
-        dialog.setLayout(layout)
-        dialog.exec_()
-
-    def _station_visualize_advance(self, visualWidget: StationGraphWidget):
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle('高级')
-        flayout = QtWidgets.QFormLayout()
-
-        group = QtWidgets.QButtonGroup()
-        radioDouble = QtWidgets.QRadioButton("双线铺画")
-        dialog.radioDouble = radioDouble
-        radioSingle = QtWidgets.QRadioButton("单线铺画")
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(radioDouble)
-        group.addButton(radioDouble)
-        hlayout.addWidget(radioSingle)
-        group.addButton(radioSingle)
-        flayout.addRow("铺画模式", hlayout)
-        if visualWidget.doubleLine():
-            radioDouble.setChecked(True)
-        else:
-            radioSingle.setChecked(True)
-        radioDouble.toggled.connect(visualWidget.setDoubleLine)
-
-        group = QtWidgets.QButtonGroup()
-        hlayout = QtWidgets.QHBoxLayout()
-        radioMainStay = QtWidgets.QRadioButton("允许")
-        radioMainStayNo = QtWidgets.QRadioButton("不允许")
-        hlayout.addWidget(radioMainStay)
-        hlayout.addWidget(radioMainStayNo)
-        dialog.radioMainStay = radioMainStay
-        group.addButton(radioMainStay)
-        group.addButton(radioMainStayNo)
-        flayout.addRow("正线停车", hlayout)
-        if visualWidget.allowMainStay():
-            radioMainStay.setChecked(True)
-        else:
-            radioMainStayNo.setChecked(True)
-        radioMainStay.toggled.connect(visualWidget.setAllowMainStay)
-
-        spinSame = QtWidgets.QSpinBox()
-        spinSame.setValue(visualWidget.sameSplitTime())
-        spinSame.setRange(0, 999)
-        spinSame.valueChanged.connect(visualWidget.setSameSplitTime)
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(spinSame)
-        hlayout.addWidget(QtWidgets.QLabel("分钟"))
-        flayout.addRow("同向接车间隔", hlayout)
-
-        spinOpposite = QtWidgets.QSpinBox()
-        spinOpposite.setValue(visualWidget.oppositeSplitTime())
-        spinOpposite.setRange(0, 999)
-        spinOpposite.valueChanged.connect(visualWidget.setOppositeSplitTime)
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(spinOpposite)
-        hlayout.addWidget(QtWidgets.QLabel("分钟"))
-        flayout.addRow("对向接车间隔", hlayout)
-
-        hlayout = QtWidgets.QHBoxLayout()
-        btnOk = QtWidgets.QPushButton("确定")
-        btnCancel = QtWidgets.QPushButton("取消")
-        hlayout.addWidget(btnOk)
-        hlayout.addWidget(btnCancel)
-        flayout.addRow(hlayout)
-
-        btnOk.clicked.connect(visualWidget.rePaintGraphAdvanced)
-        btnCancel.clicked.connect(dialog.close)
-        btnOk.clicked.connect(dialog.close)
-
-        dialog.setLayout(flayout)
-        dialog.exec_()
-
-    def _station_timetable_out(self, tableWidget: QtWidgets.QTableWidget):
-        self.statusOut("正在准备导出……")
-        try:
-            import xlwt
-        except ImportError:
-            self._derr("错误：此功能需要'xlwt'库支持。")
-            self.statusOut("就绪")
-            return
-
-        filename = QtWidgets.QFileDialog.getSaveFileName(self, '选择文件', filter='*.xls')[0]
-        if not filename:
-            return
-
-        wb = xlwt.Workbook(encoding='utf-8')
-        ws = wb.add_sheet('车站时刻表')
-
-        for i, s in enumerate(['车次', '站名', '到点', '开点', '类型', '停站', '方向', '始发', '终到']):
-            ws.write(0, i, s)
-
-        for row in range(tableWidget.rowCount()):
-            for col in range(9):
-                ws.write(row + 1, col, tableWidget.item(row, col).text())
-        wb.save(filename)
-        self._dout("时刻表导出成功！")
-        self.statusOut("就绪")
 
     def _interval_count(self):
         """
@@ -2407,6 +2229,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _correction_ok(self,train):
         self.currentWidget.setData(train)
         self.trainInfoWidget.setData(train)
+        self.trainTimetableWidget.setData(train)
         self.GraphWidget.delTrainLine(train)
         self.GraphWidget.addTrainLine(train)
 

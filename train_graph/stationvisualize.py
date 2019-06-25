@@ -24,7 +24,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         super().__init__()
         self.scene = QtWidgets.QGraphicsScene()
         self.station_name = station_name
-        mainWindow.stationVisualSizeChanged.connect(self._repaint)
+        mainWindow.stationVisualizeChanged.connect(self._repaint)
         self.seconds_per_pix = 15
         self.row_height = 40
         self.down_list = [[], ]
@@ -111,8 +111,6 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             train_dict["ddsj"]=datetime(1900,1,1,o.hour,o.minute,o.second)
             o: datetime = train_dict['cfsj']
             train_dict["cfsj"]=datetime(1900,1,1,o.hour,o.minute,o.second)
-            if train_dict['train'].fullCheci() == 'D941/4/1':
-                print("D941/4/1", train_dict)
             if train_dict["cfsj"] < train_dict["ddsj"]:
                 # 跨日处理
                 new_dict = {
@@ -365,8 +363,6 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         dd_x = self._xValueCount(ddsj)
         cf_x = self._xValueCount(cfsj)
         train = train_dict["train"]
-        if train.fullCheci()=='D941/4/1':
-            print(train_dict)
         color = QtGui.QColor(train.color(self.graph))
         width = cf_x - dd_x
         rectItem: QtWidgets.QGraphicsRectItem = self.scene.addRect(dd_x, start_y, width, self.row_height)

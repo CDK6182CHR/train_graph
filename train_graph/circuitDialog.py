@@ -33,6 +33,14 @@ class CircuitDialog(QtWidgets.QDialog):
         noteEdit.setMaximumHeight(100)
         self.noteEdit = noteEdit
 
+        modelEdit = QtWidgets.QLineEdit()
+        self.modelEdit = modelEdit
+        flayout.addRow('车底型号',modelEdit)
+
+        ownerEdit = QtWidgets.QLineEdit()
+        self.ownerEdit = ownerEdit
+        flayout.addRow('担当局段',ownerEdit)
+
         vlayout.addLayout(flayout)
 
         hlayout = QtWidgets.QHBoxLayout()
@@ -66,9 +74,9 @@ class CircuitDialog(QtWidgets.QDialog):
         vlayout.addWidget(QtWidgets.QLabel('备注或说明'))
         vlayout.addWidget(noteEdit)
 
-        btnOk = QtWidgets.QPushButton("确定")
-        btnRestore = QtWidgets.QPushButton("还原")
-        btnCancel = QtWidgets.QPushButton("关闭")
+        btnOk = QtWidgets.QPushButton("确定(&Y)")
+        btnRestore = QtWidgets.QPushButton("还原(&R)")
+        btnCancel = QtWidgets.QPushButton("关闭(&C)")
         btnOk.clicked.connect(self._apply)
         btnCancel.clicked.connect(self.close)
         btnRestore.clicked.connect(self._restore)
@@ -91,6 +99,8 @@ class CircuitDialog(QtWidgets.QDialog):
         self.tableWidget.setRowCount(circuit.trainCount())
         self.nameEdit.setText(circuit.name())
         self.noteEdit.setText(circuit.note())
+        self.ownerEdit.setText(circuit.owner())
+        self.modelEdit.setText(circuit.model())
         for row,node in enumerate(circuit.nodes()):
             self.setTableRow(row,node)
 
@@ -316,6 +326,8 @@ class CircuitDialog(QtWidgets.QDialog):
             self.circuit = Circuit(self.graph)
         self.circuit.setName(name)
         self.circuit.setNote(self.noteEdit.toPlainText())
+        self.circuit.setModel(self.modelEdit.text())
+        self.circuit.setOwner(self.ownerEdit.text())
 
         for node in self.circuit.nodes():
             node.train().setCarriageCircuit(None)

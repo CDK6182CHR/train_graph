@@ -10,6 +10,8 @@ from .graph import Graph
 from .pyETRCExceptions import *
 
 class TrainInfoWidget(QtWidgets.QWidget):
+    showTimeTable = QtCore.pyqtSignal(Train)
+    editTrain = QtCore.pyqtSignal(Train)
     def __init__(self,graph:Graph,parent=None):
         super(TrainInfoWidget, self).__init__(parent)
         self.graph = graph # type:Graph
@@ -31,6 +33,8 @@ class TrainInfoWidget(QtWidgets.QWidget):
         self.circuitNameEdit = ... # type:QtWidgets.QLineEdit
         self.directionCheciEdit = ... # type:QtWidgets.QLineEdit
         self.startEndEdit = ... # type:QtWidgets.QLineEdit
+        self.modelEdit = ... # type:QtWidgets.QLineEdit
+        self.ownerEdit = ... # type:QtWidgets.QLineEdit
         self.initUI()
 
     def initUI(self):
@@ -58,18 +62,33 @@ class TrainInfoWidget(QtWidgets.QWidget):
         self._addFormRow('本线停站时间','localStopTimeEdit')
         self._addFormRow('本线技术速度', 'localRunSpeedEdit')
         self._addFormRow('所属交路名','circuitNameEdit')
+        self._addFormRow('车底型号','modelEdit')
+        self._addFormRow('担当局段','ownerEdit')
+
+        btnTimetable = QtWidgets.QPushButton('点击查看')
+        btnTimetable.setMaximumWidth(120)
+        btnTimetable.clicked.connect(lambda:self.showTimeTable.emit(self.train))
+        flayout.addRow('时刻表',btnTimetable)
+
+        btnEdit = QtWidgets.QPushButton('点击编辑')
+        btnEdit.setMaximumWidth(120)
+        btnEdit.clicked.connect(lambda:self.editTrain.emit(self.train))
+        flayout.addRow('编辑',btnEdit)
+
         vlayout.addLayout(flayout)
 
         vlayout.addWidget(QtWidgets.QLabel('交路序列'))
         circuitOrderEdit = QtWidgets.QTextBrowser()
         self.circuitOrderEdit = circuitOrderEdit
         circuitOrderEdit.setMaximumHeight(120)
+        circuitOrderEdit.setMinimumHeight(60)
         vlayout.addWidget(circuitOrderEdit)
 
         vlayout.addWidget(QtWidgets.QLabel('交路说明'))
         circuitNoteEdit = QtWidgets.QTextBrowser()
         self.circuitNoteEdit = circuitNoteEdit
         circuitNoteEdit.setMaximumHeight(120)
+        circuitNoteEdit.setMinimumHeight(60)
         vlayout.addWidget(circuitNoteEdit)
 
         btnText = QtWidgets.QPushButton('导出文本信息')
@@ -128,6 +147,8 @@ class TrainInfoWidget(QtWidgets.QWidget):
             self.circuitNameEdit.setText('(无交路信息)')
             self.circuitNoteEdit.setText('')
             self.circuitOrderEdit.setText('')
+        self.modelEdit.setText(train.model())
+        self.ownerEdit.setText(train.owner())
 
 
     def _calSpeedStr(self,mile:float,sec:int)->str:
@@ -190,6 +211,8 @@ class TrainInfoWidget(QtWidgets.QWidget):
             text += f"交路名称：{circuit.name()}\n"
             text += f"套跑序列：{circuit.orderStr()}\n"
             text += f"交路备注：{circuit.note()}\n"
+            text += f"车底类型：{circuit.model()}\n"
+            text += f"担当局段：{circuit.owner()}\n"
 
         textBrowser = QtWidgets.QTextBrowser()
         textBrowser.setText(text)

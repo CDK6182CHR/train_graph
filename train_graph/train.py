@@ -393,6 +393,26 @@ class Train():
     def setAutoItem(self,on:bool):
         self._autoItem = on
 
+    def model(self)->str:
+        """
+        2019.06.25新增。将车底、担当局段逻辑上也作为Train的只读属性，实际通过circuit调用。
+        如果没有交路数据，返回None.
+        """
+        circuit = self.carriageCircuit()
+        if circuit is not None:
+            return circuit.model()
+        return None
+
+    def owner(self)->str:
+        """
+        2019.06.25新增。将车底、担当局段逻辑上也作为Train的只读属性，实际通过circuit调用。
+        如果没有交路数据，返回None.
+        """
+        circuit = self.carriageCircuit()
+        if circuit is not None:
+            return circuit.owner()
+        return None
+
     def firstDown(self)->bool:
         """
         返回第一个区间的上下行情况。2.0新增。
@@ -1309,6 +1329,35 @@ class Train():
             return f"{sec//60}分{sec%60:02d}秒"
         else:
             return f"{sec//60}分"
+
+    def stopTimeStr(self,dct:dict)->str:
+        """
+        2019.06.25新增工具性函数。
+        从currentWidget中拿过来。返回描述停时和是否是始发站的字符串。
+        """
+        ddsj,cfsj = dct['ddsj'],dct['cfsj']
+        station = dct['zhanming']
+        dt: timedelta = cfsj - ddsj
+        seconds = dt.seconds
+        if seconds == 0:
+            time_str = ""
+        else:
+            m = int(seconds / 60)
+            s = seconds % 60
+            time_str = "{}分".format(m)
+            if s:
+                time_str += str(s) + "秒"
+        add = ''
+        if self.isSfz(station):
+            add = '始'
+        elif self.isZdz(station):
+            add = '终'
+
+        if not time_str:
+            time_str = add
+        elif add != '':
+            time_str += f', {add}'
+        return time_str
 
     def __str__(self):
         return f"Train {self.fullCheci()} ({self.sfz}->{self.zdz}) "

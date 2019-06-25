@@ -44,6 +44,14 @@ class TrainFilter(QtCore.QObject):
         self.circuitCache = [] # type: List[Circuit]
         self.startCache = []  # 全程不允许创建空对象
         self.endCache = []
+
+        self.useModel = False
+        self.models = []
+        self.modelCache = []
+        self.useOwner = False
+        self.owners = []
+        self.ownerCache = []
+
         self.reverse = False
 
     def setFilter(self):
@@ -100,6 +108,22 @@ class TrainFilter(QtCore.QObject):
         btnCircuit.clicked.connect(self._select_circuit)
         btnCircuit.setMaximumWidth(120)
         flayout.addRow(circuitCheck,btnCircuit)
+
+        modelCheck = QtWidgets.QCheckBox('车底类型')
+        self.checkModel = modelCheck
+        modelCheck.setChecked(self.useModel)
+        btnModel = QtWidgets.QPushButton('选择车底')
+        btnModel.setMaximumWidth(120)
+        btnModel.clicked.connect(self._select_model)
+        flayout.addRow(modelCheck,btnModel)
+
+        checkOwner = QtWidgets.QCheckBox('担当局段')
+        self.checkOwner = checkOwner
+        checkOwner.setChecked(self.useOwner)
+        btnOwner = QtWidgets.QPushButton('选择担当局段')
+        btnOwner.clicked.connect(self._select_owner)
+        btnOwner.setMaximumWidth(120)
+        flayout.addRow(checkOwner,btnOwner)
 
         radioDown = QtWidgets.QRadioButton('下行')
         radioUp = QtWidgets.QRadioButton('上行')
@@ -487,6 +511,79 @@ class TrainFilter(QtCore.QObject):
             self.circuitCache.append(item.data(Qt.UserRole))
         self.circuitDialog.close()
 
+    def _select_model(self):
+        dialog = QtWidgets.QDialog(self.dialog)
+        self.modelDialog = dialog
+        dialog.setWindowTitle('选择车底')
+        layout = QtWidgets.QVBoxLayout()
+
+        if self.modelCache is None:
+            self.modelCache = self.models[:]
+        modelList = QtWidgets.QListWidget()
+        self.modelList = modelList
+        modelList.setSelectionMode(modelList.MultiSelection)
+
+        for model in self.graph.modelList():
+            item = QtWidgets.QListWidgetItem(model)
+            if model in self.modelCache:
+                item.setSelected(True)
+            modelList.addItem(item)
+        layout.addWidget(modelList)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton("确定")
+        btnCancel = QtWidgets.QPushButton("取消")
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnCancel)
+        btnCancel.clicked.connect(dialog.close)
+        btnOk.clicked.connect(self._select_model_ok)
+        layout.addLayout(hlayout)
+        dialog.setLayout(layout)
+
+        dialog.exec_()
+
+    def _select_model_ok(self):
+        self.modelCache = []
+        for item in self.modelList.selectedItems():
+            self.modelCache.append(item.text())
+        self.modelDialog.close()
+
+    def _select_owner(self):
+        dialog = QtWidgets.QDialog(self.dialog)
+        self.ownerDialog = dialog
+        dialog.setWindowTitle('选择担当局段')
+        layout = QtWidgets.QVBoxLayout()
+
+        if self.modelCache is None:
+            self.ownerCache = self.owners[:]
+        ownerList = QtWidgets.QListWidget()
+        self.ownerList = ownerList
+        self.ownerList.setSelectionMode(ownerList.MultiSelection)
+
+        for owner in self.graph.ownerList():
+            item = QtWidgets.QListWidgetItem(owner)
+            if owner in self.ownerCache:
+                item.setSelected(True)
+            ownerList.addItem(item)
+        layout.addWidget(ownerList)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton("确定")
+        btnCancel = QtWidgets.QPushButton("取消")
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnCancel)
+        btnCancel.clicked.connect(dialog.close)
+        btnOk.clicked.connect(self._select_owner_ok)
+        layout.addLayout(hlayout)
+        dialog.setLayout(layout)
+
+        dialog.exec_()
+
+    def _select_owner_ok(self):
+        self.ownerCache = []
+        for item in self.ownerList.selectedItems():
+            self.ownerCache.append(item.text())
+
     def _ok_clicked(self):
         if self.includesCache is not None:
             self.includes = self.includesCache
@@ -500,6 +597,10 @@ class TrainFilter(QtCore.QObject):
         if self.circuitCache is not None:
             self.circuits = self.circuitCache[:]
             self.circuitCache = []
+        self.owners = self.ownerCache[:]
+        self.ownerCache.clear()
+        self.models = self.modelCache[:]
+        self.modelCache.clear()
         self.startStations = self.startCache[:]
         self.endStations = self.endCache[:]
         self.startCache.clear()
@@ -513,6 +614,8 @@ class TrainFilter(QtCore.QObject):
         self.showOnly = self.checkShowOnly.isChecked()
         self.reverse = self.checkReverse.isChecked()
         self.useCircuit = self.checkCircuit.isChecked()
+        self.useModel = self.checkModel.isChecked()
+        self.useOwner = self.checkOwner.isChecked()
 
         if self.radioDown.isChecked():
             self.direction = self.DownOnly
@@ -546,6 +649,10 @@ class TrainFilter(QtCore.QObject):
         self.excludes = []
         self.useCircuit = False
         self.circuits = []
+        self.useOwner = False
+        self.owners = []
+        self.useModel = False
+        self.models = []
         self.direction = self.DownAndUp
         self.passenger = self.PassengerAndFreight
         self.showOnly = False
@@ -645,10 +752,26 @@ class TrainFilter(QtCore.QObject):
                 return True
         return False
 
+    def checkModelIncluded(self,train)->bool:
+        if not self.useModel:
+            return True
+        for model in self.models:
+            if train.model() == model:
+                return True
+        return False
+
+    def checkOwnerIncluded(self,train)->bool:
+        if not self.useOwner:
+            return True
+        for owner in self.owners:
+            if train.owner() == owner:
+                return True
+        return False
 
     def check(self,train):
         result = (self.checkShow(train) and self.checkDir(train) and
-                  self.checkType(train)  and self.checkPassenger(train)
+                  self.checkType(train)  and self.checkPassenger(train) and
+                self.checkOwnerIncluded(train) and self.checkModelIncluded(train)
                and (not self.checkExclude(train)) and self.checkStartEnd(train) and
                   self.checkCircuitIncluded(train)) \
                or self.checkInclude(train)

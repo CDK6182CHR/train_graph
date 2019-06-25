@@ -1550,6 +1550,25 @@ class Graph:
                       "程序运行异常。下次打开本文件时，如果仍未解决，此消息仍会显示。\n"
         return report
 
+    def modelList(self)->list:
+        """
+        2019.06.25新增。返回所有不同的车底类型列表。
+        目前只由trainFilter中筛选的有关功能调用，简化起见，不作为属性保存，每次都遍历得到。
+        """
+        lst = []
+        for circuit in self.circuits():
+            lst.append(circuit.model())
+        return list(set(lst))
+
+    def ownerList(self)->list:
+        """
+        返回所有不同的担当局段表。
+        """
+        lst = []
+        for circuit in self.circuits():
+            lst.append(circuit.owner())
+        return list(set(lst))
+
 
 if __name__ == '__main__':
     graph = Graph()

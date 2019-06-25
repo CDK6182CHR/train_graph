@@ -431,32 +431,12 @@ class CurrentWidget(QtWidgets.QWidget):
             item=QtWidgets.QTableWidgetItem(note)
             timeTable.setItem(num,4,item)
 
-            dt: timedelta = cfsj - ddsj
-            seconds = dt.seconds
-            if seconds == 0:
-                time_str = ""
-            else:
-                m = int(seconds / 60)
-                s = seconds % 60
-                time_str = "{}分".format(m)
-                if s:
-                    time_str += str(s) + "秒"
+            time_str = train.stopTimeStr(st_dict)
 
             if train.stationBusiness(st_dict):
                 itemStation.setForeground(QtGui.QBrush(Qt.red))
             elif train.stationStopped(st_dict):
                 itemStation.setForeground(QtGui.QBrush(Qt.blue))
-
-            add = ''
-            if train.isSfz(station):
-                add = '始'
-            elif train.isZdz(station):
-                add = '终'
-
-            if not time_str:
-                time_str = add
-            elif add != '':
-                time_str += f', {add}'
 
             item: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(time_str)
             item.setFlags(Qt.NoItemFlags)

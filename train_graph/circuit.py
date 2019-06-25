@@ -91,6 +91,8 @@ class Circuit:
     static const int CARRIAGE=0x0,MOTER=0x1; // 机车交路和车底交路的枚举常量。目前只支持车底交路。
     int _type; // CARRIAGE or MOTER
     str _note; //交路说明，任意字符串
+    str _model; //车底，任何字符串
+    str _owner; // 担当局
     Graph& graph;
     """
     CARRIAGE = 0x0
@@ -101,12 +103,16 @@ class Circuit:
         self._order = []
         self._type = self.CARRIAGE
         self._note = ""
+        self._model = ""
+        self._owner = ""
         if origin is not None:
             self.parseInfo(origin)
 
     def parseInfo(self,origin:dict):
         self._name = origin.get('name','')
         self._note = origin.get('note','')
+        self._model = origin.get('model','')
+        self._owner = origin.get('origin','')
         for n in origin.get('order',[]):
             self._order.append(CircuitNode(self.graph,origin=n))
 
@@ -114,6 +120,8 @@ class Circuit:
         dct = {
             "name":self._name,
             "note":self._note,
+            "model":self._model,
+            "owner":self._owner,
         }
         lst = []
         for node in self._order:
@@ -138,6 +146,18 @@ class Circuit:
 
     def setNote(self,note:str):
         self._note = note
+
+    def model(self)->str:
+        return self._model
+
+    def setModel(self,m:str):
+        self._model = m
+
+    def owner(self)->str:
+        return self._owner
+
+    def setOwner(self,o:str):
+        self._owner = o
 
     def removeTrain(self,train):
         for node in self._order:
