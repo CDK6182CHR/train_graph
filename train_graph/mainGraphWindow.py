@@ -62,7 +62,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190625'
+        self.build = '20190626'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))

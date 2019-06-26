@@ -87,11 +87,11 @@ class CircuitWidget(QtWidgets.QWidget):
             if item.checkState() == Qt.Checked:
                 for node in circuit.nodes():
                     if node.train() is not None:
-                        node.train().highlightItems()
+                        node.train().highlightItems(containLink=True)
             else:
                 for node in circuit.nodes():
                     if node.train() is not None:
-                        node.train().unHighlightItems()
+                        node.train().unHighlightItems(containLink=True)
 
     def _circuit_highlight(self):
         pass

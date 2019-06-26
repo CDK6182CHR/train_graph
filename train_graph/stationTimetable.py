@@ -176,7 +176,7 @@ class StationTimetable(QtWidgets.QDialog):
         btnAdvance = QtWidgets.QPushButton("高级")
         hlayout.addWidget(btnAdvance)
 
-        slider.valueChanged.connect(lambda x: self.stationVisualSizeChanged.emit(x))
+        slider.valueChanged.connect(lambda x: self.stationVisualizeChanged.emit(x))
         layout.addLayout(hlayout)
 
         widget = StationGraphWidget(station_dicts, self.graph, station_name, self)

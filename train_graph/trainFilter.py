@@ -517,7 +517,7 @@ class TrainFilter(QtCore.QObject):
         dialog.setWindowTitle('选择车底')
         layout = QtWidgets.QVBoxLayout()
 
-        if self.modelCache is None:
+        if not self.modelCache:
             self.modelCache = self.models[:]
         modelList = QtWidgets.QListWidget()
         self.modelList = modelList
@@ -554,7 +554,7 @@ class TrainFilter(QtCore.QObject):
         dialog.setWindowTitle('选择担当局段')
         layout = QtWidgets.QVBoxLayout()
 
-        if self.modelCache is None:
+        if not self.ownerCache:
             self.ownerCache = self.owners[:]
         ownerList = QtWidgets.QListWidget()
         self.ownerList = ownerList
@@ -583,6 +583,7 @@ class TrainFilter(QtCore.QObject):
         self.ownerCache = []
         for item in self.ownerList.selectedItems():
             self.ownerCache.append(item.text())
+        self.ownerDialog.close()
 
     def _ok_clicked(self):
         if self.includesCache is not None:

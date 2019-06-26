@@ -429,11 +429,13 @@ class Train():
             return dct["down"]
         return None
 
-    def stationDown(self,station:str,graph)->bool:
+    def stationDown(self,station:str,graph=None)->bool:
         """
         2.0新增。返回本车次在某个车站及其左邻域内的上下行情况。
         调用了线性算法。需要依赖于线路上的y_value，这就是说必须保证本站是铺画了的。
         """
+        if graph is None:
+            graph = self.graph
         idx = self.stationIndexByName(station)
         if idx == -1:
             return None
@@ -890,6 +892,7 @@ class Train():
             else:
                 st['business'] = self.graph.lineStationBusiness(st['zhanming'],
                                                                 self.isPassenger(detect=True),default=False)
+                # print("train::autoBusiness",st['zhanming'],self,st['business'])
 
     def isSfz(self,name:str):
         if not self.sfz:
@@ -1296,17 +1299,17 @@ class Train():
             self._carriageCircuit=circuit
             self._carriageCircuitName=circuit.name()
 
-    def highlightItems(self):
+    def highlightItems(self,containLink=False):
         for item in self.items():
             try:
-                item.select()
+                item.select(containLink)
             except:
                 pass
 
-    def unHighlightItems(self):
+    def unHighlightItems(self,containLink=False):
         for item in self.items():
             try:
-                item.unSelect()
+                item.unSelect(containLink)
             except:
                 pass
 
@@ -1358,6 +1361,33 @@ class Train():
         elif add != '':
             time_str += f', {add}'
         return time_str
+
+    def departure(self)->dict:
+        """
+        如果时刻表第一个站是始发站，返回它。否则返回None。
+        适用于严格要求判断始发站的场景，如交路连接。
+        """
+        if not self.timetable:
+            return None
+        if not self.sfz:
+            return None
+        dct = self.timetable[0]
+        if stationEqual(dct['zhanming'],self.sfz):
+            return dct
+        return None
+
+    def destination(self)->dict:
+        """
+        如果时刻表最后一个站是终到站，返回。否则返回None。
+        """
+        if not self.timetable:
+            return None
+        if not self.zdz:
+            return None
+        dct = self.timetable[-1]
+        if stationEqual(dct['zhanming'],self.zdz):
+            return dct
+        return None
 
     def __str__(self):
         return f"Train {self.fullCheci()} ({self.sfz}->{self.zdz}) "

@@ -79,6 +79,7 @@ class Graph:
             "start_label_height": 30,
             "end_label_height": 15,
             "table_row_height": 30,
+            "link_line_height":10,
             "show_time_mark": 1,  # 显示详细停点。0-不显示，1-仅显示选中车次，2-显示所有车次
             "max_passed_stations": 3,  # 至多跨越站数。超过这个数将被分成两段运行图。
             "default_colors": {"快速": "#FF0000", "特快": "#0000FF",

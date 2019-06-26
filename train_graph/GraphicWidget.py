@@ -814,7 +814,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         scenepoint = self.mapToScene(point)
         self.marginItemGroups["right"].setX(scenepoint.x() - self.scene.width() - 20)
 
-    def stationPosCalculate(self, zm: str, sj: datetime):
+    def stationPosCalculate(self, zm: str, sj: datetime)->QtCore.QPoint:
         """
         计算时间、车站对应的点。
         保证数据是datetime对象而不是str。

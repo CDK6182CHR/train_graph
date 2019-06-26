@@ -5,10 +5,17 @@
 import sys
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from .graph import Graph
+from .graph import Graph,Train
+from .circuit import Circuit
 from datetime import datetime,timedelta
 
 class StationGraphWidget(QtWidgets.QGraphicsView):
+    # enum constants for stop type, judged when make_list.
+    Stop = 0x0
+    Pass = 0x1
+    Link = 0x2  # 接续交路间的贯穿线
+    Departure = 0x3  # 无接续的始发
+    Destination = 0x4  # 无接续的终到
     def __init__(self,station_list,graph,station_name,mainWindow):
         """
         station_list由graph.stationTimetable给出。
@@ -19,6 +26,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             "cfsj":datetime,
             "down":bool,
             "train":Train,
+            "type":enum[int],
         }
         """
         super().__init__()
@@ -101,16 +109,36 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         self.down_list = [[],]  # 下行股道表，每个元素（list）是一个股道的占用次序。
         self.up_list = [[],]
         self.single_list = [[],]
+
+        newlist = []
+        toDeleteTrains = []  # 要删除的列车。是因为接续而被删除的对象。保存原来的train对象。
+
+        # 第一轮处理，删除要删除的，调整有关的类型，归一化日期。
         for train_dict in self.station_list:
-            train_dict.setdefault('isPassed',self._isPassed(train_dict))
-            if self._isPassed(train_dict):
-                train_dict['ddsj']-=timedelta(days=0,seconds=30)
-                train_dict['cfsj']+=timedelta(days=0,seconds=30)
+            try:
+                train_dict['type']
+            except KeyError:
+                # 首先判断是否是需要删除的。
+                train:Train = train_dict['train']
+                if train in toDeleteTrains:
+                    toDeleteTrains.remove(train)
+                    continue
+                if not self._judgeType(train_dict,toDeleteTrains):
+                    continue
+            else:
+                # 已经添加好，不必再处理
+                pass
+            # 将日期归一化到1900-1-1
             # datetime.date().replace()不能有效改变日期
             o:datetime = train_dict['ddsj']
             train_dict["ddsj"]=datetime(1900,1,1,o.hour,o.minute,o.second)
             o: datetime = train_dict['cfsj']
             train_dict["cfsj"]=datetime(1900,1,1,o.hour,o.minute,o.second)
+            newlist.append(train_dict)
+        self.station_list = newlist
+
+        # 第二轮，跨日处理，铺画
+        for train_dict in self.station_list:
             if train_dict["cfsj"] < train_dict["ddsj"]:
                 # 跨日处理
                 new_dict = {
@@ -119,21 +147,81 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
                     "down":train_dict["down"],
                     "train":train_dict["train"],
                     "station_name":train_dict["station_name"],
-                    "isPassed":train_dict['isPassed'],
+                    "type":train_dict['type'],
                 }
                 train_dict["cfsj"] = datetime(1900, 1, 1, 23, 59, 59)
                 self.station_list.append(new_dict)
-
-            if train_dict['isPassed']:
+            if self._isPassed(train_dict):
                 self._addPassTrain(train_dict)
             else:
                 self._addStopTrain(train_dict)
 
-    def _isPassed(self,train_dict):
+
+    def _judgeType(self,train_dict:dict,toDeleteTrains:list)->bool:
+        """
+        返回是否保留本车次。
+        """
+        train = train_dict['train']
+        # 始发情况处理
+        if self.station_name == train.sfz:
+            circuit = train.carriageCircuit()
+            if circuit is not None:
+                preTrain, preTime = circuit.preorderLinked(train)
+                if preTrain is not None:
+                    # 是一个接续的后车，创建一个虚拟的车次，删除前车和本车。方向由后车给出。
+                    toDeleteTrains.append(preTrain)
+                    ntrain = Train(self.graph, f"{preTrain.fullCheci()}-{train.fullCheci()}")
+                    dct = {
+                        "ddsj": preTime,
+                        "cfsj": train_dict['cfsj'],
+                        "down": train_dict['down'],
+                        "train": ntrain,
+                        "type": self.Link,
+                        "station_name":train_dict['station_name'],
+                    }
+                    # print("新增临时车次！", ntrain)
+                    self.station_list.append(dct)
+                    return False
+            train_dict['type'] = self.Departure
+
+        # 终到站处理
+        elif self.station_name == train.zdz:
+            circuit = train.carriageCircuit()
+            if circuit is not None:
+                postTrain, postTime = circuit.postorderLinked(train)
+                if postTrain is not None:
+                    # 是一个接续的前车，创建一个虚拟的车次，删除后车和本车。方向由后车给出。
+                    toDeleteTrains.append(postTrain)
+                    ntrain = Train(self.graph, f"{train.fullCheci()}-{postTrain.fullCheci()}")
+                    # print("新增临时车次！",ntrain)
+                    dct = {
+                        "ddsj": train_dict['ddsj'],
+                        "cfsj": postTime,
+                        "down": postTrain.stationDown(self.station_name),
+                        "train": ntrain,
+                        "type": self.Link,
+                        "station_name":postTrain.sfz,
+                    }
+                    self.station_list.append(dct)
+                    return False
+            train_dict['type'] = self.Destination
+        else:
+            if train_dict['ddsj'] == train_dict['cfsj']:
+                train_dict['type'] = self.Stop
+            else:
+                train_dict['type'] = self.Pass
+        return True
+
+    def _isPassed(self,train_dict)->bool:
+        """
+        2019.06.26注明：功能改变。
+        只决定是否需要将时刻延拓为1分钟。
+        """
         if (train_dict["ddsj"]-train_dict["cfsj"]).seconds == 0:
             return True
         else:
             return False
+
 
     def _addPassTrain(self,train_dict):
         down = train_dict["down"]
@@ -369,10 +457,18 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         rectItem.setBrush(QtGui.QBrush(color))
 
         text = f"{train.fullCheci()} {train.stationDownStr(self.station_name,self.graph)} "
-        if train_dict.get('isPassed',False):
+        if train_dict['type'] == self.Pass:
             text += f"通过  {(train_dict['ddsj']+timedelta(days=0,seconds=30)).strftime('%H:%M:%S')}"
-        else:
+        elif train_dict['type'] == self.Departure:
+            text += f"始发  {(train_dict['ddsj']+timedelta(days=0,seconds=30)).strftime('%H:%M:%S')}"
+        elif train_dict['type'] == self.Destination:
+            text += f"终到  {(train_dict['ddsj']+timedelta(days=0,seconds=30)).strftime('%H:%M:%S')}"
+        elif train_dict['type'] == self.Stop:
             text += f"停车  {ddsj.strftime('%H:%M:%S')} — {cfsj.strftime('%H:%M:%S')}"
+        else:
+            # 接续
+            text = f"交路接续 {train.fullCheci()} {ddsj.strftime('%H:%M:%S')} — {cfsj.strftime('%H:%M:%S')}"
+
         text += f" {train_dict['station_name']}"
         rectItem.setToolTip(text)
 

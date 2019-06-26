@@ -6,9 +6,18 @@
 3. 注意删除车次时的处理。ok
 2019.06.03备忘：
 注意导入车次、线路拼接时交路的处理。（跨graph对象引起的Train->Graph牵连问题）
+2019.06.26备注，关于交路连线：
+1. 交路连线等价于计算车站股道占用时判定连线。
+2. 在两车次之间连线，当且仅当：
+（1）用户勾选了连线；
+（2）前一车次终到站、后一车次始发站为本线同一车站。
+3. 连线图元由后车的TrainItem负责管理。连线格式为细实线，颜色、粗细皆同后车的起始标签。每个Item允许管理最多两个连线对象，用于处理跨日连线。加粗时应予以加粗。允许单独开关连线。
+4. //连线图元所处的高度由UIConfigData给出。默认为10. 字段：link_line_height. 使用虚线。
+连线暂定直接走站线上通过。
 """
 from .line import Line
 from .pyETRCExceptions import *
+from Timetable_new.utility import stationEqual
 
 class CircuitNode:
     """
@@ -112,7 +121,7 @@ class Circuit:
         self._name = origin.get('name','')
         self._note = origin.get('note','')
         self._model = origin.get('model','')
-        self._owner = origin.get('origin','')
+        self._owner = origin.get('owner','')
         for n in origin.get('order',[]):
             self._order.append(CircuitNode(self.graph,origin=n))
 
@@ -199,36 +208,63 @@ class Circuit:
 
     def preorderLinked(self,train):
         """
-        返回有Link的前一个车次。如果本车次没有Link，则返回None。
-        线性算法。
+        [Train,datetime] or [None,None]
+        返回有Link的前一个车次及其终到时间。如果本车次没有Link，则返回None。
+        返回的充要条件是符合连线条件。
+        关于本交路长度的线性算法。
         """
         preNode = None
+        preTrain = None
         for node in self.nodes():
             if node.train() is train:
                 if preNode is None:
-                    return None
+                    return None,None
                 elif not node.link:
-                    return None
+                    return None,None
                 else:
-                    return preNode.train()
+                    preTrain = preNode.train()
+                    break
             preNode = node
+        if preTrain is None:
+            return None,None
+        preEnd = preTrain.destination()
+        thisStart = train.departure()
 
+        if preEnd is None or thisStart is None:
+            return None,None
+        if stationEqual(preEnd['zhanming'],thisStart['zhanming']) and \
+            self.graph.stationInLine(preEnd['zhanming']):
+            return preTrain,preEnd['ddsj']
+        return None,None
 
     def postorderLinked(self,train):
         """
+        [Train,datetime] or [None,None]
         返回后续连接的车次。如果没有后续或者后续没有勾选link，返回None.
         """
         found = False
+        postTrain = None
         for node in self.nodes():
             if node.train() is train:
                 found=True
                 continue
             if found:
                 if not node.link:
-                    return None
+                    return None,None
                 else:
-                    return node.train()
-        return None
+                    postTrain = node.train()
+                    break
+        if postTrain is None:
+            return None,None
+        thisEnd = train.destination()
+        postStart = postTrain.departure()
+        if thisEnd is None or postStart is None:
+            return None,None
+        if stationEqual(thisEnd['zhanming'],postStart['zhanming']) and \
+            self.graph.stationInLine(thisEnd['zhanming']):
+            return postTrain,postStart['cfsj']
+        return None,None
+
 
     def trainOrderNum(self,train)->int:
         """

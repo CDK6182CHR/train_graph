@@ -161,14 +161,6 @@ class Line():
             info["rulers"].append(ruler.outInfo())
         return info
 
-    def mileages(self):
-        """
-        yield function
-        :return:
-        """
-        for st in self.stations:
-            yield st["licheng"]
-
     def stationInLine(self,station,strict=False):
         """
         2018.08.06 加入域解析符的支持

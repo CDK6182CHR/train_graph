@@ -45,6 +45,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.startLabelText = None
         self.endLabelItem = None
         self.endLabelText = None
+        self.linkItem1 = None  # type:QtWidgets.QGraphicsLineItem
+        self.linkItem2 = None  # type:QtWidgets.QGraphicsLineItem
         self.spanItems = []
         self.markLabels = []
         self.startRect = None
@@ -172,6 +174,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         pathItem = QtWidgets.QGraphicsPathItem(outpath, self)
         pathItem.setPen(pen)
         self.pathItem = pathItem
+        self.addLinkLine()
         return end,status
 
 
@@ -613,7 +616,53 @@ class TrainItem(QtWidgets.QGraphicsItem):
         item.setBrush(QtGui.QBrush(self.color))
         self.markLabels.append(item)
 
-    def select(self):
+    def addLinkLine(self):
+        """
+        判断并添加linkLine，即与交路前序的连接线。
+        """
+        self.linkItem1 = None
+        self.linkItem2 = None
+        circuit = self.train.carriageCircuit()
+        if circuit is None:
+            return
+        preTrain,preTime = circuit.preorderLinked(self.train)
+        if preTime is None:
+            return
+        startTime = self.train.timetable[0]['ddsj'] # preTime非None已经保证本车次的始发时间是有效的，放心引用
+        station = self.train.sfz
+        prePoint = self.graphWidget.stationPosCalculate(station,preTime)
+        thisPoint = self.graphWidget.stationPosCalculate(station,startTime)
+
+        pen = self._trainPen()
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        # pen.setDashOffset(0.5)
+        if prePoint.x() <= thisPoint.x():
+            line = QtWidgets.QGraphicsLineItem(prePoint.x(),prePoint.y(),thisPoint.x(),thisPoint.y(),parent=self)
+            self.linkItem1 = line
+            line.setPen(pen)
+        else:
+            maxX = self.graphWidget.scene.width() - self.graphWidget.margins['right']
+            minX = self.graphWidget.margins['left']
+            line1 = QtWidgets.QGraphicsLineItem(prePoint.x(),prePoint.y(),maxX,prePoint.y(),self)
+            line1.setPen(pen)
+            self.linkItem1 = line1
+            line2 = QtWidgets.QGraphicsLineItem(minX,thisPoint.y(),thisPoint.x(),thisPoint.y(),self)
+            self.linkItem2 = line2
+
+    def removeLinkLine(self):
+        """
+        测试, 不确定效果。暂时没有调用的地方。
+        """
+        if self.linkItem1 is not None:
+            self.linkItem1.setParent(None)
+            self.linkItem1 = None
+        if self.linkItem2 is not None:
+            self.linkItem2.setParent(None)
+            self.linkItem2 = None
+
+
+    def select(self,highLightLink=False):
         """
         封装选中本车次的所有操作，主要是运行线加粗。
         """
@@ -716,9 +765,16 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     it.setVisible(True)
             else:
                 self._setPathItem([],[],startIndex=self.start_index,mark_only=True)
+
+        pen.setStyle(Qt.DashLine)
+        if highLightLink:
+            if self.linkItem1 is not None:
+                self.linkItem1.setPen(pen)
+            if self.linkItem2 is not None:
+                self.linkItem2.setPen(pen)
         self.isHighlighted = True
 
-    def unSelect(self):
+    def unSelect(self,containLink=False):
         if not self.isHighlighted:
             return
         train = self.train
@@ -764,6 +820,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
             for item in self.markLabels:
                 item.setVisible(False)
             self.markTime = False
+
+        if containLink:
+            pathPen.setStyle(Qt.DashLine)
+            if self.linkItem2 is not None:
+                self.linkItem2.setPen(pathPen)
+            if self.linkItem1 is not None:
+                self.linkItem1.setPen(pathPen)
 
         self.isHighlighted = False
 
@@ -832,7 +895,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         return result
 
 
-    def validItems(self,containSpan=True,containExpand=False,containMark=True):
+    def validItems(self,containSpan=True,containExpand=False,containMark=True,containLink=False):
         """
         依次给出自身的所有非None子item
         """
@@ -844,6 +907,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
             valids.append(self.expandItem)
         if containMark:
             valids += self.markLabels
+        if containLink:
+            valids.extend((self.linkItem1,self.linkItem2))
         for sub in valids:
             if sub is not None:
                 yield sub
