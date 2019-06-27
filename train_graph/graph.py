@@ -1570,6 +1570,18 @@ class Graph:
             lst.append(circuit.owner())
         return list(set(lst))
 
+    def clearAll(self):
+        """
+        清空所有数据
+        """
+        self.clearLineStationInfo()
+        self._trains = []
+        self._circuits = []
+        self.typeList = []
+        self.fullCheciMap = {}
+        self.singleCheciMap = {}
+        self._markdown = ''
+
 
 if __name__ == '__main__':
     graph = Graph()

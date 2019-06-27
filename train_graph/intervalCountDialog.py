@@ -17,7 +17,7 @@ class IntervaLCountDialog(QtWidgets.QDialog):
 
     def initUI(self):
         self.setWindowTitle('区间对数表')
-        self.resize(600, 600)
+        self.resize(700, 700)
         layout = QtWidgets.QVBoxLayout()
         flayout = QtWidgets.QFormLayout()
 
@@ -36,7 +36,7 @@ class IntervaLCountDialog(QtWidgets.QDialog):
         radioStart.toggled.connect(self._interval_count_method_changed)
 
         combo = QtWidgets.QComboBox()
-        combo.setMaximumWidth(120)
+        combo.setMaximumWidth(250)
         combo.setEditable(True)
         for st in self.graph.stations():
             combo.addItem(st)
@@ -51,6 +51,8 @@ class IntervaLCountDialog(QtWidgets.QDialog):
         checkFreightOnly = QtWidgets.QCheckBox('仅显示办货车站')
         self.checkPassengerOnly = checkPassengerOnly
         self.checkFreightOnly = checkFreightOnly
+        checkPassengerOnly.toggled.connect(self._set_interval_count_table)
+        checkFreightOnly.toggled.connect(self._set_interval_count_table)
         hlayout = QtWidgets.QHBoxLayout()
         hlayout.addWidget(checkPassengerOnly)
         hlayout.addWidget(checkFreightOnly)
@@ -67,7 +69,7 @@ class IntervaLCountDialog(QtWidgets.QDialog):
         self.tableWidget = tableWidget
         tableWidget.setColumnCount(6)
         tableWidget.setHorizontalHeaderLabels(('发站', '到站', '车次数', '始发数', '终到数', '始发终到'))
-        widths = (80, 80, 80, 80, 80, 80)
+        widths = (110, 110, 80, 80, 80, 80)
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
         for i, s in enumerate(widths):
             tableWidget.setColumnWidth(i, s)

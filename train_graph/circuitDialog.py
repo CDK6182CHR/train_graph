@@ -221,6 +221,8 @@ class CircuitDialog(QtWidgets.QDialog):
         trains = self.graph.multiSearch(checi)
         self.comboCheci.clear()
         self.comboCheci.addItems(map(lambda x:x.fullCheci(),trains))
+        if self.comboCheci.count() > 1:
+            self.comboCheci.showPopup()
 
     def _add_train_checi_changed(self,checi:str):
         """
@@ -263,6 +265,7 @@ class CircuitDialog(QtWidgets.QDialog):
         self.tableWidget.insertRow(row)
         self.tableWidget.setCurrentCell(row,0)
         self.setTableRow(row,node)
+        self.toAddTrain = None
 
     def _add_train_cancel(self,row:int):
         self.tableWidget.removeRow(row)

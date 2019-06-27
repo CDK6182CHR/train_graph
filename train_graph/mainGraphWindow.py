@@ -344,7 +344,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        widget = CurrentWidget(self)
+        widget = CurrentWidget(self.graph,self)
         self.currentWidget = widget
 
         scroll.setWidget(widget)
@@ -1302,7 +1302,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         else:
             return
 
-        self.graph = Graph()
+        self.graph.clearAll()
         self.GraphWidget.graph = self.graph
         self.GraphWidget.paintGraph()
         self._initDockWidgetContents()
@@ -1325,7 +1325,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
 
         self.GraphWidget._line_un_selected()
-        self.graph = Graph()
+        self.graph.clearAll()
         self.showFilter.setGraph(self.graph)
         try:
             self.graph.loadGraph(filename)
@@ -1426,8 +1426,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         filename = self.graph.filename
         if not filename:
-            self.graph = Graph()
-            self.GraphWidget.graph = Graph()
+            self.graph.clearAll()
+            self.GraphWidget.graph = self.graph
         else:
             try:
                 self.graph.loadGraph(filename)

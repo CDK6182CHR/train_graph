@@ -15,7 +15,7 @@ class IntervalTrainDialog(QtWidgets.QDialog):
 
     def initUI(self):
         self.setWindowTitle('区间车次表')
-        self.resize(600, 600)
+        self.resize(700, 700)
         vlayout = QtWidgets.QVBoxLayout()
         flayout = QtWidgets.QFormLayout()
 
@@ -52,7 +52,7 @@ class IntervalTrainDialog(QtWidgets.QDialog):
         tableWidget.setHorizontalHeaderLabels(('车次', '类型', '发站', '发时', '到站', '到时',
                                                '历时', '旅速', '始发', '终到'))
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-        for i, s in enumerate((80, 60, 80, 120, 80, 120, 120, 80, 80, 80)):
+        for i, s in enumerate((80, 60, 110, 90, 110, 90, 120, 80, 80, 80)):
             tableWidget.setColumnWidth(i, s)
         self._interval_trains_table()
 

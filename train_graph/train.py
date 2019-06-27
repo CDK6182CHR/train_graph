@@ -330,16 +330,16 @@ class Train():
         for dict in self.timetable:
             ddsj:datetime = dict["ddsj"]
             cfsj:datetime = dict["cfsj"]
-            try:
-                outDict = {
+            outDict = {
                 "zhanming":dict["zhanming"],
                 "ddsj":ddsj.strftime("%H:%M:%S"),
                 "cfsj":cfsj.strftime("%H:%M:%S"),
-                "note":dict.setdefault('note','')
+                "note":dict.setdefault('note',''),
             }
-            except TypeError as e:
-                print(dict,repr(e))
-                print(type(dict["ddsj"].strftime))
+            try:
+                outDict['business'] = dict['business']
+            except KeyError:
+                pass
             info["timetable"].append(outDict)
         return info
 
@@ -687,13 +687,13 @@ class Train():
         """
         if not self._itemInfo:
             if fullAsDefault:
-                print("localMile:没有铺画数据，使用全程数据",self.fullCheci())
+                # print("localMile:没有铺画数据，使用全程数据",self.fullCheci())
                 try:
                     return graph.gapBetween(self.localFirst(graph),self.localLast(graph))
                 except:
                     return 0
             else:
-                print("localMile:没有铺画数据，里程默认为0", self.fullCheci())
+                # print("localMile:没有铺画数据，里程默认为0", self.fullCheci())
                 return 0
         else:
             mile = 0
@@ -869,10 +869,11 @@ class Train():
         try:
             return dct['business']
         except KeyError:
-            if dct['ddsj'] == dct['cfsj']:
-                dct['business'] = False
-            elif self.isSfz(dct['zhanming']) or self.isZdz(dct['zhanming']):
+            # 2019.06.27调整：先判断始发终到再判断是否停车。
+            if self.isSfz(dct['zhanming']) or self.isZdz(dct['zhanming']):
                 dct['business'] = True
+            elif dct['ddsj'] == dct['cfsj']:
+                dct['business'] = False
             else:
                 dct['business'] = self.graph.lineStationBusiness(dct['zhanming'],
                                                              self.isPassenger(detect=True),default=True)

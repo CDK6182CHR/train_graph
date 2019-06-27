@@ -476,7 +476,7 @@ class TrainFilter(QtCore.QObject):
         dialog.setWindowTitle('交路选择')
         layout = QtWidgets.QVBoxLayout()
 
-        if self.circuitCache is None:
+        if not self.circuitCache:
             self.circuitCache = self.circuits[:]
         circuitList = QtWidgets.QListWidget()
         self.circuitList = circuitList
@@ -663,6 +663,7 @@ class TrainFilter(QtCore.QObject):
         self.endStations.clear()
         self.endCache.clear()
         self.useEnd = False
+        self.reverse = False
         self.dialog.close()
         self.FilterChanged.emit()
 
