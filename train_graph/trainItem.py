@@ -199,6 +199,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         station_count = 0
         down = self.down  # 本线上下行判断
         last_point = None
+        last_ddpoint = None
         start_point = None
         start_dd,start_cf = None,None
         last_station = None
@@ -286,31 +287,30 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 # 标记停点。precondition: for station_count>=2, down is whether True or False, i.e. not None
                 if station_count == 1:
                     last_point = cfpoint
+                    last_ddpoint = ddpoint
+                    last_ddsj,last_cfsj = ddsj,cfsj
                     continue
-                elif station_count == 2:
-                    # 先补画第一个站的
-                    first_stopped = (last_point != start_point)
-                    if first_stopped and down:
-                        self.addTimeMark(start_point,start_dd,self.NE)
-                        self.addTimeMark(last_point,start_cf,self.SW)
-                    elif first_stopped and not down:
-                        self.addTimeMark(start_point,start_dd,self.SE)
-                        self.addTimeMark(last_point,start_cf,self.NW)
-                    elif not first_stopped and not down:
-                        self.addTimeMark(last_point,start_dd,self.NW)
-                    else:
-                        self.addTimeMark(last_point,start_dd,self.SW)
-                if stopped and down:
-                    self.addTimeMark(ddpoint,ddsj,self.NE)
-                    self.addTimeMark(cfpoint,cfsj,self.SW)
-                elif stopped and not down:
-                    self.addTimeMark(ddpoint,ddsj,self.SE)
-                    self.addTimeMark(cfpoint,cfsj,self.NW)
-                elif not stopped and not down:
-                    self.addTimeMark(ddpoint,ddsj,self.NW)
-                else:
-                    self.addTimeMark(ddpoint,ddsj,self.SW)
+                # 2019.06.29算法调整：改为每次循环铺画上一轮的，循环结束再铺画最后一轮的。
+                # elif station_count == 2:
+                #     先补画第一个站的
+                    # first_stopped = (last_point != start_point)
+                    # if first_stopped and down:
+                    #     self.addTimeMark(start_point,start_dd,self.NE)
+                    #     self.addTimeMark(last_point,start_cf,self.SW)
+                    # elif first_stopped and not down:
+                    #     self.addTimeMark(start_point,start_dd,self.SE)
+                    #     self.addTimeMark(last_point,start_cf,self.NW)
+                    # elif not first_stopped and not down:
+                    #     self.addTimeMark(last_point,start_dd,self.NW)
+                    # else:
+                    #     self.addTimeMark(last_point,start_dd,self.SW)
+                last_stopped = (last_ddsj != last_cfsj)
+                if last_stopped:
+                    self._addTimeMarkFromData(last_stopped,down,True,last_ddsj,last_ddpoint)
+                self._addTimeMarkFromData(last_stopped,down,False,last_cfsj,last_point)
             last_point = cfpoint
+            last_ddpoint = ddpoint
+            last_ddsj,last_cfsj = ddsj,cfsj
             last_loop_station = station
             if self.endStation is not None and self.endStation == station:
                 status = self.Setted
@@ -318,6 +318,15 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 break
 
         self.endStation = last_station
+        if self.endStation is not None:
+            # 添加最后一次循环的标注
+            if self.markTime:
+                last_stopped = (last_ddsj!=last_cfsj)
+                if last_stopped:
+                    self._addTimeMarkFromData(True,down,True,last_ddsj,last_ddpoint)
+                    self._addTimeMarkFromData(False,down,False,last_cfsj,last_point)
+                else:
+                    self._addTimeMarkFromData(False,down,True,last_ddsj,last_ddpoint)
         if status is None:
             status = self.End
         if end_point is None:
@@ -329,6 +338,21 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.down = down
         self.station_count = station_count
         return path,start_point,end_point,curIndex,status
+
+    def _addTimeMarkFromData(self,stopped:bool,down:bool,asArriveTime:bool,sj:datetime,point:QtCore.QPoint):
+        """
+        2019.06.29新增，对addTimeMark进一步封装，减少冗余调用。
+        主函数中调用的是这个函数。取消对addTimeMark的直接调用。
+        """
+        if down and asArriveTime:
+            self.addTimeMark(point,sj,self.NE)
+        elif down and not asArriveTime:
+            self.addTimeMark(point,sj,self.SW)
+        elif not down and not asArriveTime:
+            self.addTimeMark(point,sj,self.NW)
+        else: # not down and asArriveTime
+            self.addTimeMark(point,sj,self.SE)
+
 
     def _setStartEndLabelText(self,checi,brush)->QtWidgets.QGraphicsSimpleTextItem:
         """

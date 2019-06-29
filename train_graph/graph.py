@@ -1328,10 +1328,11 @@ class Graph:
             tgsj_str += '  '
         return tgsj_str
 
-    def getIntervalTrains(self, start, end, trainFilter):
+    def getIntervalTrains(self, start, end, trainFilter,*,businessOnly=False,stoppedOnly=False):
         """
         返回某个区间办客车次列表。数据结构为list<dict>。
-        2.1版本修改逻辑为：两站皆办理业务才被选入。
+        //2.1版本修改逻辑为：两站皆办理业务才被选入。
+        2019.06.29修改逻辑：选入的条件由输入参数给定。其中stoppedOnly包含始发终到情况。
         dict{
             'train':train object,
             'isSfz':boolean,
@@ -1347,11 +1348,12 @@ class Graph:
             # b2 = train.stationStopBehaviour(end)
             start_dict = train.stationDict(start)
             end_dict = train.stationDict(end)
-            p1 = train.stationBusiness(start_dict)
-            p2 = train.stationBusiness(end_dict)
-            if not (p1 and p2):
-                continue
+            # p1 = train.stationBusiness(start_dict)
+            # p2 = train.stationBusiness(end_dict)
             if not train.stationBefore(start, end):
+                continue
+            if not (self.judgeStopAndBusiness(train,start_dict,businessOnly,stoppedOnly) and
+                    self.judgeStopAndBusiness(train,end_dict,businessOnly,stoppedOnly)):
                 continue
             isSfz = train.isSfz(start)
             isZdz = train.isZdz(end)
@@ -1364,6 +1366,15 @@ class Graph:
             }
             interval_list.append(train_dict)
         return interval_list
+
+    def judgeStopAndBusiness(self,train:Train,dct:dict,bOnly:bool,sOnly:bool):
+        """
+        为上一个函数服务的工具性函数。判断时刻表中某车站是否符合对营业和停车的要求。
+        表达式写的丑是为了利用短路性提高效率。
+        """
+        zm = dct['zhanming']
+        return (not sOnly or train.stationStopped(dct) or train.isSfz(zm) or train.isZdz(zm)) and\
+               (not bOnly or train.stationBusiness(dct))
 
     def getIntervalCount(self, fromOrTo, isStart, trainFilter, passenger_only=False, freight_only=False):
         """

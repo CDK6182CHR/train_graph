@@ -36,6 +36,18 @@ class IntervalTrainDialog(QtWidgets.QDialog):
         flayout.addRow('发站', comboStart)
         flayout.addRow('到站', comboEnd)
 
+        checkBusinessOnly = QtWidgets.QCheckBox('仅营业车次')
+        checkStoppedOnly = QtWidgets.QCheckBox('仅停车车次')
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(checkBusinessOnly)
+        hlayout.addWidget(checkStoppedOnly)
+        self.checkBusinessOnly = checkBusinessOnly
+        self.checkStoppedOnly = checkStoppedOnly
+        self.checkBusinessOnly.setChecked(True)
+        flayout.addRow('显示条件',hlayout)
+        checkBusinessOnly.toggled.connect(self._interval_trains_table)
+        checkStoppedOnly.toggled.connect(self._interval_trains_table)
+
         self.filter = TrainFilter(self.graph, self)
         btnFilt = QtWidgets.QPushButton("筛选")
         btnFilt.setMaximumWidth(120)
@@ -71,6 +83,9 @@ class IntervalTrainDialog(QtWidgets.QDialog):
         self._interval_trains_table()
 
     def _interval_trains_table(self):
+        """
+        重新设置表内容时调用此处。
+        """
         if self.start == self.end or not self.start or not self.end:
             return
         tb: QtWidgets.QTableWidget = self.tableWidget
@@ -78,7 +93,9 @@ class IntervalTrainDialog(QtWidgets.QDialog):
 
         # ('车次','类型','发站','发时','到站','到时', '历时','旅速','始发','终到')
         # print(dialog.start,dialog.end)
-        info_dicts = self.graph.getIntervalTrains(self.start, self.end, self.filter)
+        info_dicts = self.graph.getIntervalTrains(self.start, self.end, self.filter,
+                                                  businessOnly=self.checkBusinessOnly.isChecked(),
+                                                  stoppedOnly=self.checkStoppedOnly.isChecked())
         tb.setRowCount(0)
 
         for i, tr in enumerate(info_dicts):

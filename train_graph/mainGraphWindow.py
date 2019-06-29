@@ -60,9 +60,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.2.2"
+        self.version = "V2.2.3"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190626'
+        self.build = '20190629'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -328,7 +328,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _initSysWidget(self):
         sysWidget = ConfigWidget(self.graph,True,self)
         self.sysWidget = sysWidget
-        self.sysDockWidget.setWidget(sysWidget)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidget(sysWidget)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.sysDockWidget.setWidget(scroll)
 
     def _initCurrentDock(self):
         currentDock = QtWidgets.QDockWidget()
@@ -930,8 +934,12 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         configWidget = ConfigWidget(self.graph,False,self)
         self.configWidget = configWidget
         configWidget.RepaintGraph.connect(self._apply_config_repaint)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setWidget(configWidget)
 
-        self.configDockWidget.setWidget(configWidget)
+        self.configDockWidget.setWidget(scroll)
 
     def _apply_config_repaint(self):
         """
@@ -1425,8 +1433,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
 
         filename = self.graph.filename
+        self.graph.clearAll()
         if not filename:
-            self.graph.clearAll()
             self.GraphWidget.graph = self.graph
         else:
             try:
