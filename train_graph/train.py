@@ -413,6 +413,30 @@ class Train():
             return circuit.owner()
         return None
 
+    def previousCheci(self)->str:
+        """
+        前序车次，如果没有，返回空串。此接口提供给trainInfoWidget。
+        """
+        circuit = self.carriageCircuit()
+        if circuit is None:
+            return ''
+        pr,_ = circuit.preorderLinked(self)
+        if pr is not None:
+            return pr.fullCheci()
+        return '-'
+
+    def nextCheci(self)->str:
+        """
+        后序车次，如果没有返回空串。
+        """
+        circuit = self.carriageCircuit()
+        if circuit is None:
+            return ''
+        nx,_ = circuit.postorderLinked(self)
+        if nx is not None:
+            return nx.fullCheci()
+        return '-'
+
     def firstDown(self)->bool:
         """
         返回第一个区间的上下行情况。2.0新增。

@@ -62,7 +62,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.3"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190629'
+        self.build = '20190630'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -200,10 +200,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initLineWidget()
         self._initRulerWidget()
         self._initTypeWidget()
+        self._initCircuitWidget()  # circuit必须在current前初始化，后者有前者的slot连接。
         self._initCurrentWidget()
         self._initSysWidget()
         self._initForbidWidget()
-        self._initCircuitWidget()
         self._initTrainInfoWidget()
         self._initTrainTimetableWidget()
 
@@ -348,7 +348,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        widget = CurrentWidget(self.graph,self)
+        widget = CurrentWidget(self.graph)
         self.currentWidget = widget
 
         scroll.setWidget(widget)
@@ -362,6 +362,51 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.trainTimetableDockWidget.visibilityChanged.connect(
             lambda:self.trainTimetableWidget.setData(self.currentTrain())
         )
+
+        # connect slots
+        widget.checkCurrentTrainRuler.connect(self._check_ruler)
+        widget.correctCurrentTrainTable.connect(self._correction_timetable)
+        widget.showCurrentTrainEvents.connect(self._train_event_out)
+        widget.showStatus.connect(self.statusOut)
+        widget.currentTrainApplied.connect(self._current_applied)
+        widget.currentTrainDeleted.connect(self._del_train_from_current)
+        widget.editCurrentTrainCircuit.connect(self.circuitWidget.editCircuit)
+
+    def _current_applied(self,train:Train):
+        """
+        2019.06.30新增。将currentWidget中与main有关的全部移到这里。
+        """
+        if train.trainType() not in self.graph.typeList:
+            self.graph.typeList.append(train.trainType())
+            self.typeWidget._setTypeList()
+
+        self.GraphWidget.delTrainLine(train)
+        self.GraphWidget.addTrainLine(train)
+
+        if not self.graph.trainExisted(train):
+            self.graph.addTrain(train)
+            self.trainWidget.addTrain(train)
+        else:
+            self.trainWidget.updateRowByTrain(train)
+        self.statusOut("车次信息更新完毕")
+
+    def _del_train_from_current(self,train:Train):
+        tableWidget = self.main.trainWidget.trainTable
+        isOld = self.graph.trainExisted(train)
+
+        self.GraphWidget._line_un_selected()
+
+        if isOld:
+            # 旧车次，清除表格中的信息
+            for row in range(tableWidget.rowCount()):
+                if tableWidget.item(row, 0).data(-1) is train:
+                    tableWidget.removeRow(row)
+                    break
+        self.GraphWidget.delTrainLine(train)
+
+        self.graph.delTrain(train)
+        self.setData()
+
 
     def _check_ruler(self, train: Train):
         """
@@ -2165,6 +2210,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             num = self.graph.addTrainByGraph(graph,flag)
             self.GraphWidget.paintGraph()
             self.trainWidget.addTrainsFromBottom(num)
+            self.typeWidget._setTypeList()
             self._dout(f"成功导入{num}个车次。")
 
     def _import_train_real(self):

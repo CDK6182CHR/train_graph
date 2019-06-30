@@ -1,19 +1,26 @@
 """
-当前车次信息窗口类
+当前车次信息窗口类。2019.06.30修改：将与Main的连接全部改为signal
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 from .ruler import Ruler
 from .line import Line
+from .circuit import Circuit
 from .train import Train
 from datetime import datetime,timedelta
 from Timetable_new.checi3 import Checi
 from Timetable_new.utility import judge_type,strToTime
 
 class CurrentWidget(QtWidgets.QWidget):
-    def __init__(self,graph,main=None):
+    checkCurrentTrainRuler=QtCore.pyqtSignal(Train)
+    showCurrentTrainEvents = QtCore.pyqtSignal()
+    correctCurrentTrainTable = QtCore.pyqtSignal(Train)
+    showStatus = QtCore.pyqtSignal(str)
+    currentTrainApplied = QtCore.pyqtSignal(Train)
+    currentTrainDeleted = QtCore.pyqtSignal(Train)
+    editCurrentTrainCircuit = QtCore.pyqtSignal(Circuit)
+    def __init__(self,graph):
         super().__init__()
-        self.main = main
         self.graph = graph
         self.train = None
         self.initUI()
@@ -163,30 +170,29 @@ class CurrentWidget(QtWidgets.QWidget):
         hlayout.addWidget(btnLoad)
         layout.addLayout(hlayout)
 
-        if self.main is not None:
-            hlayout = QtWidgets.QHBoxLayout()
-            btnCheck = QtWidgets.QPushButton("标尺对照")
-            btnCheck.clicked.connect(lambda: self.main._check_ruler(self.train))
-            btnCheck.setMinimumWidth(120)
+        hlayout = QtWidgets.QHBoxLayout()
+        btnCheck = QtWidgets.QPushButton("标尺对照")
+        btnCheck.clicked.connect(lambda:self.checkCurrentTrainRuler.emit(self.train))
+        btnCheck.setMinimumWidth(120)
 
-            btnEvent = QtWidgets.QPushButton("切片输出")
-            btnEvent.setToolTip("显示本车次在本线的停站、发车、通过、会车、待避、越行等事件列表。")
-            btnEvent.clicked.connect(self.main._train_event_out)
-            btnEvent.setMinimumWidth(120)
+        btnEvent = QtWidgets.QPushButton("切片输出")
+        btnEvent.setToolTip("显示本车次在本线的停站、发车、通过、会车、待避、越行等事件列表。")
+        btnEvent.clicked.connect(self.showCurrentTrainEvents.emit)
+        btnEvent.setMinimumWidth(120)
 
-            btnCorrection = QtWidgets.QPushButton("顺序重排")
-            btnAutoBusiness = QtWidgets.QPushButton('自动营业')
-            btnAutoBusiness.clicked.connect(self._auto_business)
-            btnCorrection.clicked.connect(lambda:self.main._correction_timetable(self.train))
+        btnCorrection = QtWidgets.QPushButton("顺序重排")
+        btnAutoBusiness = QtWidgets.QPushButton('自动营业')
+        btnAutoBusiness.clicked.connect(self._auto_business)
+        btnCorrection.clicked.connect(lambda:self.correctCurrentTrainTable.emit(self.train))
 
-            btnAutoStartEnd = QtWidgets.QPushButton("自动始发终到(&R)")
-            btnAutoStartEnd.clicked.connect(self._auto_start_end)
+        btnAutoStartEnd = QtWidgets.QPushButton("自动始发终到(&R)")
+        btnAutoStartEnd.clicked.connect(self._auto_start_end)
 
-            hlayout.addWidget(btnCheck)
-            hlayout.addWidget(btnEvent)
-            hlayout.addWidget(btnCorrection)
-            hlayout.addWidget(btnAutoBusiness)
-            layout.addLayout(hlayout)
+        hlayout.addWidget(btnCheck)
+        hlayout.addWidget(btnEvent)
+        hlayout.addWidget(btnCorrection)
+        hlayout.addWidget(btnAutoBusiness)
+        layout.addLayout(hlayout)
 
         hlayout = QtWidgets.QHBoxLayout()
         btnOk = QtWidgets.QPushButton("确定(&O)")
@@ -528,8 +534,7 @@ class CurrentWidget(QtWidgets.QWidget):
         time = timeTable.cellWidget(row, 1).time()
         timeTable.cellWidget(row, 2).setTime(time)
         timeTable.item(row, 3).setText("")  # 停时变成0
-        if self.main is not None:
-            self.main.statusOut(f"{timeTable.item(row,0).text()}站到达时间复制成功")
+        self.showStatus.emit(f"{timeTable.item(row,0).text()}站到达时间复制成功")
 
     def _add_timetable_station(self, timeTable: QtWidgets.QTableWidget, later=False):
         row = timeTable.currentIndex().row()
@@ -650,8 +655,7 @@ class CurrentWidget(QtWidgets.QWidget):
         sender.parentWidget().close()
 
     def _current_ok(self):
-        if self.main:
-            self.main.statusOut("车次信息更新中……")
+        self.showStatus.emit("车次信息更新中……")
 
         if self.train is None:
             self.train = Train(self.graph)
@@ -681,8 +685,6 @@ class CurrentWidget(QtWidgets.QWidget):
 
         elif trainType not in self.graph.typeList:
             self.graph.typeList.append(trainType)
-            if self.main:
-                self.main._initTypeWidget()
         train.setType(trainType)
 
         isShow = self.checkShow.isChecked()
@@ -713,40 +715,10 @@ class CurrentWidget(QtWidgets.QWidget):
 
         self.setData(train)
 
-        # repaint line
-        if self.main:
-            self.main.GraphWidget.delTrainLine(train)
-            self.main.GraphWidget.addTrainLine(train)
-
-            if not self.graph.trainExisted(train):
-                self.graph.addTrain(train)
-                self.main.trainWidget.addTrain(train)
-
-            else:
-                self.main.trainWidget.updateRowByTrain(train)
-
-            if domain:
-                self.main._out_domain_info()
-
-            self.main.statusOut("车次信息更新完毕")
+        # 2019.06.30将所有与main有关的移到main._current_applied中。
 
     def _del_train_from_current(self):
-        if self.main:
-            tableWidget = self.main.trainWidget.trainTable
-            train: Train = self.train
-            isOld = self.graph.trainExisted(train)
-
-            self.main.GraphWidget._line_un_selected()
-
-            if isOld:
-                # 旧车次，清除表格中的信息
-                for row in range(tableWidget.rowCount()):
-                    if tableWidget.item(row, 0).data(-1) is train:
-                        tableWidget.removeRow(row)
-                        break
-            self.main.GraphWidget.delTrainLine(train)
-
-        self.graph.delTrain(train)
+        self.currentTrainDeleted.emit(self.train)
         self.setData()
 
     def _restore_current_train(self):
@@ -768,5 +740,5 @@ class CurrentWidget(QtWidgets.QWidget):
         if circuit is None:
             return
         if self.main:
-            self.main.circuitWidget.editCircuit(circuit)
+            self.editCurrentTrainCircuit.emit(circuit)
 

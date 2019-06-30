@@ -35,6 +35,8 @@ class TrainInfoWidget(QtWidgets.QWidget):
         self.startEndEdit = ... # type:QtWidgets.QLineEdit
         self.modelEdit = ... # type:QtWidgets.QLineEdit
         self.ownerEdit = ... # type:QtWidgets.QLineEdit
+        self.previousEdit = ...  # type:QtWidgets.QLineEdit
+        self.nextEdit = ...  # type:QtWidgets.QLineEdit
         self.initUI()
 
     def initUI(self):
@@ -64,6 +66,8 @@ class TrainInfoWidget(QtWidgets.QWidget):
         self._addFormRow('所属交路名','circuitNameEdit')
         self._addFormRow('车底型号','modelEdit')
         self._addFormRow('担当局段','ownerEdit')
+        self._addFormRow('前序','previousEdit')
+        self._addFormRow('后序','nextEdit')
 
         btnTimetable = QtWidgets.QPushButton('点击查看')
         btnTimetable.setMaximumWidth(120)
@@ -136,7 +140,7 @@ class TrainInfoWidget(QtWidgets.QWidget):
         self.localRunTimeEdit.setText(self._sec2str(running))
         self.localStopTimeEdit.setText(self._sec2str(stay))
         self.localTotalSpeedEdit.setText(self._calSpeedStr(mile,time))
-        self.localRunSpeedEdit.setText(self._calSpeedStr(mile,time))
+        self.localRunSpeedEdit.setText(self._calSpeedStr(mile,running))
 
         circuit = self.train.carriageCircuit()
         if circuit is not None:
@@ -149,6 +153,8 @@ class TrainInfoWidget(QtWidgets.QWidget):
             self.circuitOrderEdit.setText('')
         self.modelEdit.setText(train.model())
         self.ownerEdit.setText(train.owner())
+        self.previousEdit.setText(train.previousCheci())
+        self.nextEdit.setText(train.nextCheci())
 
 
     def _calSpeedStr(self,mile:float,sec:int)->str:

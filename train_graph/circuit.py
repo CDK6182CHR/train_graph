@@ -40,6 +40,8 @@ class CircuitNode:
         self.graph=graph
         if origin is not None:
             self.parseInfo(origin)
+        if train is not None and self._checi is None:
+            self._checi = train.fullCheci()
 
     def parseInfo(self,origin:dict):
         self._checi = origin['checi']
@@ -191,7 +193,12 @@ class Circuit:
         return f"Circuit<{self.name()}>"
 
     def orderStr(self)->str:
-        return '-'.join(map(lambda x:x.train().fullCheci(),self._order))
+        try:
+            return '-'.join(map(lambda x:x.train().fullCheci(),self._order))
+        except TrainNotFoundException as e:
+            print("Circuit::orderStr",e)
+            return 'NA'
+
 
     def trainCount(self)->int:
         return len(self._order)
@@ -206,7 +213,7 @@ class Circuit:
     def addNode(self,node:CircuitNode):
         self._order.append(node)
 
-    def preorderLinked(self,train):
+    def preorderLinked(self,train)->tuple:
         """
         [Train,datetime] or [None,None]
         返回有Link的前一个车次及其终到时间。如果本车次没有Link，则返回None。
@@ -237,7 +244,7 @@ class Circuit:
             return preTrain,preEnd['ddsj']
         return None,None
 
-    def postorderLinked(self,train):
+    def postorderLinked(self,train)->tuple:
         """
         [Train,datetime] or [None,None]
         返回后续连接的车次。如果没有后续或者后续没有勾选link，返回None.

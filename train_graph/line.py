@@ -362,6 +362,14 @@ class Line():
         except IndexError:
             return 0
 
+    def clear(self):
+        """
+        清除所有信息。2019.06.30新增，解决天窗造成的异常问题。
+        """
+        self.stations.clear()
+        self.rulers.clear()
+        self.forbid.clear()
+
     @staticmethod
     def bool2CheckState(t):
         """

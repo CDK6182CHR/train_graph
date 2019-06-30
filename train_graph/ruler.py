@@ -321,8 +321,8 @@ class Ruler():
         """
         # print("total time calculate")
         total = 0
-        start_station = self._line.stations[0]["zhanming"]
-        end_station = self._line.stations[-1]["zhanming"]
+        # start_station = self._line.stations[0]["zhanming"]
+        # end_station = self._line.stations[-1]["zhanming"]
         passed = []
 
         former_station = None

@@ -449,6 +449,24 @@ class Graph:
             if selected is not None:
                 return selected[0]
         return None
+        # t = self.trainFromCheciLinear(checi,full_only)
+        # if t is not None:
+        #     print("Graph::trainFromCheci error! Existed train not found: ",t)
+        # return t
+
+    def trainFromCheciLinear(self,checi:str,full_only:bool)->Train:
+        """
+        仅调试用，线性查找车次。
+        """
+        # print("Graph::trainFromCheciLinear",checi)
+        for train in self.trains():
+            if train.fullCheci() == checi:
+                return train
+        if not full_only:
+            for train in self.trains():
+                if train.downCheci() == checi or train.upCheci() == checi:
+                    return train
+        return None
 
     def multiSearch(self, checi: str):
         """
@@ -513,8 +531,7 @@ class Graph:
         return len(self.line.stations)
 
     def clearLineStationInfo(self):
-        del self.line.stations
-        self.line.stations = []
+        self.line.clear()
 
     def stationExisted(self, name: str):
         self.line.stationExisted(name)
@@ -1586,6 +1603,7 @@ class Graph:
         清空所有数据
         """
         self.clearLineStationInfo()
+        self.setOrdinateRuler(None)
         self._trains = []
         self._circuits = []
         self.typeList = []
