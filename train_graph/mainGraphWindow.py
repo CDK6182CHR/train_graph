@@ -60,9 +60,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self,filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.2.3"
+        self.version = "V2.2.4"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190630'
+        self.build = '20190703'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -388,6 +388,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.trainWidget.addTrain(train)
         else:
             self.trainWidget.updateRowByTrain(train)
+        self.trainInfoWidget.setData(train)
+        self.trainTimetableWidget.setData(train)
         self.statusOut("车次信息更新完毕")
 
     def _del_train_from_current(self,train:Train):
@@ -405,7 +407,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget.delTrainLine(train)
 
         self.graph.delTrain(train)
-        self.setData()
 
 
     def _check_ruler(self, train: Train):
@@ -1577,7 +1578,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dock.setAllowedAreas(Qt.NoDockWidgetArea)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
         dock.setFloating(True)
-        dock.resize(600, 800)
+        dock.resize(700, 800)
 
     def _station_timetable(self):
         dialog = QtWidgets.QDialog(self)
@@ -1992,6 +1993,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         self.GraphWidget.delTrainLine(train)
         self.GraphWidget.addTrainLine(train)
+        self.currentWidget.setData(train)
+        self.trainTimetableWidget.setData(train)
         dialog.close()
 
     def _import_line(self):

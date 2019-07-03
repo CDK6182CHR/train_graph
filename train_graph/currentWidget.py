@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 from .ruler import Ruler
 from .line import Line
+from .graph import Graph
 from .circuit import Circuit
 from .train import Train
 from datetime import datetime,timedelta
@@ -21,7 +22,7 @@ class CurrentWidget(QtWidgets.QWidget):
     editCurrentTrainCircuit = QtCore.pyqtSignal(Circuit)
     def __init__(self,graph):
         super().__init__()
-        self.graph = graph
+        self.graph = graph  # type:Graph
         self.train = None
         self.initUI()
 
@@ -385,10 +386,12 @@ class CurrentWidget(QtWidgets.QWidget):
         if not self.color:
             self.btnColor.setText("系统默认")
             self.btnDefault.setEnabled(False)
+            self.btnColor.setStyleSheet('default')
         else:
             color = QtGui.QColor(self.color)
-            self.btnColor.setStyleSheet(f"color:rgb({color.red()},{color.green()},{color.blue()})")
-            self.btnColor.setStyleSheet(self.color)
+            st = f"color:rgb({color.red()},{color.green()},{color.blue()})"
+            self.btnColor.setText(self.color)
+            self.btnColor.setStyleSheet(st)
         self.spinWidth.setValue(train.lineWidth())
 
         self.checkShow.setChecked(train.isShow())
@@ -421,6 +424,7 @@ class CurrentWidget(QtWidgets.QWidget):
             # ddsjQ = QtCore.QTime(ddsj.hour,ddsj.minute,ddsj.second)
             ddsjQ = QtCore.QTime(ddsj.hour, ddsj.minute, ddsj.second)
             ddsjEdit.setDisplayFormat("hh:mm:ss")
+            ddsjEdit.setWrapping(True)
             ddsjEdit.setTime(ddsjQ)
             ddsjEdit.setMinimumSize(1,1)
             ddsjEdit.timeChanged.connect(self._time_changed)
@@ -430,6 +434,7 @@ class CurrentWidget(QtWidgets.QWidget):
             cfsjEdit.row = num
             cfsjQ = QtCore.QTime(cfsj.hour, cfsj.minute, cfsj.second)
             cfsjEdit.setDisplayFormat("hh:mm:ss")
+            cfsjEdit.setWrapping(True)
             cfsjEdit.setTime(cfsjQ)
             cfsjEdit.setMinimumSize(1,1)
             cfsjEdit.timeChanged.connect(self._time_changed)
@@ -504,7 +509,7 @@ class CurrentWidget(QtWidgets.QWidget):
         color: QtGui.QColor = QtWidgets.QColorDialog.getColor()
         self.color = "#%02X%02X%02X" % (color.red(), color.green(), color.blue())
         btn: QtWidgets.QPushButton = self.btnColor
-        btn.setStyleSheet(f"background-color:rgb({color.red()},{color.green()},{color.blue()})")
+        btn.setStyleSheet(f"color:rgb({color.red()},{color.green()},{color.blue()})")
         btn.setText(self.color)
         self.btnDefault.setEnabled(True)
 
@@ -559,11 +564,11 @@ class CurrentWidget(QtWidgets.QWidget):
 
         item = QtWidgets.QTableWidgetItem()
         item.setFlags(Qt.NoItemFlags)
-        timeTable.setItem(row, 3, item)
+        timeTable.setItem(row, 5, item)
 
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Line.bool2CheckState(business))
-        timeTable.setItem(row,4,item)
+        timeTable.setItem(row,3,item)
 
     def _remove_timetable_station(self, timeTable: QtWidgets.QTableWidget):
         timeTable.removeRow(timeTable.currentRow())
@@ -669,7 +674,7 @@ class CurrentWidget(QtWidgets.QWidget):
             self._derr(f"车次{fullCheci}已存在，请重新输入！")
             return
 
-        train.setCheci(fullCheci, downCheci, upCheci)
+        self.graph.changeTrainCheci(train,fullCheci,downCheci,upCheci)
 
         sfz = self.sfzEdit.text()
         zdz = self.zdzEdit.text()
@@ -714,7 +719,7 @@ class CurrentWidget(QtWidgets.QWidget):
             train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()),note=note)
 
         self.setData(train)
-
+        self.currentTrainApplied.emit(train)
         # 2019.06.30将所有与main有关的移到main._current_applied中。
 
     def _del_train_from_current(self):
@@ -741,4 +746,11 @@ class CurrentWidget(QtWidgets.QWidget):
             return
         if self.main:
             self.editCurrentTrainCircuit.emit(circuit)
+
+    def _derr(self, note: str):
+        # print("_derr")
+        QtWidgets.QMessageBox.warning(self, "错误", note)
+
+    def _dout(self, note: str):
+        QtWidgets.QMessageBox.information(self, "提示", note)
 

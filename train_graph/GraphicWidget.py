@@ -1344,8 +1344,6 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
     def _remove_forbid(self, down):
         forbid = self.graph.line.forbid
-        print(forbid._downItems)
-        print(forbid._upItems)
         for item in forbid.items(down):
             if item in self.scene.items():  # 临时使用这种方法避免出错
                 self.scene.removeItem(item)

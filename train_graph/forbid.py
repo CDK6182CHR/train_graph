@@ -152,3 +152,13 @@ class Forbid:
             self._downItems = []
         else:
             self._upItems = []
+
+    def changeStationName(self,old:str,new:str):
+        """
+        2019.07.03新增，修改站名。站名要严格匹配。
+        """
+        for node in self._nodes:
+            if node['fazhan'] == old:
+                node['fazhan']=new
+            if node['daozhan'] == old:
+                node['daozhan'] = new

@@ -69,9 +69,9 @@ class rulerPainter(QtWidgets.QWidget):
         hlayout.addWidget(btnOk)
         layout.addLayout(hlayout)
         self.setLayout(layout)
-        self.widget1.resize(800,800)
-        self.widget2.resize(800,800)
-        self.resize(800,800)
+        self.widget1.resize(900,900)
+        self.widget2.resize(900,900)
+        self.resize(900,900)
         self.btnFormer.setEnabled(False)
         self.btnOk.setEnabled(False)
 
@@ -213,6 +213,7 @@ class rulerPainter(QtWidgets.QWidget):
 
         timeEdit = QtWidgets.QTimeEdit()
         timeEdit.setDisplayFormat('hh:mm:ss')
+        timeEdit.setWrapping(True)
         timeEdit.setLineEdit(QtWidgets.QLineEdit())
         timeEdit.timeChanged.connect(self._start_time_changed)
         timeEdit.setMaximumWidth(200)
@@ -232,7 +233,7 @@ class rulerPainter(QtWidgets.QWidget):
 
         timeTable = QtWidgets.QTableWidget()
         timeTable.setEditTriggers(timeTable.NoEditTriggers)
-        timeTable.setColumnCount(7)
+        timeTable.setColumnCount(8)
         timeTable.setToolTip("按alt+C检测所在行时刻冲突情况")
         actionText = QtWidgets.QAction(timeTable)
         actionText.setShortcut('alt+C')
@@ -243,14 +244,15 @@ class rulerPainter(QtWidgets.QWidget):
             0:80,
             1:50,
             2:50,
-            3:100,
-            4:100,
+            3:90,
+            4:90,
             5:60,
             6:60,
+            7:60,
         }
         for key,value in column_width.items():
             timeTable.setColumnWidth(key,value)
-        timeTable.setHorizontalHeaderLabels(['站名','停分','秒','到点','开点','附加','区间'])
+        timeTable.setHorizontalHeaderLabels(['站名','停分','秒','到点','开点','附加','调整','区间'])
         self._setTable()
         timeTable.cellDoubleClicked.connect(self._paint_to_here)
 
@@ -311,6 +313,7 @@ class rulerPainter(QtWidgets.QWidget):
         timeTable.setCellWidget(num,2,spinSec)
         spinSec.setRange(0,59)
         spinSec.setSingleStep(10)
+        spinSec.setWrapping(True)
         spinSec.valueChanged.connect(lambda :self._stop_changed(num))
         spinSec.setMinimumSize(1,1)
 
@@ -339,18 +342,27 @@ class rulerPainter(QtWidgets.QWidget):
         item.setText(text)
         timeTable.setItem(num,5,item)
 
+        spinAdjust = QtWidgets.QSpinBox()
+        spinAdjust.setSingleStep(10)
+        spinAdjust.setRange(-1000,1000)
+        spinAdjust.setValue(0)
+        spinAdjust.row = num
+        spinAdjust.valueChanged.connect(lambda:self._adjust_changed(num))
+
         if node is None:
             ds = 0
+            spinAdjust.setEnabled(False)
             ds_str = '--'
         else:
             ds = node["interval"]
             if 0x1&flag:
                 ds += node["start"]
             ds_str = "%d:%02d"%(int(ds/60),ds%60)
+        timeTable.setCellWidget(num,6,spinAdjust)
 
         item = QtWidgets.QTableWidgetItem(ds_str)
         item.setData(-1,node)
-        timeTable.setItem(num,6,item)
+        timeTable.setItem(num,7,item)
 
     def _ruler_changed(self,name:str):
         self.ruler = self.graph.line.rulerByName(name)
@@ -425,6 +437,9 @@ class rulerPainter(QtWidgets.QWidget):
         """
         车站停时改变触发。
         """
+        self._reCalculate(row)
+
+    def _adjust_changed(self,row:int):
         self._reCalculate(row)
 
     def _paint_to_here(self,row:int):
@@ -541,11 +556,12 @@ class rulerPainter(QtWidgets.QWidget):
                 interval_str = '--'
             else:
                 #区间行为判断
+                adjust_value = timeTable.cellWidget(row,6).value()
                 last_stay = self._stayTime(row-1)
                 append_flag = 0x0
                 append_flag_str = ""
-                node:dict = timeTable.item(row,6).data(-1)
-                interval = node["interval"]
+                node:dict = timeTable.item(row,7).data(-1)
+                interval = node["interval"]+adjust_value
                 if last_stay.seconds != 0:
                     append_flag += 0x1  #起
                     append_flag_str += '起'
@@ -575,15 +591,13 @@ class rulerPainter(QtWidgets.QWidget):
             timeTable.item(row,4).setText(cfsj.strftime('%H:%M:%S'))
             timeTable.item(row,5).setData(-1,append_flag)
             timeTable.item(row,5).setText(append_flag_str)
-            timeTable.item(row,6).setText(interval_str)
+            timeTable.item(row,7).setText(interval_str)
 
             last_time = cfsj
 
-    def _stayTime(self,row:int):
+    def _stayTime(self,row:int)->timedelta:
         """
         计算row行的停留时间。返回timedelta。
-        :param row:
-        :return:
         """
         ds = self.timeTable.cellWidget(row,1).value()*60+self.timeTable.cellWidget(row,2).value()
         return timedelta(days=0,seconds=ds)

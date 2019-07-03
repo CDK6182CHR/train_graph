@@ -30,7 +30,7 @@ class CircuitWidget(QtWidgets.QWidget):
         tableWidget.setHorizontalHeaderLabels(['高亮','交路名','车次列','车底','担当','注释'])
         tableWidget.itemChanged.connect(self._table_item_changed)
 
-        for i,s in enumerate((60,110,110,100,100,120)):
+        for i,s in enumerate((40,110,110,100,100,120)):
             tableWidget.setColumnWidth(i,s)
 
         vlayout.addWidget(tableWidget)
@@ -72,6 +72,7 @@ class CircuitWidget(QtWidgets.QWidget):
             item = QtWidgets.QTableWidgetItem()
             item.setCheckState(Qt.Unchecked)
             tableWidget.setItem(row,0,item)
+            item.setFlags(Qt.ItemIsUserCheckable|Qt.ItemIsEnabled)
 
     def editCircuit(self,circuit:Circuit):
         """

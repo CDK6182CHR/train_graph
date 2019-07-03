@@ -672,6 +672,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             line1.setPen(pen)
             self.linkItem1 = line1
             line2 = QtWidgets.QGraphicsLineItem(minX,thisPoint.y(),thisPoint.x(),thisPoint.y(),self)
+            line2.setPen(pen)
             self.linkItem2 = line2
 
     def removeLinkLine(self):

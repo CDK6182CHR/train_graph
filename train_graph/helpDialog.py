@@ -64,8 +64,6 @@ Alt+D	复制到发时刻	1.0.7	在“选中车次设置”面板有效，将当�
 Alt+C	复制天窗（一行）	1.2.3	在“天窗编辑”面板有效，将当前行数据复制到下一行。同时将光标下移一行。
 Alt+shift+C	复制天窗（本方向）	1.2.3	在“天窗编辑”面板有效，将当前行数据复制到本方向（上行或下行）自本行开始的所有行。
 Alt+C	排图冲突检查	1.0.7	在“标尺排图向导”运行时有效，检查当前行到发时刻附近的其他列车时刻。
-Alt+I	提交当前车次更改	2.1.0	在“当前车次设置”面板有效，相当于点击该面板的“确定”。
-
 """
 
 class HelpDialog(QtWidgets.QDialog):
@@ -116,7 +114,7 @@ class HelpDialog(QtWidgets.QDialog):
 
         tableWidget.setColumnCount(3)
         tableWidget.setHorizontalHeaderLabels(('快捷键','起始版本','功能'))
-        for i,s in enumerate((130,80,300)):
+        for i,s in enumerate((130,70,290)):
             tableWidget.setColumnWidth(i,s)
         tableWidget.itemDoubleClicked.connect(self._item_double_clicked)
 

@@ -158,7 +158,7 @@ class ForbidWidget(QtWidgets.QWidget):
                 self.sender().setChecked(True)
                 return
         self.data.setDifferent(checked,del_up=True)
-        self.initUI()
+        self.setData()
 
     def _show_changed(self,checked:bool,down:bool):
         self.data.setShow(checked,down)
@@ -232,7 +232,7 @@ class ForbidWidget(QtWidgets.QWidget):
     def _cancel_clicked(self):
         if not self.question('将本线标尺信息恢复为保存的信息，当前未保存的改动将会丢失。是否继续？'):
             return
-        self.initUI()
+        self.setData()
 
     def question(self, note: str, default=True):
         flag = QtWidgets.QMessageBox.question(self, '天窗编辑', note,

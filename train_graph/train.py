@@ -73,17 +73,17 @@ class Train():
             #从既有字典读取数据
             self.loadTrain(origin)
         else:
-            print("新")
             self.checi = [checi_full,checi_down,checi_up]
             self.type = ''
             self.timetable = []
             self.sfz=sfz
             self.zdz=zdz
             self.UI={}
+            print("新车次",self.checi)
 
             if not checi_down and not checi_up and checi_full:
                 #没有给出上下行车次，重新拆分初始化
-                tempcheci = Checi  (checi_full)
+                tempcheci = Checi(checi_full)
                 self.checi[1]=tempcheci.down
                 self.checi[2]=tempcheci.up
                 self.type = tempcheci.type
@@ -245,7 +245,10 @@ class Train():
         for st in self.timetable:
             yield st["zhanming"],st["ddsj"],st["cfsj"]
 
-    def color(self,graph=None):
+    def color(self,graph=None)->str:
+        """
+        graph为None时只取本身设定的颜色。graph为非None时，如果没有设定就返回默认。
+        """
         try:
             color_str = self.UI["Color"]
         except KeyError:

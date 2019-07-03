@@ -774,7 +774,7 @@ class Graph:
             train.reverseAllItemDown()
 
             # 车次交换
-            temp = train.setCheci(train.fullCheci(), train.upCheci(), train.downCheci())
+            train.setCheci(train.fullCheci(), train.upCheci(), train.downCheci())
 
     def downTrainCount(self):
         count = 0
@@ -1029,6 +1029,7 @@ class Graph:
         if old_dict is not None:
             old_dict["zhanming"] = new if not auto_field else new.split('::')[0]
 
+        # 更新标尺中站名
         for ruler in self.line.rulers:
             ruler.changeStationName(old, new)
         for train in self.trains():
@@ -1043,7 +1044,10 @@ class Graph:
             st_dict = train.stationDict(old)
             if st_dict is not None:
                 st_dict["zhanming"] = new
+        # 更新天窗中站名
+        self.line.forbid.changeStationName(old,new)
         self.line.changeStationNameUpdateMap(old, new)
+
 
     def addTrainByGraph(self, graph, cover=False):
         """

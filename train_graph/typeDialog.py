@@ -94,11 +94,17 @@ class TypeDialog(QtWidgets.QDialog):
         row = self.tableWidget.currentRow()
         self.tableWidget.insertRow(row)
         self.tableWidget.setRowHeight(row,self.UIDict['table_row_height'])
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Qt.Unchecked)
+        self.tableWidget.setItem(row,2,item)
 
     def _insert_after(self):
         row = self.tableWidget.currentRow()
         self.tableWidget.insertRow(row+1)
         self.tableWidget.setRowHeight(row+1,self.UIDict['table_row_height'])
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Qt.Unchecked)
+        self.tableWidget.setItem(row+1, 2, item)
 
     def _del(self):
         self.tableWidget.removeRow(self.tableWidget.currentRow())
