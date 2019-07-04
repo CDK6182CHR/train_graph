@@ -46,6 +46,8 @@ from .correctionWidget import CorrectionWidget
 from .stationTimetable import StationTimetable
 from .trainTimetable import TrainTimetable
 from .helpDialog import HelpDialog
+from .changeTrainIntervalDialog import ChangeTrainIntervalDialog
+from .exchangeIntervalDialog import ExchangeIntervalDialog
 import time
 from .thread import ThreadDialog
 import traceback
@@ -55,14 +57,15 @@ cgitb.enable(format='text')
 
 system_file = "system.json"
 
+
 class mainGraphWindow(QtWidgets.QMainWindow):
 
-    def __init__(self,filename=None):
+    def __init__(self, filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.4"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190703'
+        self.build = '20190704'
         self._system = None
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
@@ -72,7 +75,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._selectedTrain = None
         self.graph = Graph()
         self._initGraph(filename)
-        self.GraphWidget = GraphicsWidget(self.graph,self)
+        self.GraphWidget = GraphicsWidget(self.graph, self)
 
         self.setWindowTitle(f"{self.title}   {self.graph.filename if self.graph.filename else '新运行图'}")
 
@@ -107,10 +110,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         1.4版本新增函数。
         """
         try:
-            with open(system_file,encoding='utf-8',errors='ignore') as fp:
+            with open(system_file, encoding='utf-8', errors='ignore') as fp:
                 self._system = json.load(fp)
         except:
-            self._system={}
+            self._system = {}
         self._checkSystemSetting()
 
     def _checkSystemSetting(self):
@@ -118,9 +121,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         1.4版本新增函数。
         """
         system_default = {
-            "last_file":'',
-            "default_file":'sample.json',
-            "dock_show":{}
+            "last_file": '',
+            "default_file": 'sample.json',
+            "dock_show": {}
         }
         system_default.update(self._system)
         self._system = system_default
@@ -129,14 +132,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         1.4版本新增函数
         """
-        with open(system_file,'w',encoding='utf-8',errors='ignore') as fp:
-            json.dump(self._system,fp,ensure_ascii=False)
+        with open(system_file, 'w', encoding='utf-8', errors='ignore') as fp:
+            json.dump(self._system, fp, ensure_ascii=False)
 
-    def _initGraph(self,filename=None):
+    def _initGraph(self, filename=None):
         """
         1.4版本新增函数。按照给定文件、上次打开的文件、默认文件的顺序，初始化系统内置graph。
         """
-        for n in (filename,self._system["last_file"],self._system["default_file"]):
+        for n in (filename, self._system["last_file"], self._system["default_file"]):
             if not n:
                 continue
             try:
@@ -146,14 +149,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             else:
                 return
 
-    def currentTrain(self)->Train:
+    def currentTrain(self) -> Train:
         """
         2019.06.06新增函数。将选中列车作为main窗口封装的属性之一。
         增加的动机：GraphWidget.selectedTrain无法满足无运行线车次的选择状态记录功能。
         """
         return self._selectedTrain
 
-    def setCurrentTrain(self,train:Train):
+    def setCurrentTrain(self, train: Train):
         self._selectedTrain = train
 
     def _initUI(self):
@@ -189,9 +192,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '显示类型设置': self.typeDockWidget,
             '标尺编辑': self.rulerDockWidget,
             '天窗编辑': self.forbidDockWidget,
-            '交路编辑':self.circuitDockWidget,
-            '车次信息':self.trainInfoDockWidget,
-            '车次时刻表':self.trainTimetableDockWidget,
+            '交路编辑': self.circuitDockWidget,
+            '车次信息': self.trainInfoDockWidget,
+            '车次时刻表': self.trainTimetableDockWidget,
         }
 
     def _initDockWidgetContents(self):
@@ -211,8 +214,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         1.4版本新增，初始化停靠面板是否显示。
         """
-        for key,dock in self.action_widget_dict.items():
-            dock.setVisible(self._system['dock_show'].setdefault(key,False))
+        for key, dock in self.action_widget_dict.items():
+            dock.setVisible(self._system['dock_show'].setdefault(key, False))
 
     def _refreshDockWidgets(self):
         """
@@ -251,29 +254,29 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _initCircuitDock(self):
         dock = QtWidgets.QDockWidget()
         dock.setWindowTitle('交路编辑')
-        dock.visibilityChanged.connect(lambda:self._dock_visibility_changed('交路编辑',dock))
-        self.addDockWidget(Qt.RightDockWidgetArea,dock)
+        dock.visibilityChanged.connect(lambda: self._dock_visibility_changed('交路编辑', dock))
+        self.addDockWidget(Qt.RightDockWidgetArea, dock)
         dock.setVisible(False)
-        self.circuitDockWidget=dock
+        self.circuitDockWidget = dock
 
     def _initTrainInfoDock(self):
         dock = QtWidgets.QDockWidget()
         dock.setWindowTitle('车次信息')
-        dock.visibilityChanged.connect(lambda:self._dock_visibility_changed('车次信息',dock))
-        self.addDockWidget(Qt.LeftDockWidgetArea,dock)
+        dock.visibilityChanged.connect(lambda: self._dock_visibility_changed('车次信息', dock))
+        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
         dock.setVisible(False)
         self.trainInfoDockWidget = dock
 
     def _initTrainTimetableDock(self):
         dock = QtWidgets.QDockWidget()
         dock.setWindowTitle('车次时刻表')
-        dock.visibilityChanged.connect(lambda:self._dock_visibility_changed('车次时刻表',dock))
-        self.addDockWidget(Qt.RightDockWidgetArea,dock)
+        dock.visibilityChanged.connect(lambda: self._dock_visibility_changed('车次时刻表', dock))
+        self.addDockWidget(Qt.RightDockWidgetArea, dock)
         dock.setVisible(False)
         self.trainTimetableDockWidget = dock
 
     def _initTrainTimetableWidget(self):
-        widget = TrainTimetable(self.graph,self)
+        widget = TrainTimetable(self.graph, self)
         self.trainTimetableDockWidget.setWidget(widget)
         self.trainTimetableWidget = widget
 
@@ -326,7 +329,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         colorDock.setVisible(False)
 
     def _initSysWidget(self):
-        sysWidget = ConfigWidget(self.graph,True,self)
+        sysWidget = ConfigWidget(self.graph, True, self)
         self.sysWidget = sysWidget
         scroll = QtWidgets.QScrollArea()
         scroll.setWidget(sysWidget)
@@ -360,7 +363,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             lambda: self.trainInfoWidget.setData(self.currentTrain())
         )
         self.trainTimetableDockWidget.visibilityChanged.connect(
-            lambda:self.trainTimetableWidget.setData(self.currentTrain())
+            lambda: self.trainTimetableWidget.setData(self.currentTrain())
         )
 
         # connect slots
@@ -372,7 +375,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         widget.currentTrainDeleted.connect(self._del_train_from_current)
         widget.editCurrentTrainCircuit.connect(self.circuitWidget.editCircuit)
 
-    def _current_applied(self,train:Train):
+    def _current_applied(self, train: Train):
         """
         2019.06.30新增。将currentWidget中与main有关的全部移到这里。
         """
@@ -380,8 +383,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.graph.typeList.append(train.trainType())
             self.typeWidget._setTypeList()
 
-        self.GraphWidget.delTrainLine(train)
-        self.GraphWidget.addTrainLine(train)
+        self.GraphWidget.repaintTrainLine(train)
 
         if not self.graph.trainExisted(train):
             self.graph.addTrain(train)
@@ -392,7 +394,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.trainTimetableWidget.setData(train)
         self.statusOut("车次信息更新完毕")
 
-    def _del_train_from_current(self,train:Train):
+    def _del_train_from_current(self, train: Train):
         tableWidget = self.main.trainWidget.trainTable
         isOld = self.graph.trainExisted(train)
 
@@ -407,7 +409,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget.delTrainLine(train)
 
         self.graph.delTrain(train)
-
 
     def _check_ruler(self, train: Train):
         """
@@ -695,7 +696,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             if event["type"] == TrainEventType.pass_calculated:
                 add = '推定'
             else:
-                add = event.get("note",'')
+                add = event.get("note", '')
             item = QtWidgets.QTableWidgetItem(add)
             tableWidget.setItem(row, 5, item)
 
@@ -816,7 +817,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         typeDock.setVisible(False)
 
     def _initTypeWidget(self):
-        typeWidget = TypeWidget(self.graph,self)
+        typeWidget = TypeWidget(self.graph, self)
         self.typeWidget = typeWidget
         typeWidget.TypeShowChanged.connect(self._apply_type_show)
 
@@ -883,14 +884,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         print("double clicked!")
         train.setIsShow(True, affect_item=True)
         self.setCurrentTrain(train)
-        self.GraphWidget.setTrainShow(train,True)
+        self.GraphWidget.setTrainShow(train, True)
         for item in train.items():
             self.GraphWidget._line_selected(item)
             break
         dock: QtWidgets.QDockWidget = self.currentDockWidget
         dock.setVisible(True)
 
-    def _show_timetable(self,train:Train):
+    def _show_timetable(self, train: Train):
         """
         2019.06.25新增，强制显示时刻表。
         """
@@ -977,7 +978,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, configDock)
 
     def _initConfigWidget(self):
-        configWidget = ConfigWidget(self.graph,False,self)
+        configWidget = ConfigWidget(self.graph, False, self)
         self.configWidget = configWidget
         configWidget.RepaintGraph.connect(self._apply_config_repaint)
         scroll = QtWidgets.QScrollArea()
@@ -994,7 +995,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         try:
             self.GraphWidget.paintGraph(True)
         except Exception as e:
-            self._derr("铺画失败，可能由于排图标尺不符合要求。已自动恢复为按里程排图。\n"+str(e))
+            self._derr("铺画失败，可能由于排图标尺不符合要求。已自动恢复为按里程排图。\n" + str(e))
             self.graph.setOrdinateRuler(None)
             self.GraphWidget.paintGraph()
             self.configWidget.setOrdinateCombo()
@@ -1042,7 +1043,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         actionSaveAs.setShortcut('F12')
         m1.addAction(actionSaveAs)
 
-        actionToTrc = QtWidgets.QAction("导出为ETRC运行图（.trc）格式",self)
+        actionToTrc = QtWidgets.QAction("导出为ETRC运行图（.trc）格式", self)
         actionToTrc.triggered.connect(self._toTrc)
         actionToTrc.setShortcut('ctrl+M')
         m1.addAction(actionToTrc)
@@ -1056,9 +1057,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         actionRefresh.triggered.connect(self._refresh_graph)
         m1.addAction(actionRefresh)
 
-        actionPaint = QtWidgets.QAction("立即铺画运行图",self)
+        actionPaint = QtWidgets.QAction("立即铺画运行图", self)
         actionPaint.setShortcut('shift+F5')
-        actionPaint.triggered.connect(lambda :self.GraphWidget.paintGraph(force=True))
+        actionPaint.triggered.connect(lambda: self.GraphWidget.paintGraph(force=True))
         m1.addAction(actionPaint)
 
         actionOutput = QtWidgets.QAction(QtGui.QIcon(), "导出运行图", self)
@@ -1067,7 +1068,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         m1.addAction(actionOutput)
         # self.actionOutput=actionOutput
 
-        actionOutPdf = QtWidgets.QAction(QtGui.QIcon(),"导出矢量pdf运行图",self)
+        actionOutPdf = QtWidgets.QAction(QtGui.QIcon(), "导出矢量pdf运行图", self)
         actionOutPdf.setShortcut("ctrl+shift+T")
         actionOutPdf.triggered.connect(self._outputPdf)
         m1.addAction(actionOutPdf)
@@ -1089,6 +1090,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._add_train_by_ruler)
         menu.addAction(action)
 
+        action = QtWidgets.QAction('当前车次区间重排', self)
+        action.setShortcut('ctrl+shift+R')
+        action.triggered.connect(self._change_train_interval)
+        menu.addAction(action)
+
         action = QtWidgets.QAction("搜索车次", self)
         action.setShortcut('ctrl+F')
         action.triggered.connect(self._search_from_menu)
@@ -1103,7 +1109,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._reset_start_end)
         menu.addAction(action)
 
-        action = QtWidgets.QAction("自动适配始发终到站",self)
+        action = QtWidgets.QAction("自动适配始发终到站", self)
         action.triggered.connect(self._auto_start_end)
         # action.setShortcut('ctrl+M')
         menu.addAction(action)
@@ -1124,15 +1130,15 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         menu.addAction(actionZoomOut)
 
         menu.addSeparator()
-        actionResetType = QtWidgets.QAction('重置所有列车营业站',self)
+        actionResetType = QtWidgets.QAction('重置所有列车营业站', self)
         actionResetType.triggered.connect(self._reset_business)
         menu.addAction(actionResetType)
 
-        actionResetPassenger = QtWidgets.QAction("自动设置是否客车",self)
+        actionResetPassenger = QtWidgets.QAction("自动设置是否客车", self)
         actionResetPassenger.triggered.connect(self._reset_passenger)
         menu.addAction(actionResetPassenger)
 
-        actionAutoType = QtWidgets.QAction('重置所有列车类型',self)
+        actionAutoType = QtWidgets.QAction('重置所有列车类型', self)
         actionAutoType.triggered.connect(self._auto_type)
         menu.addAction(actionAutoType)
 
@@ -1154,7 +1160,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._check_ruler_from_menu)
         menu.addAction(action)
 
-        action = QtWidgets.QAction("两车次时分对照",self)
+        action = QtWidgets.QAction("两车次时分对照", self)
         action.setShortcut('ctrl+shift+W')
         action.triggered.connect(self._train_compare)
         menu.addAction(action)
@@ -1197,6 +1203,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._batch_copy_train)
         menu.addAction(action)
 
+        action = QtWidgets.QAction('区间换线', self)
+        action.setShortcut('ctrl+5')
+        action.triggered.connect(self._interval_exchange)
+        menu.addAction(action)
+
         action = QtWidgets.QAction("反排运行图", self)
         action.triggered.connect(self._reverse_graph)
         menu.addAction(action)
@@ -1221,7 +1232,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self.showFilter.setFilter)
         menu.addAction(action)
 
-        action = QtWidgets.QAction('当前车次时刻表重排',self)
+        action = QtWidgets.QAction('当前车次时刻表重排', self)
         action.setShortcut('ctrl+V')
         action.triggered.connect(self._correction_timetable)
         menu.addAction(action)
@@ -1259,10 +1270,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.actionWindow_list = []
         actions = (
             '线路编辑', '车次编辑', '标尺编辑', '选中车次设置', '运行图设置', '系统默认设置',
-            '显示类型设置', '天窗编辑','交路编辑','车次信息','车次时刻表'
+            '显示类型设置', '天窗编辑', '交路编辑', '车次信息', '车次时刻表'
         )
         shorcuts = (
-            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1','4','Q','Y'
+            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1', '4', 'Q', 'Y'
         )
         for a, s in zip(actions, shorcuts):
             action = QtWidgets.QAction(a, self)
@@ -1282,7 +1293,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._about)
         menu.addAction(action)
 
-        action = QtWidgets.QAction("简明功能表",self)
+        action = QtWidgets.QAction("简明功能表", self)
         action.triggered.connect(self._function_list)
         action.setShortcut('F1')
         menu.addAction(action)
@@ -1305,10 +1316,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '标尺编辑': self.rulerDockWidget,
             '标尺排图向导': self.guideDockWidget,
             '天窗编辑': self.forbidDockWidget,
-            '系统默认设置':self.sysDockWidget,
-            '交路编辑':self.circuitDockWidget,
-            '车次信息':self.trainInfoDockWidget,
-            '车次时刻表':self.trainTimetableDockWidget,
+            '系统默认设置': self.sysDockWidget,
+            '交路编辑': self.circuitDockWidget,
+            '车次信息': self.trainInfoDockWidget,
+            '车次时刻表': self.trainTimetableDockWidget,
         }
         dock = widgets[action.text()]
         if dock is None:
@@ -1411,7 +1422,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                                                              filter="图像(*.png)")
         if not filename or not ok:
             return
-        self.GraphWidget.save(filename,f"由{self.name}{self.version}导出")
+        self.GraphWidget.save(filename, f"由{self.name}{self.version}导出")
         self._dout("导出成功！")
 
     def _outputPdf(self):
@@ -1421,7 +1432,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                                                              filter="PDF图像(*.pdf)")
         if not filename or not ok:
             return
-        if self.GraphWidget.savePdf(filename,f"由{self.name}{self.version}导出"):
+        if self.GraphWidget.savePdf(filename, f"由{self.name}{self.version}导出"):
             self._dout("导出PDF成功！")
 
     def _outExcel(self):
@@ -1436,8 +1447,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         # status: QtWidgets.QStatusBar = self.statusBar()
         self.statusOut("正在保存")
         if not self.graph.graphFileName():
-            filename,ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
-                                                             filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')
+            filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件",
+                                                                 directory=self.graph.lineName() + '.json',
+                                                                 filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')
             if not ok:
                 return
         self.graph.setVersion(self.version)
@@ -1466,8 +1478,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         text = "注意：显著的信息丢失。由于文本运行图格式不支持本系统的部分功能，导出的.trc格式运行图包含的信息少于本系统的.json格式运行图。这就是说，若先导出.trc格式，再用本系统读取该文件，仍将造成显著的信息丢失。本功能不改变原运行图，只是导出一个副本。请确认知悉以上内容，并继续。"
         self._dout(text)
-        filename,ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.trc',
-                                                         filter='ETRC运行图文件(*.trc)\n所有文件(*.*)')
+        filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.trc',
+                                                             filter='ETRC运行图文件(*.trc)\n所有文件(*.*)')
         if not ok:
             return
         self.graph.toTrc(filename)
@@ -1505,7 +1517,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         QtWidgets.QMessageBox.about(self, '关于', text)
 
     def _function_list(self):
-        dialog = HelpDialog(self.graph,self)
+        dialog = HelpDialog(self.graph, self)
         dialog.exec_()
 
     def statusOut(self, note: str, seconds: int = 0):
@@ -1580,6 +1592,32 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dock.setFloating(True)
         dock.resize(700, 800)
 
+    def _change_train_interval(self):
+        """
+        当前车次区间时刻表重排，ctrl+shift+R。先选择区间，然后调起标尺排图向导。
+        """
+        train = self.currentTrain()
+        if train is None:
+            self._derr('当前车次区间时刻重排：当前没有选中的车次！')
+            return
+        if not self.graph.rulerCount():
+            self._derr("当前车次区间时刻重排：无可用标尺！")
+            return
+        dialog = ChangeTrainIntervalDialog(train, self.graph, self)
+        dialog.trainChangeOk.connect(self._change_train_interval_ok)
+        self.changeTrainIntervalDialog = dialog
+        dialog.exec_()
+
+    def _change_train_interval_ok(self, train: Train, anTrain: Train):
+        self.GraphWidget.delTrainLine(anTrain)
+        self.GraphWidget.repaintTrainLine(train)
+        self.currentWidget.setData(train)
+        self.trainTimetableWidget.setData(train)
+        self.trainInfoWidget.setData(train)
+        self.trainWidget.updateRowByTrain(train)
+        self.statusOut('车次调整完毕')
+        del self.changeTrainIntervalDialog
+
     def _station_timetable(self):
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle("导出车站时刻表")
@@ -1615,7 +1653,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self._derr("请先选择车站！")
             return
 
-        dialog = StationTimetable(self.graph,station_name,self)
+        dialog = StationTimetable(self.graph, station_name, self)
         dialog.showStatusInfo.connect(self.statusOut)
         dialog.exec_()
 
@@ -1623,7 +1661,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         计算区间停站车次数量
         """
-        dialog = IntervaLCountDialog(self.graph,self)
+        dialog = IntervaLCountDialog(self.graph, self)
         dialog.exec_()
 
     def _reverse_graph(self):
@@ -1638,7 +1676,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _line_info_out(self):
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle("线路信息")
-        dialog.resize(400,400)
+        dialog.resize(400, 400)
         layout = QtWidgets.QVBoxLayout()
         text = ""
         text += f"线名：{self.graph.lineName()}\n"
@@ -1668,7 +1706,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         给出区间车次表，类似12306查询车票
         """
-        dialog = IntervalTrainDialog(self.graph,self)
+        dialog = IntervalTrainDialog(self.graph, self)
         dialog.exec_()
 
     def _search_from_menu(self):
@@ -1727,10 +1765,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         if self.rulerPainter is not None:
             self.rulerPainter._cancel()
         # 记录各个dock的状态
-        for name,dock in self.action_widget_dict.items():
-            self._system.setdefault("dock_show",{})[name]=dock.isVisible()
+        for name, dock in self.action_widget_dict.items():
+            self._system.setdefault("dock_show", {})[name] = dock.isVisible()
         self._saveSystemSetting()
-
 
     def _check_ruler_from_menu(self):
         train = self.currentTrain()
@@ -1743,7 +1780,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         两车次运行对照
         """
-        dialog = TrainComparator(self.graph,self)
+        dialog = TrainComparator(self.graph, self)
         dialog.exec_()
 
     def _get_interval_info(self):
@@ -1991,8 +2028,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             name = item.data(-1)
             train.setStationDeltaTime(name, ds_int)
 
-        self.GraphWidget.delTrainLine(train)
-        self.GraphWidget.addTrainLine(train)
+        self.GraphWidget.repaintTrainLine(train)
         self.currentWidget.setData(train)
         self.trainTimetableWidget.setData(train)
         dialog.close()
@@ -2052,7 +2088,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.lines = lines
 
         btnOk = QtWidgets.QPushButton("确定")
-        listWidget.itemDoubleClicked.connect(lambda:self._import_line_ok(dialog))
+        listWidget.itemDoubleClicked.connect(lambda: self._import_line_ok(dialog))
         btnCancel = QtWidgets.QPushButton("取消")
         hlayout = QtWidgets.QHBoxLayout()
         hlayout.addWidget(btnOk)
@@ -2084,7 +2120,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         listWidget = QtWidgets.QListWidget()
         listWidget.setSelectionMode(listWidget.MultiSelection)
         for st in line.stationDicts():
-            name,mile = st["zhanming"],st["licheng"]
+            name, mile = st["zhanming"], st["licheng"]
             listWidget.addItem(f"{mile} km  {name}")
         vlayout.addWidget(listWidget)
         stDialog.listWidget = listWidget
@@ -2106,16 +2142,15 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         stDialog.setLayout(vlayout)
         stDialog.exec_()
 
-
-    def _import_line_stations(self,line:Line,dialogLines,dialogStations,all:bool=False):
+    def _import_line_stations(self, line: Line, dialogLines, dialogStations, all: bool = False):
         """
         选择导入的站点后确定。
         """
         newLine = Line(line.name)
         if all:
-            newLine.copyData(line,withRuler=True)
+            newLine.copyData(line, withRuler=True)
         else:
-            listWidget:QtWidgets.QListWidget = dialogStations.listWidget
+            listWidget: QtWidgets.QListWidget = dialogStations.listWidget
             for idx in listWidget.selectedIndexes():
                 row = idx.row()
                 newLine.addStationDict(line.stationDictByIndex(row))
@@ -2210,7 +2245,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             traceback.print_exc()
             return
         else:
-            num = self.graph.addTrainByGraph(graph,flag)
+            num = self.graph.addTrainByGraph(graph, flag)
             self.GraphWidget.paintGraph()
             self.trainWidget.addTrainsFromBottom(num)
             self.typeWidget._setTypeList()
@@ -2273,22 +2308,21 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         # dialog.okClicked.connect(self.GraphWidget.paintGraph)
         dialog.exec_()
 
-    def _correction_timetable(self,train=None):
-        if not isinstance(train,Train):
+    def _correction_timetable(self, train=None):
+        if not isinstance(train, Train):
             train = self.currentTrain()
         if train is None:
             self._derr('当前车次时刻表重排：当前没有选中车次！')
             return
-        dialog = CorrectionWidget(train,self.graph,self)
+        dialog = CorrectionWidget(train, self.graph, self)
         dialog.correctionOK.connect(self._correction_ok)
         dialog.exec_()
 
-    def _correction_ok(self,train):
+    def _correction_ok(self, train):
         self.currentWidget.setData(train)
         self.trainInfoWidget.setData(train)
         self.trainTimetableWidget.setData(train)
-        self.GraphWidget.delTrainLine(train)
-        self.GraphWidget.addTrainLine(train)
+        self.GraphWidget.repaintTrainLine(train)
 
     def _train_show_filter_ok(self):
         for train in self.graph.trains():
@@ -2392,7 +2426,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.GraphWidget.addTrainLine(new_train)
 
         cnt = tableWidget.rowCount() - len(failed)
-        print("to add to checi-list:",cnt)
+        print("to add to checi-list:", cnt)
         self.trainWidget.addTrainsFromBottom(cnt)
 
         text = f"成功复制{cnt}个车次。"
@@ -2401,6 +2435,22 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             for checi, s_t in failed:
                 text += f'\n{checi if checi else "空"},{s_t.strftime("%H:%M:%S")}'
         self._dout(text)
+
+    def _interval_exchange(self):
+        train = self.currentTrain()
+        if train is None:
+            self._derr("区间换线：当前没有选中车次！")
+            return
+        dialog = ExchangeIntervalDialog(train, self.graph, self)
+        dialog.exchangeOk.connect(self._interval_exchange_ok)
+        dialog.exec_()
+
+    def _interval_exchange_ok(self, train1: Train, train2: Train):
+        self.GraphWidget.repaintTrainLine(train1)
+        self.GraphWidget.repaintTrainLine(train2)
+        self.currentWidget.setData(train1)
+        self.trainTimetableWidget.setData(train1)
+        self.trainInfoWidget.setData(train1)
 
     def _derr(self, note: str):
         # print("_derr")

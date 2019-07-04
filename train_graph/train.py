@@ -199,7 +199,7 @@ class Train():
         }
         if business is None:
             business = self.graph.lineStationBusiness(name,
-                                        self.isPassenger(detect=True),default=None) and (ddsj!=cfsj)
+                    self.isPassenger(detect=True),default=None) and self.stationStoppedOrStartEnd(dict)
         if business is not None:
             dict['business']=business
         if auto_cover:
@@ -361,6 +361,11 @@ class Train():
 
     def items(self):
         return self._items
+
+    def firstItem(self):
+        for item in self._items:
+            return item
+        return None
 
     def itemInfo(self)->Iterable[dict]:
         for it in self._itemInfo:
@@ -602,6 +607,7 @@ class Train():
 
     def clearTimetable(self):
         self.timetable = []
+        self._yToStationMap.clear()
 
     def firstDownStr(self):
         if self.firstDown() is True:
@@ -981,14 +987,6 @@ class Train():
         """
         2.0版本注释：本函数只由rulerPaint调用，所以保留items不变，目的是方便后面删除。不会引起问题。
         用train的信息覆盖本车次信息
-        List<Str> checi;
-    Str sfz,zdz;
-    Str type;
-    List<Dict> timetable;
-    Dict UI; #显示设置，如线形，颜色等
-    bool down;//本线的上下行
-    QtWidgets.QGraphicsViewPathItem pathItem;
-    QtWidgets.QGraphicsViewItem labelItem;
         """
         from copy import copy,deepcopy
         self.checi = copy(train.checi)
@@ -997,6 +995,35 @@ class Train():
         self.UI = copy(train.UI)
         self._itemInfo = train._itemInfo
         self.timetable = deepcopy(train.timetable)
+
+    def intervalExchange(self,start1:int,end1:int,train,start2:int,end2:int,*,
+                         includeStart=True,includeEnd=True):
+        """
+        区间换线。
+        用train的start2-end2数据（包含收尾）交换本次列车start1至end1的点单。
+        参数都是数组下标。如果越界，忽略处理。
+        直接使用slice方法，自动忽略越界的数据。
+        """
+        from copy import deepcopy
+        inter1 = deepcopy(self.timetable[start1:end1+1])
+        inter2 = deepcopy(train.timetable[start2:end2+1])
+        if not includeStart:
+            try:
+                inter1[0]['ddsj'] = train.timetable[start2]['ddsj']
+                inter2[0]['ddsj'] = self.timetable[start1]['ddsj']
+            except IndexError:
+                print("Train::intervalExchange: includeStart IndexError")
+                pass
+        if not includeEnd:
+            try:
+                inter1[-1]['cfsj'] = train.timetable[end2]['cfsj']
+                inter2[-1]['cfsj'] = self.timetable[end1]['cfsj']
+            except IndexError:
+                print("Train::intervalExchange: includeEnd IndexError")
+                pass
+
+        self.timetable=self.timetable[:start1]+inter2+self.timetable[end1+1:]
+        train.timetable=train.timetable[:start2]+inter1+train.timetable[end2+1:]
 
     def relativeError(self,ruler):
         """
@@ -1129,9 +1156,16 @@ class Train():
 
     def stationStopped(self,station:dict)->bool:
         """
-        注意，输入的是字典
+        注意，输入的是字典。不考虑始发终到。
         """
         return bool((station['ddsj']-station['cfsj']).seconds)
+
+    def stationStoppedOrStartEnd(self,station:dict)->bool:
+        """
+        如果始发终到，或者停车，返回True。否则返回False.
+        """
+        zm = station['zhanming']
+        return bool((station['ddsj'] - station['cfsj']).seconds) or self.isSfz(zm) or self.isZdz(zm)
 
     def makeStationDict(self,name,rate:float,reference:dict,ruler_node:dict,precision:int):
         """

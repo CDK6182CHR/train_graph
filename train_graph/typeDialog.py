@@ -97,6 +97,7 @@ class TypeDialog(QtWidgets.QDialog):
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Qt.Unchecked)
         self.tableWidget.setItem(row,2,item)
+        self.tableWidget.setItem(row,0,QtWidgets.QTableWidgetItem(''))
 
     def _insert_after(self):
         row = self.tableWidget.currentRow()
@@ -105,6 +106,7 @@ class TypeDialog(QtWidgets.QDialog):
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Qt.Unchecked)
         self.tableWidget.setItem(row+1, 2, item)
+        self.tableWidget.setItem(row+1,0,QtWidgets.QTableWidgetItem(''))
 
     def _del(self):
         self.tableWidget.removeRow(self.tableWidget.currentRow())

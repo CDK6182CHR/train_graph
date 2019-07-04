@@ -159,6 +159,7 @@ class ColorWidget(QtWidgets.QDialog):
         item = QtWidgets.QTableWidgetItem('#FFFFFF')
         item.setFlags(Qt.NoItemFlags)
         table.setItem(row, 1, item)
+        table.setItem(row, 0, QtWidgets.QTableWidgetItem(''))
 
     def _del_color_row(self):
         table = self.tableWidget

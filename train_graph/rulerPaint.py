@@ -2,6 +2,7 @@
 按标尺排图向导对象封装。
 注意：排图进行过程中，重新执行painGraph操作是高危动作，发现崩溃首先查找这里。
 2018.11.24重构为QWidget+QStackedWidget实现。
+2019.07.04新增注意事项：ChangeTrainIntervalDialog中有对本类listWidget，timeTable等的直接操作，破坏封装性。
 """
 
 from .GraphicWidget import GraphicsWidget
@@ -15,8 +16,9 @@ cgitb.enable(format='text')
 
 class rulerPainter(QtWidgets.QWidget):
     trainOK = QtCore.pyqtSignal(Train)
-    def __init__(self,graphWindow:GraphicsWidget,parent=None):
+    def __init__(self,graphWindow:GraphicsWidget,parent=None,setCheci=True):
         super(rulerPainter,self).__init__(parent)
+        self.setCheci = setCheci  # 如果为False，则任何情况下都不显示设置车次的窗口。
         self.graphWindow = graphWindow
         self.ruler = None
         self.graph = graphWindow.graph
@@ -371,7 +373,6 @@ class rulerPainter(QtWidgets.QWidget):
     def _setRulerInfo(self):
         """
         设置listWidget的数据
-        :return:
         """
         self.listWidget.clear()
         ruler:Ruler = self.ruler
@@ -408,9 +409,6 @@ class rulerPainter(QtWidgets.QWidget):
     def _start_changed(self,item1):
         """
         变换起始站。item1是现在选择的
-        :param item1:
-        :param item2:
-        :return:
         """
         try:
             item1.text()
@@ -512,12 +510,12 @@ class rulerPainter(QtWidgets.QWidget):
             return
         append_flag += 0x2
         last_time = self._leaveTime(row-1)
-        interval = self._cal_interval(self.timeTable.item(row,6).data(-1),append_flag)
+        interval = self._cal_interval(self.timeTable.item(row,7).data(-1),append_flag)
         ddsj = last_time+timedelta(days=0,seconds=interval)
         self.timeTable.item(row,3).setData(-1,ddsj)
         self.timeTable.item(row,3).setText(ddsj.strftime('%H:%M:%S'))
         self.timeTable.item(row,4).setText(ddsj.strftime('%H:%M:%S')) #到这里的一定是没有停时的
-        self.timeTable.item(row,6).setText("%d:%02d"%(int(interval/60),interval%60))
+        self.timeTable.item(row,7).setText("%d:%02d"%(int(interval/60),interval%60))
 
     def _resetEndStation(self,row:int):
         """
@@ -635,15 +633,18 @@ class rulerPainter(QtWidgets.QWidget):
         self.interrupted = False
 
         if not self.isAppend:
-            checi = QtWidgets.QInputDialog.getText(self,'车次设置','当前排图列车车次')[0]
-            graph:Graph = self.graphWindow.graph
-            while not checi or graph.checiExisted(checi):
-                QtWidgets.QMessageBox.information(self,"提示","无效车次。车次不能为空，且不能与本运行图当前存在的车次重复。请重新设置。")
-                checi,ok = QtWidgets.QInputDialog.getText(self, '车次设置', '当前排图列车车次')
+            graph: Graph = self.graphWindow.graph
+            if self.setCheci:
+                checi,ok = QtWidgets.QInputDialog.getText(self,'车次设置','当前排图列车车次')
                 if not ok:
                     return
-            self.train.setFullCheci(checi)
-            self.train.autoTrainType()
+                while not checi or graph.checiExisted(checi):
+                    QtWidgets.QMessageBox.information(self,"提示","无效车次。车次不能为空，且不能与本运行图当前存在的车次重复。请重新设置。")
+                    checi,ok = QtWidgets.QInputDialog.getText(self, '车次设置', '当前排图列车车次')
+                    if not ok:
+                        return
+                self.train.setFullCheci(checi)
+                self.train.autoTrainType()
 
             graph.addTrain(self.train)
             if self.train.items():
@@ -664,7 +665,8 @@ class rulerPainter(QtWidgets.QWidget):
             self.train = train
             self.graphWindow.addTrainLine(train)
 
-        QtWidgets.QMessageBox.information(self, '提示', '排图成功。请到“当前车次设置”中继续编辑相关信息。')
+        if self.setCheci:
+            QtWidgets.QMessageBox.information(self, '提示', '排图成功。请到“当前车次设置”中继续编辑相关信息。')
         self.trainOK.emit(self.train)
         self.close()
         try:

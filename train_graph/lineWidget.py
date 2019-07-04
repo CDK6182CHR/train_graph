@@ -184,6 +184,7 @@ class LineWidget(QtWidgets.QWidget):
             num += 1
 
         tableWidget.insertRow(num)
+        tableWidget.setItem(num,0,QtWidgets.QTableWidgetItem(''))
 
         spin1 = QtWidgets.QDoubleSpinBox()
         spin1.setRange(-9999.0, 9999.0)

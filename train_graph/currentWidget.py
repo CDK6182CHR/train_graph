@@ -547,7 +547,7 @@ class CurrentWidget(QtWidgets.QWidget):
             row += 1
         self._add_timetable_row(row, timeTable)
 
-    def _add_timetable_row(self, row: int, timeTable: QtWidgets.QTableWidget, name: str = "",business=True):
+    def _add_timetable_row(self, row: int, timeTable: QtWidgets.QTableWidget, name: str = "",business=False):
         timeTable.insertRow(row)
         timeTable.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
@@ -654,8 +654,8 @@ class CurrentWidget(QtWidgets.QWidget):
         for item in listWidget.selectedItems():
             zm = item.data(-1)
             row = timeTable.rowCount()
-            business = self.graph.lineStationBusiness(zm,self.train.isPassenger(detect=True))
-            self._add_timetable_row(row, timeTable, zm,business)
+            # business = self.graph.lineStationBusiness(zm,self.train.isPassenger(detect=True))
+            self._add_timetable_row(row, timeTable, zm, False)
         sender: QtWidgets.QPushButton = self.sender()
         sender.parentWidget().close()
 
@@ -714,7 +714,11 @@ class CurrentWidget(QtWidgets.QWidget):
             cfsjSpin = timeTable.cellWidget(row, 2)
             cfsj = strToTime(cfsjSpin.time().toString("hh:mm:ss"))
 
-            note = timeTable.item(row,4).text()
+            try:
+                note = timeTable.item(row,4).text()
+            except AttributeError:
+                # item is None
+                note = ''
 
             train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()),note=note)
 
@@ -753,4 +757,14 @@ class CurrentWidget(QtWidgets.QWidget):
 
     def _dout(self, note: str):
         QtWidgets.QMessageBox.information(self, "提示", note)
+
+    def question(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self, '问题', note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default
 

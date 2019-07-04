@@ -785,6 +785,16 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             self.scene.removeItem(item)
         train.clearItems()
 
+    def repaintTrainLine(self, train):
+        """
+        重新铺画，先删除再铺画，但保留选择。2019.07.04新增。
+        """
+        isSelected = (train==self.selectedTrain)
+        self.delTrainLine(train)
+        self.addTrainLine(train)
+        if isSelected:
+            self._line_selected(train.firstItem())
+
     def _resetTimeAxis(self):
         point = QtCore.QPoint(0, 0)
         scenepoint = self.mapToScene(point)
@@ -922,7 +932,6 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             self.setToolTip('')
             return
         dct_pre,dct_lat = train.yToStationInterval(pos.y())
-        # dct_pre, dct_lat = train.yToStationInterval(event.pos().y())
         if dct_pre is None:
             self.setToolTip('')
             return
@@ -953,7 +962,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             if sec1 < sec2:
                 pre = dct_pre;lat=dct_lat;sec=sec1
             else:
-                pre=dct_lat;lat=dct_pre;sec=sec2
+                pre = dct_lat;lat=dct_pre;sec=sec2
             text = f"{train.fullCheci()}次({train.sfz}->{train.zdz})在{pre['zhanming']}-{lat['zhanming']}区间 "
             text += f"{pre['cfsj'].strftime('%H:%M:%S')}-{lat['ddsj'].strftime('%H:%M:%S')} "
             sec_str = f"{sec%60:02d}秒"
