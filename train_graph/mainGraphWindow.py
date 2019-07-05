@@ -1549,7 +1549,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         QtWidgets.QMessageBox.about(self, '关于', text)
 
     def _function_list(self):
-        dialog = HelpDialog(self.graph, self)
+        dialog = HelpDialog(self.graph,self.version, self)
         dialog.exec_()
 
     def statusOut(self, note: str, seconds: int = 0):
@@ -1651,6 +1651,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget.repaintTrainLine(train)
         self._updateCurrentTrainRelatedWidgets(train)
         self.trainWidget.updateRowByTrain(train)
+        self.graph.delTrain(anTrain)
         self.statusOut('车次调整完毕')
         del self.changeTrainIntervalDialog
 
