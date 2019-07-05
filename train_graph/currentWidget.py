@@ -722,7 +722,8 @@ class CurrentWidget(QtWidgets.QWidget):
 
             train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()),note=note)
 
-        self.setData(train)
+        # 2019.07.05将setData移动到main中完成。
+        # self.setData(train)
         self.currentTrainApplied.emit(train)
         # 2019.06.30将所有与main有关的移到main._current_applied中。
 
