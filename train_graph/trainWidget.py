@@ -72,6 +72,7 @@ class TrainWidget(QtWidgets.QWidget):
         btnAdd.setMinimumWidth(80)
         btnDel = QtWidgets.QPushButton("删除")
         btnDel.setMinimumWidth(80)
+        self.btnDel = btnDel  # 用于从profile处操纵删除。
 
         btnEdit.clicked.connect(lambda: self._train_table_doubleClicked(self.trainTable.currentRow()))
         btnAdd.clicked.connect(self.addNewTrain.emit)
@@ -355,6 +356,8 @@ class TrainWidget(QtWidgets.QWidget):
 
         count = len(rows)
 
+        if self.main:
+            self.main.updating=True
         for i, row in enumerate(rows):
             train = tableWidget.item(row, 0).data(-1)
             self.graph.delTrain(train)
@@ -369,6 +372,8 @@ class TrainWidget(QtWidgets.QWidget):
                 if progressDialog.wasCanceled():
                     count = i + 1
                     break
+        if self.main:
+            self.main.updating=False
 
         if count:
             self.showStatus.emit(f"成功删除{count}个车次")

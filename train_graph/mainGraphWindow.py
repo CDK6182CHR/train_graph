@@ -64,10 +64,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self, filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.2.4"
+        self.version = "V2.2.5"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190705'
+        self.build = '20190706'
         self._system = None
+        self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         self.showMaximized()
@@ -106,6 +107,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initUI()
         self._checkGraph()
         self.rulerPainter = None
+        self.updating=False
 
     def _readSystemSetting(self):
         """
@@ -415,7 +417,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut("车次信息更新完毕")
 
     def _del_train_from_current(self, train: Train):
-        tableWidget = self.main.trainWidget.trainTable
+        tableWidget = self.trainWidget.trainTable
         isOld = self.graph.trainExisted(train)
 
         self.GraphWidget._line_un_selected()
@@ -924,7 +926,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         if train is None:
             return
-        self._updateCurrentTrainRelatedWidgets(train,force=False)
+        self._updateCurrentTrainRelatedWidgets(train,force=False,sender=3)
         if self.graph.stationInLine(dct['zhanming']):
             # 本线调整才重新铺画运行线
             self.GraphWidget.repaintTrainLine(train)
@@ -1580,7 +1582,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         2018.12.28修改：把解读车次的逻辑放入trainWidget中。这里直接接受列车对象.
         2.0版本修改：把currentWidget信息变化的调用从Graphics那边的槽函数挪到这里。防止没有运行线的车不能显示。
         """
-
+        if self.updating:
+            return
         # print("current train changed. line 1708", row,train.fullCheci())
 
         # 取消不响应非显示列车的逻辑。2018年11月20日
@@ -1596,9 +1599,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget._line_selected(train.firstItem(), True)  # 函数会检查是否重复选择
         self._updateCurrentTrainRelatedWidgets(train,force=False)
 
-    def _updateCurrentTrainRelatedWidgets(self,train:Train,force=True):
+    def _updateCurrentTrainRelatedWidgets(self,train:Train,force=True,sender=-1):
         """
         更新与当前车次有关的几个面板。force=False时仅更新显示的面板。
+        sender: 表示发来信号的窗口，是避免interactive间接递归。
+        0-currentWidget; 1-trainInfoWidget; 2-trainTimetableWidget; 3-interactiveTimetableWidget.
         """
         if force or self.currentWidget.isVisible():
             self.currentWidget.setData(train)
@@ -1606,7 +1611,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self.trainInfoWidget.setData(train)
         if force or self.trainTimetableWidget.isVisible():
             self.trainTimetableWidget.setData(train)
-        if force or self.interactiveTimetableWidget.isVisible():
+        if force or self.interactiveTimetableWidget.isVisible() and sender != 3:
             self.interactiveTimetableWidget.setData(train)
 
     def _add_train_by_ruler(self):

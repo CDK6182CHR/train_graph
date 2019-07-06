@@ -793,7 +793,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.delTrainLine(train)
         self.addTrainLine(train)
         if isSelected:
-            self._line_selected(train.firstItem())
+            self._line_selected(train.firstItem(),emit=False)
 
     def _resetTimeAxis(self):
         point = QtCore.QPoint(0, 0)
@@ -859,7 +859,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         return point
 
-    def _line_selected(self, item: QtWidgets.QGraphicsPathItem, ensure_visible=False):
+    def _line_selected(self, item: QtWidgets.QGraphicsPathItem, ensure_visible=False,emit=True):
         # print(item)
         if item is None:
             return
@@ -875,7 +875,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             self.ensureVisible(item)
 
         self.selectedTrain = train
-        self.focusChanged.emit(self.selectedTrain)
+        if emit:
+            self.focusChanged.emit(self.selectedTrain)
         self.nowItem.setPlainText(train.fullCheci())
 
     def _line_un_selected(self):

@@ -12,6 +12,7 @@ class InteractiveTimetable(QtWidgets.QWidget):
         super(InteractiveTimetable, self).__init__(parent)
         self.graph = graph  # type:Graph
         self.train = None  # type:Train
+        self.updating = False
         self.initUI()
 
     def initUI(self):
@@ -42,6 +43,7 @@ class InteractiveTimetable(QtWidgets.QWidget):
         除去最开始外，self.train都不会是None。所以遇到None直接return。
         编辑栏增加ddsjEdit.row属性，记录所在的（物理）行号。
         """
+        self.updating=True
         if train is None:
             train = self.train
         if train is None:
@@ -93,7 +95,7 @@ class InteractiveTimetable(QtWidgets.QWidget):
             # tw.setRowHeight(r, self.graph.UIConfigData()['table_row_height'])
             tw.setRowHeight(r,30)
             tw.setRowHeight(r + 1, self.graph.UIConfigData()['table_row_height'])
-
+        self.updating=False
 
     @staticmethod
     def pytime2QTime(tm:datetime)->QtCore.QTime:
@@ -115,6 +117,8 @@ class InteractiveTimetable(QtWidgets.QWidget):
 
     # slots
     def _time_changed(self,tm:QtCore.QTime):
+        if self.updating:
+            return
         sender:QtWidgets.QTimeEdit = self.sender()
         row = sender.row
         dct = self.train.timetable[row//2]
