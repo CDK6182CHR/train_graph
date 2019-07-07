@@ -1471,7 +1471,7 @@ class Train():
         """
         if not self.timetable:
             return 0
-        if byTimetable:
+        if not byTimetable:
             if self.timetable[-1]['ddsj'] >= self.timetable[0]['cfsj']:
                 return 0
             return 1
@@ -1488,6 +1488,7 @@ class Train():
                 day+=1
             if st_dict['cfsj'] < st_dict['ddsj']:
                 day+=1
+            last_dict = st_dict
         return day
 
 

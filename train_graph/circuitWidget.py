@@ -16,6 +16,7 @@ class CircuitWidget(QtWidgets.QWidget):
         self.dialog = CircuitDialog(self.graph,self)
         self.dialog.NewCircuitAdded.connect(self._circuit_added)
         self.dialog.CircuitChangeApplied.connect(self._circuit_changed)
+        self.dialog.setWindowModality(Qt.NonModal)
         self.initUI()
         self.setData()
 
@@ -79,7 +80,7 @@ class CircuitWidget(QtWidgets.QWidget):
         从currentWidget调用，直接编辑交路。
         """
         self.dialog.setData(circuit)
-        self.dialog.exec_()
+        self.dialog.show()
 
     # slots
     def _table_item_changed(self,item:QtWidgets.QTableWidgetItem):
@@ -108,11 +109,11 @@ class CircuitWidget(QtWidgets.QWidget):
         circuit = item.data(Qt.UserRole)
         if isinstance(circuit,Circuit):
             self.dialog.setData(circuit)
-            self.dialog.exec_()
+            self.dialog.show()
 
     def _add_circuit(self):
         self.dialog.setData(None)
-        self.dialog.exec_()
+        self.dialog.show()
 
     def _del_circuit(self):
         row = self.tableWidget.currentRow()

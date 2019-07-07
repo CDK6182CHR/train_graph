@@ -161,6 +161,7 @@ class StationTimetable(QtWidgets.QDialog):
 
         slider = QtWidgets.QSlider(Qt.Horizontal)
         slider.setRange(1, 120)
+        slider.setMaximumWidth(600)
         # slider.valueChanged.connect(lambda x:print(x))
         slider.setMaximumWidth(800)
         slider.setValue(20)

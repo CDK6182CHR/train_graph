@@ -51,7 +51,7 @@ class CircuitNode:
 
     def outInfo(self)->dict:
         return {
-            "checi":self._checi,
+            "checi":self.checi(),
             "start":self._start,
             "end":self._end,
             "link":self.link,

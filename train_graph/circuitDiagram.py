@@ -265,6 +265,7 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
 
     def setMultiDayByTimetable(self,on:bool):
         self._multiDayByTimetable = on
+        self.transData()
         self.initUI()
 
     def setDayWidth(self,w:int):

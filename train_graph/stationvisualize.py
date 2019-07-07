@@ -1,5 +1,7 @@
 """
 车站股道占用情况可视化图表。
+2019.07.07注意：本模块时间皆归一化到2000-1-1。
+1900-1-1是时间戳起点，再往前减会出问题。
 """
 
 import sys
@@ -131,9 +133,9 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             # 将日期归一化到1900-1-1
             # datetime.date().replace()不能有效改变日期
             o:datetime = train_dict['ddsj']
-            train_dict["ddsj"]=datetime(1900,1,1,o.hour,o.minute,o.second)
+            train_dict["ddsj"]=datetime(2000,1,1,o.hour,o.minute,o.second)
             o: datetime = train_dict['cfsj']
-            train_dict["cfsj"]=datetime(1900,1,1,o.hour,o.minute,o.second)
+            train_dict["cfsj"]=datetime(2000,1,1,o.hour,o.minute,o.second)
             newlist.append(train_dict)
         self.station_list = newlist
 
@@ -142,20 +144,20 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             if train_dict["cfsj"] < train_dict["ddsj"]:
                 # 跨日处理
                 new_dict = {
-                    "ddsj":datetime(1900,1,1,0,0,0),
+                    "ddsj":datetime(2000,1,1,0,0,0),
                     "cfsj":train_dict["cfsj"],
                     "down":train_dict["down"],
                     "train":train_dict["train"],
                     "station_name":train_dict["station_name"],
                     "type":train_dict['type'],
                 }
-                train_dict["cfsj"] = datetime(1900, 1, 1, 23, 59, 59)
+                print("addNewDict",new_dict)
+                train_dict["cfsj"] = datetime(2000, 1, 1, 23, 59, 59)
                 self.station_list.append(new_dict)
             if self._isPassed(train_dict):
                 self._addPassTrain(train_dict)
             else:
                 self._addStopTrain(train_dict)
-
 
     def _judgeType(self,train_dict:dict,toDeleteTrains:list)->bool:
         """
@@ -300,25 +302,25 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
     def _isIdle(self,rail:list,new_train):
         ddsj,cfsj = self._occupyTime(new_train)
         for train_dict in rail:
-            arrive,depart = self._occupyTime(train_dict)  #已经占用的时间
+            arrive,depart = self._occupyTime(train_dict)  # 已经占用的时间
             if new_train["down"] == train_dict["down"]:
-                #同向车次，扣去同向间隔
+                # 同向车次，扣去同向间隔
                 dt = timedelta(days=0,seconds=self._sameSplitTime*60)
             else:
                 dt = timedelta(days=0, seconds=self._oppositeSplitTime * 60)
-            if (ddsj > (arrive-dt) and ddsj < (depart+dt)) or (cfsj > (arrive-dt) and cfsj < (depart+dt)):
+            if (ddsj >= (arrive-dt) and ddsj <= (depart+dt)) or (cfsj >= (arrive-dt) and cfsj <= (depart+dt)):
                 return False
         return True
 
-    def _occupyTime(self,new_train):
+    def _occupyTime(self,new_train:dict):
         if self._isPassed(new_train):
             ddsj = new_train["ddsj"] - timedelta(days=0,seconds=30)
             cfsj = new_train["cfsj"] + timedelta(days=0,seconds=30)
         else:
             ddsj = new_train["ddsj"]
             cfsj = new_train["cfsj"]
-        ddsj.date().replace(1900,1,1)
-        cfsj.date().replace(1900,1,1)
+        ddsj = datetime(2000,1,1,ddsj.hour,ddsj.minute,ddsj.second)
+        cfsj = datetime(2000,1,1,cfsj.hour,cfsj.minute,cfsj.second)
         return ddsj,cfsj
 
     def _initUI(self):
@@ -473,6 +475,6 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         rectItem.setToolTip(text)
 
     def _xValueCount(self,time:datetime):
-        dt_int = (time-datetime(1900,1,1,0,0,0)).seconds
+        dt_int = (time-datetime(2000,1,1,0,0,0)).seconds
         dx = dt_int/self.seconds_per_pix
         return dx + self.margins["left"]

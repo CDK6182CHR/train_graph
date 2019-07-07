@@ -1567,6 +1567,9 @@ class Graph:
                 node.train().setCarriageCircuit(None)
             except AttributeError:
                 print("Graph::delCircuit: Unexcpeted node.train", node)
+            except TrainNotFoundException as e:
+                print("Graph::delCircuit: TrainNotFoundException",e)
+                pass
 
     def checkGraph(self)->str:
         """
