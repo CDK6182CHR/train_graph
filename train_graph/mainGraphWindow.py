@@ -66,7 +66,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.5"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190706'
+        self.build = '20190707'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -76,6 +76,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         self._selectedTrain = None
         self.graph = Graph()
+        self.graph.setSysVersion(self.version)
         self._initGraph(filename)
         self.GraphWidget = GraphicsWidget(self.graph, self)
 

@@ -101,7 +101,7 @@ class TrainWidget(QtWidgets.QWidget):
         根据自带的graph数据对象重新设置表格信息。
         原则上只有系统初始化时才可以调用initWidget。
         """
-        self.trainMapToRow=dict()
+        self.trainMapToRow.clear()
         self.trainTable.setRowCount(0)
         for train in self.graph.trains():
             if self.filter.check(train):
@@ -218,13 +218,16 @@ class TrainWidget(QtWidgets.QWidget):
 
     def setCurrentTrain(self,train):
         """
-        TODO 线性算法，要优化
+        2019.07.07改用映射表，删除线性算法。
         """
-        for i in range(self.trainTable.rowCount()):
-            if train is self.trainTable.item(i, 0).data(-1):
-                self.trainTable.setCurrentCell(i, 0)
-                self.trainTable.cellWidget(i,4).setChecked(train.isShow())
-
+        try:
+            r = self.trainMapToRow[train]
+        except KeyError:
+            # 这不是异常。当车次筛选器有效时，不是所有车次都能在表上找到。
+            print("TrainWidget::setCurrentTrain: train not found!",train)
+            return
+        self.trainTable.setCurrentCell(r,0)
+        self.trainTable.cellWidget(r,4).setChecked(train.isShow())
 
 
     # slots

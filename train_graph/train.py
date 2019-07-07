@@ -586,6 +586,17 @@ class Train():
         #else:
         #    return dt.seconds
 
+    def totalMinTime(self)->int:
+        """
+        2019.07.07新增
+        终到站减去始发站的时间。
+        """
+        if not self.timetable:
+            return 0
+        dt:timedelta = self.timetable[-1]['cfsj'] - self.timetable[0]['ddsj']
+        sec = dt.seconds
+        return sec
+
     def stationCount(self):
         return len(self.timetable)
 
@@ -1450,6 +1461,35 @@ class Train():
         if stationEqual(dct['zhanming'],self.zdz):
             return dct
         return None
+
+    def deltaDays(self,byTimetable:bool=False)->int:
+        """
+        2019.07.07新增，为交路图做准备。
+        设始发是第0日，返回终到是第几日。
+        byTimetable为True时，逐个车站判断是否跨日。否则只判断首末。
+        需要保证日期都是1900-1-1.
+        """
+        if not self.timetable:
+            return 0
+        if byTimetable:
+            if self.timetable[-1]['ddsj'] >= self.timetable[0]['cfsj']:
+                return 0
+            return 1
+        # 每个站先比较是否站内跨日，再比较与【上一站】的区间是否跨日。
+        day = 0
+        last_dict = None
+        for st_dict in self.stationDicts():
+            if last_dict is None:
+                if st_dict['cfsj'] < st_dict['ddsj']:
+                    day+=1
+                last_dict = st_dict
+                continue
+            if st_dict['ddsj'] < last_dict['cfsj']:
+                day+=1
+            if st_dict['cfsj'] < st_dict['ddsj']:
+                day+=1
+        return day
+
 
     def __str__(self):
         return f"Train {self.fullCheci()} ({self.sfz}->{self.zdz}) "

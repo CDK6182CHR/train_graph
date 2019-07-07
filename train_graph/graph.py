@@ -35,6 +35,7 @@ class Graph:
         """
         self.filename = ""
         self._version = ""
+        self._sysVersion = ""
         self.line = Line()
         self._trains = []
         self._circuits = []
@@ -270,6 +271,14 @@ class Graph:
 
     def setVersion(self, v: str):
         self._version = v
+
+    def sysVersion(self)->str:
+        if self._sysVersion:
+            return self._sysVersion
+        return self._version
+
+    def setSysVersion(self,v:str):
+        self._sysVersion = v
 
     def addTrain(self, train: Train):
         self._trains.append(train)
@@ -1062,6 +1071,11 @@ class Graph:
                 elif cover:
                     num += 1
                     t = self.trainFromCheci(train.fullCheci())
+                    # 临时处理：移交交路数据
+                    circuit = t.carriageCircuit()
+                    if circuit is not None:
+                        circuit.replaceTrain(t,train)
+                        train.setCarriageCircuit(circuit)
                     self.delTrain(t)
                     self.addTrain(train)
 

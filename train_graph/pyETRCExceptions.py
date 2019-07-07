@@ -55,3 +55,11 @@ class TrainNotInCircuitError(Exception):
     def __str__(self):
         return f"列车{self.train}不在交路{self.circuit}中！"
 
+class StartOrEndNotMatchedError(Exception):
+    def __init__(self,startOrEnd,firstOrLast,train):
+        self.startOrEnd = startOrEnd
+        self.firstOrLast = firstOrLast
+        self.train = train
+
+    def __str__(self):
+        return f"列车{self.train}的始发或终到站{self.startOrEnd}与时刻表首末站{self.firstOrLast}不匹配！"

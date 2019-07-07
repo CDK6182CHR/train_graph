@@ -8,6 +8,7 @@ from .circuit import Circuit,CircuitNode
 from .pyETRCExceptions import *
 from .graph import Graph
 from .train import Train
+from .circuitDiagramWidget import CircuitDiagramWidget
 
 class CircuitDialog(QtWidgets.QDialog):
     CircuitChangeApplied = QtCore.pyqtSignal(Circuit)
@@ -76,14 +77,17 @@ class CircuitDialog(QtWidgets.QDialog):
 
         btnOk = QtWidgets.QPushButton("确定(&Y)")
         btnRestore = QtWidgets.QPushButton("还原(&R)")
+        btnDiagram = QtWidgets.QPushButton('交路图(&D)')
         btnCancel = QtWidgets.QPushButton("关闭(&C)")
         btnOk.clicked.connect(self._apply)
         btnCancel.clicked.connect(self.close)
         btnRestore.clicked.connect(self._restore)
+        btnDiagram.clicked.connect(self._show_diagram)
 
         hlayout = QtWidgets.QHBoxLayout()
         hlayout.addWidget(btnOk)
         hlayout.addWidget(btnRestore)
+        hlayout.addWidget(btnDiagram)
         hlayout.addWidget(btnCancel)
         vlayout.addLayout(hlayout)
 
@@ -310,6 +314,16 @@ class CircuitDialog(QtWidgets.QDialog):
 
     def _restore(self):
         self.setData(self.circuit)
+
+    def _show_diagram(self):
+        try:
+            dialog = CircuitDiagramWidget(self.graph,self.circuit,self)
+        except StartOrEndNotMatchedError as e:
+            QtWidgets.QMessageBox.warning(self,'错误','交路不符合绘图要求。'
+                                '铺画交路图要求交路中每个车次的始发终到站与时刻表首末站一致。\n'+
+                                          str(e))
+            return
+        dialog.exec_()
 
     def _apply(self):
         """

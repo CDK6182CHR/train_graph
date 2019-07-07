@@ -281,3 +281,12 @@ class Circuit:
             if node.train() is train:
                 return i
         raise TrainNotInCircuitError(train,self)
+
+    def replaceTrain(self,old,new):
+        """
+        导入车次时覆盖。将车次用新车次对象替换。
+        """
+        for node in self.nodes():
+            if node.train() is old:
+                node.setTrain(new)
+                return
