@@ -729,7 +729,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
     def _del_train_from_current(self):
         self.currentTrainDeleted.emit(self.train)
-        self.setData()
+        self.setData(None)
 
     def _restore_current_train(self):
         self.setData(self.train)

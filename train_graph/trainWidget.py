@@ -1,5 +1,6 @@
 """
 车次编辑功能的封装类
+2019.07.09将trainMapToRow数据结构改为：Train->QTableWidgetItem，指向的是每行第0个Item，即车次一格。
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
@@ -18,7 +19,7 @@ class TrainWidget(QtWidgets.QWidget):
         super().__init__(parent)
         self.graph = graph
         self.main = main
-        self.trainMapToRow=dict()
+        self.trainMapToRow=dict()  # dict<train,item>
         self.filter = TrainFilter(self.graph,self)
 
     def initWidget(self):
@@ -120,6 +121,7 @@ class TrainWidget(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem(train.fullCheci())
         item.setData(-1, train)
         tableWidget.setItem(now_line, 0, item)
+        self.trainMapToRow[train] = item
 
         item = QtWidgets.QTableWidgetItem(train.sfz)
         tableWidget.setItem(now_line, 1, item)
@@ -151,7 +153,18 @@ class TrainWidget(QtWidgets.QWidget):
         check.toggled.connect(self._train_show_changed)
         tableWidget.setCellWidget(now_line, 4, check)
 
-        self.trainMapToRow[train] = now_line
+    def delTrain(self,train:Train):
+        """
+        2019.07.11新增，从main中移动出来。利用映射表信息快速删除行，并更新映射表。
+        不保证要删除的车次在表中存在（因车次筛选器）
+        """
+        try:
+            item = self.trainMapToRow[train]
+        except KeyError:
+            return
+        else:
+            self.trainTable.removeRow(item.row())
+            del self.trainMapToRow[train]
 
     def updateShow(self):
         """
@@ -188,8 +201,8 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.item(row,6).setText(f"speed:.2f" if speed!=-1 else 'NA')
 
     def updateRowByTrain(self,train:Train):
-        row = self.trainMapToRow[train]
-        self.updateRowByNum(row)
+        item:QtWidgets.QTableWidgetItem = self.trainMapToRow[train]
+        self.updateRowByNum(item.row())
 
     def updateAllTrains(self):
         """
@@ -221,13 +234,13 @@ class TrainWidget(QtWidgets.QWidget):
         2019.07.07改用映射表，删除线性算法。
         """
         try:
-            r = self.trainMapToRow[train]
+            item = self.trainMapToRow[train]
         except KeyError:
             # 这不是异常。当车次筛选器有效时，不是所有车次都能在表上找到。
             print("TrainWidget::setCurrentTrain: train not found!",train)
             return
-        self.trainTable.setCurrentCell(r,0)
-        self.trainTable.cellWidget(r,4).setChecked(train.isShow())
+        self.trainTable.setCurrentCell(item.row(),0)
+        self.trainTable.cellWidget(item.row(),4).setChecked(train.isShow())
 
 
     # slots

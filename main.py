@@ -8,6 +8,6 @@ try:
 except IndexError:
     f = None
 mainWindow = mainGraphWindow(f)
-mainWindow.showMaximized()
+# mainWindow.showMaximized()
 
 app.exec_()

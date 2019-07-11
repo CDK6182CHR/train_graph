@@ -52,7 +52,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.setWindowTitle("GraphicsViewsTestWindow")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
         QtWidgets.QScroller.grabGesture(self,QtWidgets.QScroller.TouchGesture)
-        self.setGeometry(200, 200, 1200, 600)
+        # self.setGeometry(200, 200, 1200, 600)
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
         self.graph = graph
@@ -69,12 +69,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         }
 
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
-
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         self.selectedTrain = None
-        self.tempRect = None
-        self.tempRect2 = None
 
         self.setGraph(self.graph)
 
@@ -166,7 +163,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             progressDialog.setRange(0, self.graph.trainCount())
             progressDialog.setCancelButton(None)
             progressDialog.setWindowTitle('正在铺画')
+            progressDialog.setValue(0)
         i = 0
+        QtCore.QCoreApplication.processEvents()
         for train in self.graph.trains():
             train.clearItems()
             i += 1

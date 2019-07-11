@@ -30,10 +30,22 @@ class ChangeTrainIntervalDialog(QtWidgets.QDialog):
         label.setWordWrap(True)
         vlayout.addWidget(label)
 
+        flayout = QtWidgets.QFormLayout()
+        checiEdit = QtWidgets.QLineEdit(self.train.fullCheci())
+        checiEdit.setFocusPolicy(Qt.NoFocus)
+        flayout.addRow('当前车次',checiEdit)
+        vlayout.addLayout(flayout)
+
         listWidget = QtWidgets.QListWidget()
         self.listWidget = listWidget
         for st_dict in self.train.stationDicts():
-            listWidget.addItem(st_dict['zhanming'])
+            text = f"{st_dict['zhanming']:10s} "
+            if self.train.stationStopped(st_dict):
+                text += '...'
+            else:
+                text += st_dict['ddsj'].strftime('%H:%M:%S')
+            text += '/'+st_dict['cfsj'].strftime('%H:%M:%S')
+            listWidget.addItem(text)
         listWidget.setSelectionMode(listWidget.MultiSelection)
         vlayout.addWidget(listWidget)
 

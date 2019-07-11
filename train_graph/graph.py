@@ -1411,7 +1411,8 @@ class Graph:
         return (not sOnly or train.stationStopped(dct) or train.isSfz(zm) or train.isZdz(zm)) and\
                (not bOnly or train.stationBusiness(dct))
 
-    def getIntervalCount(self, fromOrTo, isStart, trainFilter, passenger_only=False, freight_only=False):
+    def getIntervalCount(self, fromOrTo, isStart, trainFilter, passenger_only=False, freight_only=False,
+                        business_train_only=False,stopped_train_only=False):
         """
         获取区间对数表。
         :param fromOrTo:发站或到站
@@ -1425,13 +1426,17 @@ class Graph:
         if isStart:
             for st in self.businessStationNames(passenger_only, freight_only):
                 if not stationEqual(fromOrTo, st):
-                    infoList.append({'from': fromOrTo, 'to': st, 'info': self.getIntervalTrains(fromOrTo, st,
-                                                                                                trainFilter)})
+                    infoList.append({'from': fromOrTo, 'to': st, 'info':
+                        self.getIntervalTrains(fromOrTo, st,trainFilter,businessOnly=business_train_only,
+                                               stoppedOnly=stopped_train_only
+                                               )})
         else:
             for st in self.businessStationNames(passenger_only, freight_only):
                 if not stationEqual(fromOrTo, st):
-                    infoList.append({'to': fromOrTo, 'from': st, 'info': self.getIntervalTrains(st, fromOrTo,
-                                                                                                trainFilter)})
+                    infoList.append({'to': fromOrTo, 'from': st, 'info':
+                        self.getIntervalTrains(st, fromOrTo,trainFilter,businessOnly=business_train_only,
+                                               stoppedOnly=stopped_train_only
+                                               )})
 
         count_list = []
         for info_dict in infoList:

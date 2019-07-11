@@ -8,8 +8,10 @@ import sys
 from .graph import Graph
 from .train import Train
 from .trainFilter import TrainFilter
+from .intervalTrainDialog import IntervalTrainDialog
 
 class IntervaLCountDialog(QtWidgets.QDialog):
+    intervalRowDoubleClicked = QtCore.pyqtSignal(str,str)  # 双击打开区间车次表。
     def __init__(self,graph:Graph,parent=None):
         super(IntervaLCountDialog, self).__init__(parent)
         self.graph = graph
@@ -58,6 +60,18 @@ class IntervaLCountDialog(QtWidgets.QDialog):
         hlayout.addWidget(checkFreightOnly)
         flayout.addRow('车站筛选',hlayout)
 
+        hlayout = QtWidgets.QHBoxLayout()
+        checkBusinessOnly = QtWidgets.QCheckBox('仅营业车次')
+        self.checkBusinessOnly = checkBusinessOnly
+        checkBusinessOnly.setChecked(True)
+        checkStoppedOnly = QtWidgets.QCheckBox('仅停车车次')
+        self.checkStoppedOnly = checkStoppedOnly
+        hlayout.addWidget(checkBusinessOnly)
+        hlayout.addWidget(checkStoppedOnly)
+        flayout.addRow('显示车次',hlayout)
+        checkBusinessOnly.toggled.connect(self._set_interval_count_table)
+        checkStoppedOnly.toggled.connect(self._set_interval_count_table)
+
         self.filter = TrainFilter(self.graph, self)
         btnFilt = QtWidgets.QPushButton("筛选")
         btnFilt.setMaximumWidth(120)
@@ -65,9 +79,13 @@ class IntervaLCountDialog(QtWidgets.QDialog):
         btnFilt.clicked.connect(self.filter.setFilter)
         flayout.addRow('车次筛选', btnFilt)
 
+        label = QtWidgets.QLabel('双击区间行显示对应区间的车次。')
+        layout.addWidget(label)
+
         tableWidget = QtWidgets.QTableWidget()
         self.tableWidget = tableWidget
         tableWidget.setColumnCount(6)
+        tableWidget.itemDoubleClicked.connect(self._double_clicked)
         tableWidget.setHorizontalHeaderLabels(('发站', '到站', '车次数', '始发数', '终到数', '始发终到'))
         widths = (110, 110, 80, 80, 80, 80)
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
@@ -104,7 +122,10 @@ class IntervaLCountDialog(QtWidgets.QDialog):
         tableWidget.setRowCount(0)
         count_list = self.graph.getIntervalCount(station, startView, self.filter,
                                                  self.checkPassengerOnly.isChecked(),
-                                                 self.checkFreightOnly.isChecked())
+                                                 self.checkFreightOnly.isChecked(),
+                                                 self.checkBusinessOnly.isChecked(),
+                                                 self.checkStoppedOnly.isChecked(),
+                                                 )
         for i, s in enumerate(count_list):
             tableWidget.insertRow(i)
             tableWidget.setRowHeight(i, self.graph.UIConfigData()['table_row_height'])
@@ -114,3 +135,12 @@ class IntervaLCountDialog(QtWidgets.QDialog):
             tableWidget.setItem(i, 3, QtWidgets.QTableWidgetItem(str(s['countSfz']) if s['countSfz'] else '-'))
             tableWidget.setItem(i, 4, QtWidgets.QTableWidgetItem(str(s['countZdz']) if s['countZdz'] else '-'))
             tableWidget.setItem(i, 5, QtWidgets.QTableWidgetItem(str(s['countSfZd']) if s['countSfZd'] else '-'))
+
+    def _double_clicked(self,item:QtWidgets.QTableWidgetItem):
+        row = item.row()
+        start = self.tableWidget.item(row,0).text()
+        end = self.tableWidget.item(row,1).text()
+        d = IntervalTrainDialog(self.graph,self)
+        d.comboStart.setCurrentText(start)
+        d.comboEnd.setCurrentText(end)
+        d.exec_()

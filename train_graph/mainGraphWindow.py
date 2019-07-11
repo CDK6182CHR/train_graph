@@ -66,7 +66,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.5"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190707'
+        self.build = '20190711'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -420,17 +420,12 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _del_train_from_current(self, train: Train):
         tableWidget = self.trainWidget.trainTable
         isOld = self.graph.trainExisted(train)
-
         self.GraphWidget._line_un_selected()
 
         if isOld:
             # 旧车次，清除表格中的信息
-            for row in range(tableWidget.rowCount()):
-                if tableWidget.item(row, 0).data(-1) is train:
-                    tableWidget.removeRow(row)
-                    break
+            self.trainWidget.delTrain(train)
         self.GraphWidget.delTrainLine(train)
-
         self.graph.delTrain(train)
 
     def _check_ruler(self, train: Train):

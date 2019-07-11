@@ -21,6 +21,8 @@ class IntervalTrainDialog(QtWidgets.QDialog):
 
         comboStart = QtWidgets.QComboBox()
         comboEnd = QtWidgets.QComboBox()
+        self.comboStart = comboStart
+        self.comboEnd = comboEnd
         self.start = self.graph.firstStation()
         self.end = self.graph.lastStation()
         for st in self.graph.stations():
