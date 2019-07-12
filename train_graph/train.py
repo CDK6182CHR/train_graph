@@ -513,7 +513,7 @@ class Train():
         2.0新增。线性算法。
         """
         for i,st in enumerate(self.timetable):
-            if stationEqual(st['zhanming'],name):
+            if stationEqual(st['zhanming'],name,strict):
                 return i
         return -1
 
@@ -901,6 +901,26 @@ class Train():
                 return st
         return None
 
+    def findStationNums(self,st_names:list,strict=False)->list:
+        """
+        2019.07.11新增。
+        一次性返回一系列车站的【序号】。找不到的站用-1表示。
+        为解决graph中intervalTrains函数执行过程中要（最坏情况）三次遍历的问题。此函数牺牲封装性提高效率。
+        st_names是一个小的列表，遍历它的代价不予考虑。
+        """
+        st_indexes = [-1 for i in st_names]
+        cnt = 0
+        mx = len(st_names)
+        for st_num,st_dict in enumerate(self.stationDicts()):
+            for i,st_name in enumerate(st_names):
+                if stationEqual(st_name,st_dict['zhanming'],strict):
+                    st_indexes[i]=st_num
+                    cnt+=1
+                    if cnt>=mx:
+                        return st_indexes
+        return st_indexes
+
+
     def stationBusiness(self,dct:dict)->bool:
         """
         2.0.2开始新增函数。返回某个站是否办理业务。注意，此项数据原则上只能从这里获取，不能直接用dict取得。
@@ -1250,7 +1270,7 @@ class Train():
 
     def stationBefore(self,st1,st2):
         """
-        返回st1是否在st2之前。
+        返回st1是否在st2之前。线性算法。
         """
         findStart = False
         for st_dict in self.timetable:

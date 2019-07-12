@@ -120,7 +120,7 @@ class IntervaLCountDialog(QtWidgets.QDialog):
         if not station:
             return
         tableWidget.setRowCount(0)
-        count_list = self.graph.getIntervalCount(station, startView, self.filter,
+        count_list = self.graph.getIntervalCount_faster(station, startView, self.filter,
                                                  self.checkPassengerOnly.isChecked(),
                                                  self.checkFreightOnly.isChecked(),
                                                  self.checkBusinessOnly.isChecked(),

@@ -33,6 +33,7 @@ class Line():
         #默认情况下构造空对象。从文件读取时，用dict构造。
         self.nameMap = {} # 站名查找表
         self.fieldMap = {} # 站名-站名::场名映射表
+        self.numberMap = None  # 站名->序号映射表。用于初始化时临时使用。使用期间保证站表是不变的。
         if origin is not None:
             self.loadLine(origin)
         else:
@@ -70,6 +71,17 @@ class Line():
             lst.remove(name)
         else:
             del self.fieldMap[bare]
+
+    def enableNumberMap(self):
+        """
+        启用序号映射表。
+        """
+        self.numberMap = {}
+        for i,st_dict in enumerate(self.stations):
+            self.numberMap[st_dict['zhanming']] = i
+
+    def disableNumberMap(self):
+        self.numberMap=None
 
     def findStation(self,name):
         """

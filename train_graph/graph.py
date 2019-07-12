@@ -334,6 +334,16 @@ class Graph:
                     ((not freight_only) or st.get("freight", True)):
                 yield st['zhanming']
 
+    def verifyStationBusiness(self,st:dict,passenger_only:bool,freight_only:bool)->bool:
+        """
+        2019.07.12新增。
+        检查所给的车站dict是否符合办客和办货的要求。
+        """
+        if ((not passenger_only) or st.get("passenger", True)) and \
+                ((not freight_only) or st.get("freight", True)):
+            return True
+        return False
+
     def stationDicts(self, reverse=False):
         if not reverse:
             for station in self.line.stations:
@@ -1003,10 +1013,22 @@ class Graph:
         return None
 
     def stationIndex(self, name: str):
+        """
+        2019.07.12新增常量级别算法。
+        """
+        if self.line.numberMap is None:
+            return self.stationIndex_bf(name)
+        else:
+            return self.line.numberMap[name]
+
+    def stationIndex_bf(self,name:str):
+        """
+        原来的暴力方法查找序号。分离此函数是为了尝试统计有多少次使用暴力方法。
+        """
         for i, st in enumerate(self.line.stations):
             if stationEqual(st["zhanming"], name):
                 return i
-        raise Exception("No such station", name)
+        raise StationNotInLineException(name)
 
     def stationByDict(self, name: str, strict=False):
         """
@@ -1379,14 +1401,13 @@ class Graph:
         for train in self.trains():
             if not trainFilter.check(train):
                 continue
-            # b1 = train.stationStopBehaviour(start)
-            # b2 = train.stationStopBehaviour(end)
-            start_dict = train.stationDict(start)
-            end_dict = train.stationDict(end)
-            # p1 = train.stationBusiness(start_dict)
-            # p2 = train.stationBusiness(end_dict)
-            if not train.stationBefore(start, end):
+            start_idx,end_idx = train.stationIndexByName(start),train.stationIndexByName(end)
+            if start_idx==-1 or end_idx==-1:
                 continue
+            if start_idx>end_idx:
+                continue
+            start_dict,end_dict = train.timetable[start_idx],train.timetable[end_idx]
+
             if not (self.judgeStopAndBusiness(train,start_dict,businessOnly,stoppedOnly) and
                     self.judgeStopAndBusiness(train,end_dict,businessOnly,stoppedOnly)):
                 continue
@@ -1455,6 +1476,120 @@ class Graph:
             }
             count_list.append(int_dict)
         return count_list
+
+    def getIntervalCount_faster(self, fromOrTo, isStart, trainFilter,
+                                passenger_only=False, freight_only=False,
+                                business_train_only=False, stopped_train_only=False)->list:
+        """
+        2019.07.12新增，破坏封装性提高效率。
+        原理是避免车次的时刻表被多次遍历。由于Line对象的name->dict有映射表而可以以近常量的效率完成，
+        故使用反复的graph.stationDict代替反复的train.stationDict可显著提高效率。
+        """
+        # 统计单源点车站对数的四个表。数据结构为str,int，没有的站即为0.
+        if not self.stationInLine(fromOrTo):
+            return []
+        startEndCount = {}
+        startCount = {}
+        endCount = {}
+        allCount = {}
+        if isStart:
+            for train in self.trains():
+                if not trainFilter.check(train):
+                    continue
+                started = 0  # 0: 未开始；1：开始但不是始发站；2：开始且是始发站。
+                for st_dict_train in train.stationDicts():
+                    st_dict_line = self.stationByDict(st_dict_train['zhanming'])
+                    if st_dict_line is None:
+                        continue
+                    if stationEqual(st_dict_line['zhanming'],fromOrTo,strict=True):
+                        if not self.judgeStopAndBusiness(train,
+                        st_dict_train,business_train_only,stopped_train_only):
+                            break
+                        elif train.isSfz(st_dict_train['zhanming']):
+                            started=2
+                        else:
+                            started=1
+                        continue
+                    if not started:
+                        continue
+                    # 到这里为止，保证站名存在，且已经越过了始发站。
+                    zm = st_dict_line['zhanming']
+                    # 排除不符合线路站点要求的项目
+                    if not self.verifyStationBusiness(st_dict_line,passenger_only,freight_only):
+                        continue
+                    # 排除不符合车次营业及停车要求的项目
+                    if not self.judgeStopAndBusiness(train,st_dict_train,
+                                                     business_train_only,stopped_train_only):
+                        continue
+                    allCount[zm]=allCount.get(zm,0)+1
+                    if train.isZdz(st_dict_train['zhanming']):
+                        endCount[zm]=endCount.get(zm,0)+1
+                    if started==2:
+                        startCount[zm]=startCount.get(zm,0)+1
+                        if train.isZdz(zm):
+                            startEndCount[zm]=startEndCount.get(zm,0)+1
+            count_list = []
+            for st_name in self.businessStationNames(passenger_only,freight_only):
+                count_list.append(
+                    {
+                        'from':fromOrTo,
+                        'to':st_name,
+                        'count':allCount.get(st_name,0),
+                        'countSfz':startCount.get(st_name,0),
+                        'countZdz':endCount.get(st_name,0),
+                        'countSfZd':startEndCount.get(st_name,0),
+                    }
+                )
+            return count_list
+        else:
+            for train in self.trains():
+                if not trainFilter.check(train):
+                    continue
+                started = 0  # 0: 未开始；1：开始但不是终到站；2：开始且是终到站。
+                for st_dict_train in reversed(train.timetable):
+                    st_dict_line = self.stationByDict(st_dict_train['zhanming'])
+                    if st_dict_line is None:
+                        continue
+                    if stationEqual(st_dict_line['zhanming'],fromOrTo,strict=True):
+                        if not self.judgeStopAndBusiness(train,st_dict_train,business_train_only,
+                                                         stopped_train_only):
+                            break
+                        elif train.isZdz(st_dict_train['zhanming']):
+                            started=2
+                        else:
+                            started=1
+                        continue
+                    if not started:
+                        continue
+                    # 到这里为止，保证站名存在，且已经越过了终到站。
+                    zm = st_dict_line['zhanming']
+                    # 排除不符合线路站点要求的项目
+                    if not self.verifyStationBusiness(st_dict_line,passenger_only,freight_only):
+                        continue
+                    # 排除不符合车次营业及停车要求的项目
+                    if not self.judgeStopAndBusiness(train,st_dict_train,
+                                                     business_train_only,stopped_train_only):
+                        continue
+                    allCount[zm]=allCount.get(zm,0)+1
+                    if train.isSfz(st_dict_train['zhanming']):
+                        startCount[zm]=startCount.get(zm,0)+1
+                    if started==2:
+                        endCount[zm]=endCount.get(zm,0)+1
+                        if train.isSfz(zm):
+                            startEndCount[zm]=startEndCount.get(zm,0)+1
+            count_list = []
+            for st_name in self.businessStationNames(passenger_only,freight_only):
+                count_list.append(
+                    {
+                        'from':st_name,
+                        'to':fromOrTo,
+                        'count':allCount.get(st_name,0),
+                        'countSfz':startCount.get(st_name,0),
+                        'countZdz':endCount.get(st_name,0),
+                        'countSfZd':startEndCount.get(st_name,0),
+                    }
+                )
+            return count_list
 
     def stationByIndex(self, idx):
         return self.line.stations[idx]

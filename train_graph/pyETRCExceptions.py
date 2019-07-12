@@ -63,3 +63,10 @@ class StartOrEndNotMatchedError(Exception):
 
     def __str__(self):
         return f"列车{self.train}的始发或终到站{self.startOrEnd}与时刻表首末站{self.firstOrLast}不匹配！"
+
+class StationNotInLineException(Exception):
+    def __init__(self,st):
+        self.st = st
+
+    def __str__(self):
+        return f"车站{self.st}不属于本线！"

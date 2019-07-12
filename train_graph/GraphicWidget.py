@@ -124,6 +124,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # self.setStyleSheet("padding:0px;border:0px")
         if self.graph is None:
             return
+        self.graph.line.enableNumberMap()
 
         UIDict = self.graph.UIConfigData()
         if isinstance(UIDict["ordinate"], str):
@@ -199,6 +200,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         self.verticalScrollBar().valueChanged.connect(self._resetTimeAxis)
         self.horizontalScrollBar().valueChanged.connect(self._resetDistanceAxis)
+        self.graph.line.disableNumberMap()
 
     def _setHLines(self, UIDict: dict, gridColor: QtGui.QColor, width: int, height: int):
         """

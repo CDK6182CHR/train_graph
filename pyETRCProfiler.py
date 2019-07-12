@@ -34,14 +34,19 @@ def test_stats():
     p.strip_dirs()
     p.sort_stats('cumulative').print_stats()
 
+def test_interval_trains(w:mainGraphWindow):
+    # w._interval_count()
+    cProfile.run('w._interval_count()',filename='profile/7.pstat')
+
 
 if __name__ == '__main__':
-    from train_graph.circuitDiagram import Graph,CircuitDiagram
     app = QtWidgets.QApplication(sys.argv)
-    graph = Graph()
-    graph.loadGraph('source/成贵客专线四川段F-交路图测试.json')
-    circuit = graph._circuits[2]
-    widget = CircuitDiagram(graph,circuit)
-    widget.show()
-    app.exec_()
+    # w = mainGraphWindow('source/京沪线上局段20190410.json')
+    #     # test_interval_trains(w)
+
+    p = pstats.Stats('profile/6.pstat')
+    p.strip_dirs()
+    p.sort_stats('cumulative').print_stats()
+
+
 
