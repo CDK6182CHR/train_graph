@@ -56,6 +56,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
         self.graph = graph
+        self._initMenu()
 
         self.appendix_margins = {
             "title_row_height":40,  # 左侧表格的表头高度
@@ -75,6 +76,24 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         self.setGraph(self.graph)
 
+    def _initMenu(self):
+        """
+        右键快捷菜单。
+        """
+        menu = QtWidgets.QMenu()
+        self.menu = menu
+        action = QtWidgets.QAction('标尺对照(Ctrl+W)',self)
+        menu.addAction(action)
+        action = QtWidgets.QAction('两车次运行对照(Ctrl+Shift+Z)', self)
+        menu.addAction(action)
+        action = QtWidgets.QAction('车次事件表(Ctrl+Z)',self)
+        menu.addAction(action)
+        menu.addSeparator()
+        menu.addAction(QtWidgets.QAction('时刻调整(Ctrl+A)',self))
+        menu.addAction(QtWidgets.QAction('时刻重排(Ctrl+V)',self))
+        menu.addAction(QtWidgets.QAction('批量复制(Ctrl+Shift+A)',self))
+        menu.addAction(QtWidgets.QAction('区间换线(Ctrl+5)',self))
+        menu.addAction(QtWidgets.QAction('推定时刻(Ctrl+2)',self))
 
     def setMargin(self):
         """
@@ -162,7 +181,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         if self.parent():
             progressDialog = QtWidgets.QProgressDialog()
             progressDialog.setRange(0, self.graph.trainCount())
-            progressDialog.setCancelButton(None)
+            progressDialog.setCancelButtonText('中止铺画')
             progressDialog.setWindowTitle('正在铺画')
             progressDialog.setValue(0)
         i = 0
@@ -191,6 +210,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 if i % 10 == 0:
                     # 平衡更新界面和整体速度。仅在整10才更新界面。
                     QtCore.QCoreApplication.processEvents()
+                if progressDialog.wasCanceled():
+                    break
 
         forbid = self.graph.line.forbid
         if forbid.downShow():
@@ -890,23 +911,24 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.nowItem.setPlainText(' ')
         self.selectedTrain = None
 
-    def mousePressEvent(self, QMouseEvent):
-        pos = self.mapToScene(QMouseEvent.pos())
-        # print("mousePressEvent",pos)
-        # self.scene.addRect(pos.x()-1,pos.y()-1,2,2)
-        if self.selectedTrain is not None:
-            self._line_un_selected()
+    def mousePressEvent(self, QMouseEvent:QtGui.QMouseEvent):
+        if QMouseEvent.button() == Qt.LeftButton:
+            pos = self.mapToScene(QMouseEvent.pos())
+            # print("mousePressEvent",pos)
+            # self.scene.addRect(pos.x()-1,pos.y()-1,2,2)
+            if self.selectedTrain is not None:
+                self._line_un_selected()
 
-        item: QtWidgets.QGraphicsItem = self.scene.itemAt(pos, self.transform())
-        if item is None:
-            return
-        # print(item)
-        while item.parentItem():
-            item = item.parentItem()
-        if isinstance(item, TrainItem):
-            self._line_selected(item, ensure_visible=False)
-
-        self.lastpos = pos
+            item: QtWidgets.QGraphicsItem = self.scene.itemAt(pos, self.transform())
+            if item is None:
+                return
+            # print(item)
+            while item.parentItem():
+                item = item.parentItem()
+            if isinstance(item, TrainItem):
+                self._line_selected(item, ensure_visible=False)
+        elif QMouseEvent.button() == Qt.RightButton:
+            self.menu.popup(QMouseEvent.globalPos())
         super(GraphicsWidget, self).mousePressEvent(QMouseEvent)
 
     def posTrain(self,pos)->Train:
@@ -1207,7 +1229,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     if (train is None):
                         # 表明是标签对象，无意义
                         continue
-                    print(self.selectedTrain.fullCheci(), train.fullCheci())
+                    # print(self.selectedTrain.fullCheci(), train.fullCheci())
                     events += self._trains_collid(selfItem, item, self.selectedTrain, train)
                 elif isinstance(item, QtWidgets.QGraphicsLineItem):
                     # events += self._line_collid(selfItem,item,self.selectedTrain)

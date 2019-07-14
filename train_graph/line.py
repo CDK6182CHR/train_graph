@@ -76,6 +76,8 @@ class Line():
         """
         启用序号映射表。
         """
+        if self.numberMap is not None:
+            return
         self.numberMap = {}
         for i,st_dict in enumerate(self.stations):
             self.numberMap[st_dict['zhanming']] = i

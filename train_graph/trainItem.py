@@ -789,7 +789,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 for it in self.markLabels:
                     it.setVisible(True)
             else:
+                self.graph.line.enableNumberMap()
                 self._setPathItem([],[],startIndex=self.start_index,mark_only=True)
+                self.graph.line.disableNumberMap()
 
         pen.setStyle(Qt.DashLine)
         if highLightLink:
@@ -897,27 +899,35 @@ class TrainItem(QtWidgets.QGraphicsItem):
     def boundingRect(self):
         """
         返回的是所有元素的bounding rect的并
+        2019.07.12试验：只考虑pathItem的boundingRect，提高效率。
         """
-        minStartX,minStartY = 1000000,1000000
-        maxEndX,maxEndY = 0,0
-        for sub in self.validItems():
-            rect:QtCore.QRectF = sub.boundingRect()
-            if rect.x()<minStartX:
-                minStartX = rect.x()
-            if rect.x() + rect.width() > maxEndX:
-                maxEndX = rect.x() + rect.width()
-            if rect.y()<minStartY:
-                minStartY = rect.y()
-            if rect.y() + rect.height() > maxEndY:
-                maxEndY = rect.y() + rect.height()
-        return QtCore.QRectF(minStartX,minStartY,maxEndX-minStartX,maxEndY-minStartY)
+        # minStartX,minStartY = 1000000,1000000
+        # maxEndX,maxEndY = 0,0
+        # for sub in self.validItems(containMark=False, containLink=True):
+        #     rect:QtCore.QRectF = sub.boundingRect()
+        #     if rect.x()<minStartX:
+        #         minStartX = rect.x()
+        #     if rect.x() + rect.width() > maxEndX:
+        #         maxEndX = rect.x() + rect.width()
+        #     if rect.y()<minStartY:
+        #         minStartY = rect.y()
+        #     if rect.y() + rect.height() > maxEndY:
+        #         maxEndY = rect.y() + rect.height()
+        # return QtCore.QRectF(minStartX,minStartY,maxEndX-minStartX,maxEndY-minStartY)
+        try:
+            return self.pathItem.boundingRect()
+        except:
+            return QtCore.QRectF(0,0,0,0)
 
 
     def contains(self, point):
-        result = False
-        for sub in self.validItems():
-            result = result or sub.contains(point)
-        return result
+        """
+        选择车次的时候，似乎是直接通过子图元来判断的，自身的contain与否并不重要。
+        """
+        # for sub in self.validItems(containMark=False):
+        #     if sub.contains(point):
+        #         return True
+        return False
 
 
     def validItems(self,containSpan=True,containExpand=False,containMark=True,containLink=False):

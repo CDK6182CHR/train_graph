@@ -24,6 +24,7 @@ class CurrentWidget(QtWidgets.QWidget):
         super().__init__()
         self.graph = graph  # type:Graph
         self.train = None
+        self.updating=False
         self.initUI()
 
     def initUI(self):
@@ -368,6 +369,7 @@ class CurrentWidget(QtWidgets.QWidget):
         # if train is self.train:
         #     # 此逻辑不确定
         #     return
+        self.updating=True
         print("current::setData",train)
         self.train = train
         if train is None:
@@ -406,7 +408,6 @@ class CurrentWidget(QtWidgets.QWidget):
             self.btnEditCircuit.setEnabled(False)
 
         timeTable: QtWidgets.QTableWidget = self.timeTable
-        timeTable.setRowCount(0)
         timeTable.setRowCount(train.stationCount())
 
         num = 0
@@ -419,51 +420,56 @@ class CurrentWidget(QtWidgets.QWidget):
             itemStation.setData(Qt.UserRole,st_dict)
             timeTable.setItem(num, 0, itemStation)
 
-            ddsjEdit = QtWidgets.QTimeEdit()
-            ddsjEdit.row = num
-            # ddsjQ = QtCore.QTime(ddsj.hour,ddsj.minute,ddsj.second)
-            ddsjQ = QtCore.QTime(ddsj.hour, ddsj.minute, ddsj.second)
-            ddsjEdit.setDisplayFormat("hh:mm:ss")
-            ddsjEdit.setWrapping(True)
-            ddsjEdit.setTime(ddsjQ)
-            ddsjEdit.setMinimumSize(1,1)
-            ddsjEdit.timeChanged.connect(self._time_changed)
-            timeTable.setCellWidget(num, 1, ddsjEdit)
-
-            cfsjEdit = QtWidgets.QTimeEdit()
-            cfsjEdit.row = num
-            cfsjQ = QtCore.QTime(cfsj.hour, cfsj.minute, cfsj.second)
-            cfsjEdit.setDisplayFormat("hh:mm:ss")
-            cfsjEdit.setWrapping(True)
-            cfsjEdit.setTime(cfsjQ)
-            cfsjEdit.setMinimumSize(1,1)
-            cfsjEdit.timeChanged.connect(self._time_changed)
-            timeTable.setCellWidget(num, 2, cfsjEdit)
+            # 2019.07.13调整，设置时间会触发计算时间，此时要求第3、5列不能是None。
+            time_str = train.stopTimeStr(st_dict)
+            item: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(time_str)
+            item.setFlags(Qt.ItemIsEnabled)
+            timeTable.setItem(num, 5, item)
 
             item = QtWidgets.QTableWidgetItem()
             item.setCheckState(Line.bool2CheckState(train.stationBusiness(st_dict)))
-            timeTable.setItem(num,3,item)
+            timeTable.setItem(num, 3, item)
+
+            ddsjEdit = timeTable.cellWidget(num,1)
+            if ddsjEdit is None:
+                ddsjEdit = QtWidgets.QTimeEdit()
+                ddsjEdit.setWrapping(True)
+                ddsjEdit.setDisplayFormat("hh:mm:ss")
+                ddsjEdit.timeChanged.connect(self._time_changed)
+                timeTable.setCellWidget(num, 1, ddsjEdit)
+            ddsjEdit.row = num
+            ddsjQ = QtCore.QTime(ddsj.hour, ddsj.minute, ddsj.second)
+            # ddsjEdit.setMinimumSize(1,1)
+            ddsjEdit.setTime(ddsjQ)
+
+            cfsjEdit = timeTable.cellWidget(num,2)
+            if cfsjEdit is None:
+                cfsjEdit = QtWidgets.QTimeEdit()
+                cfsjEdit.setDisplayFormat("hh:mm:ss")
+                cfsjEdit.setWrapping(True)
+                cfsjEdit.timeChanged.connect(self._time_changed)
+                timeTable.setCellWidget(num, 2, cfsjEdit)
+            cfsjEdit.row = num
+            cfsjQ = QtCore.QTime(cfsj.hour, cfsj.minute, cfsj.second)
+            cfsjEdit.setTime(cfsjQ)
+            # cfsjEdit.setMinimumSize(1,1)
 
             note=st_dict.setdefault('note','')
             item=QtWidgets.QTableWidgetItem(note)
             timeTable.setItem(num,4,item)
-
-            time_str = train.stopTimeStr(st_dict)
 
             if train.stationBusiness(st_dict):
                 itemStation.setForeground(QtGui.QBrush(Qt.red))
             elif train.stationStopped(st_dict):
                 itemStation.setForeground(QtGui.QBrush(Qt.blue))
 
-            item: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(time_str)
-            item.setFlags(Qt.NoItemFlags)
-            timeTable.setItem(num, 5, item)
-
             num += 1
-
+        self.updating=False
 
     # Slots
     def _time_changed(self):
+        if self.updating:
+            return
         row = self.sender().row
         ddsjEdit:QtWidgets.QTimeEdit = self.timeTable.cellWidget(row,1)
         cfsjEdit:QtWidgets.QTimeEdit = self.timeTable.cellWidget(row,2)
@@ -521,6 +527,8 @@ class CurrentWidget(QtWidgets.QWidget):
         self.btnDefault.setEnabled(False)
 
     def _table_item_changed(self,item:QtWidgets.QTableWidgetItem):
+        if self.updating:
+            return
         # print("currentWidget::table_item_changed",item.text(),item.row(),item.column())
         row = item.row()
         if item.column() == 3:

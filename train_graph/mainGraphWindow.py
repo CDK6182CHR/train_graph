@@ -66,7 +66,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.5"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190712'
+        self.build = '20190714'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -79,6 +79,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.graph.setSysVersion(self.version)
         self._initGraph(filename)
         self.GraphWidget = GraphicsWidget(self.graph, self)
+        self.GraphWidget.menu.triggered.connect(self._shortcut_action_triggered)
 
         self.setWindowTitle(f"{self.title}   {self.graph.filename if self.graph.filename else '新运行图'}")
 
@@ -251,6 +252,25 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.trainTimetableWidget.setData()
         self.interactiveTimetableWidget.setData()
         self.statusOut('所有停靠面板刷新完毕')
+
+    def _shortcut_action_triggered(self,action:QtWidgets.QAction):
+        """
+        2019.07.14新增，连接右键菜单
+        """
+        action_map = {
+            '标尺对照(Ctrl+W)':self._check_ruler_from_menu,
+            '两车次运行对照(Ctrl+Shift+Z)':self._train_compare,
+            '车次事件表(Ctrl+Z)':self._train_event_out,
+            '时刻调整(Ctrl+A)':self._adjust_train_time,
+            '时刻重排(Ctrl+V)':self._correction_timetable,
+            '批量复制(Ctrl+Shift+A)':self._batch_copy_train,
+            '区间换线(Ctrl+5)':self._interval_exchange,
+            '推定时刻(Ctrl+2)':self._detect_pass_time,
+        }
+        try:
+            action_map[action.text()]()
+        except KeyError:
+            print("mainGraphWindow::shortcut_action_triggered: 未定义的操作",action.text())
 
     def _initForbidDock(self):
         dock = QtWidgets.QDockWidget()
