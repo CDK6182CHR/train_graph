@@ -47,13 +47,13 @@ class TrainTimetable(QtWidgets.QWidget):
 
     def setData(self,train:Train=None):
         if train is None:
-            train = self.train
+            train = Train(self.graph)
+            self.train = train
         else:
             self.train=train
         tw = self.tableWidget
-        tw.setRowCount(0)
-        if train is None:
-            return
+        # if train is None:
+        #     return
         self.checiEdit.setText(train.fullCheci())
         tw.setRowCount(train.stationCount()*2)
         TWI = QtWidgets.QTableWidgetItem

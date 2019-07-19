@@ -5,6 +5,7 @@ from .forbid import Forbid
 from PyQt5 import QtWidgets,QtCore
 from PyQt5.QtCore import Qt
 from datetime import datetime
+from .line import Line
 
 class ForbidWidget(QtWidgets.QWidget):
     okClicked = QtCore.pyqtSignal()
@@ -14,7 +15,7 @@ class ForbidWidget(QtWidgets.QWidget):
         super().__init__(parent)
         self.setWindowTitle('天窗编辑')
         self.data = data
-        self.line = data.line()
+        self.line = data.line()  # type:Line
         self.initUI()
 
     def initUI(self):
@@ -89,18 +90,20 @@ class ForbidWidget(QtWidgets.QWidget):
 
     def _setTableWidget(self):
         tableWidget = self.tableWidget
-        tableWidget.setRowCount(0)
+        tableWidget.setRowCount(2*self.line.stationCount())
 
         line = self.data.line()
         station_dicts = line.stations
         blocker = "->" if self.data.different() else "<->"
 
+        row = 0
         former_dict = None
         for i, st_dict in enumerate(station_dicts):
             if st_dict["direction"] & line.DownVia:
                 if former_dict is not None:
                     self._addTableRow(former_dict["zhanming"], st_dict["zhanming"],
-                                      self.data.getInfo(former_dict["zhanming"], st_dict["zhanming"]), blocker)
+                                      self.data.getInfo(former_dict["zhanming"], st_dict["zhanming"]), blocker,row)
+                    row+=1
                 former_dict = st_dict
 
         former_dict = None
@@ -110,13 +113,13 @@ class ForbidWidget(QtWidgets.QWidget):
                 if st_dict["direction"] & line.UpVia:
                     if former_dict is not None:
                         self._addTableRow(former_dict["zhanming"], st_dict["zhanming"],
-                                          self.data.getInfo(former_dict["zhanming"], st_dict["zhanming"]), blocker)
+                                          self.data.getInfo(former_dict["zhanming"], st_dict["zhanming"]), blocker,row)
+                        row+=1
                     former_dict = st_dict
+        tableWidget.setRowCount(row)
 
-    def _addTableRow(self,fazhan,daozhan,node,blocker):
+    def _addTableRow(self,fazhan,daozhan,node,blocker,row):
         tableWidget:QtWidgets.QTableWidget = self.tableWidget
-        row = tableWidget.rowCount()
-        tableWidget.insertRow(row)
         tableWidget.setRowHeight(row,30)  # cannot infer to graph
 
         item = QtWidgets.QTableWidgetItem(f'{fazhan}{blocker}{daozhan}')

@@ -196,7 +196,6 @@ class LineDB(QtWidgets.QDialog):
         rulerDialog = QtWidgets.QDialog(self)
         rulerDialog.setWindowTitle(f"标尺编辑*{line.name}")
         tabWidget = RulerWidget(line)
-        tabWidget.setData()
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(tabWidget)

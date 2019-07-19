@@ -67,7 +67,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self, filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.2.6"
+        self.version = "V2.2.7"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
         self.build = '20190719'
         self._system = None
@@ -234,6 +234,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         聚合所有停靠面板的更新信息调用。由刷新命令调用。
         要逐步把所有更新替换为专用更新函数，避免创建新对象。
+        2019.07.19新增要求：打开新运行图也调用此函数。
         """
         self.statusOut('停靠面板刷新开始')
         self.trainWidget.setData()
@@ -242,18 +243,18 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut('设置面板刷新完毕')
         self.lineWidget.setData()
         self.statusOut('线路面板刷新完毕')
-        self.rulerWidget.updateRulerTabs()  # 效率考虑
+        self.rulerWidget.setData()
         self.statusOut('标尺面板刷新完毕')
         self.typeWidget._setTypeList()
         self.statusOut('类型面板刷新完毕')
-        self.currentWidget.setData()
+        self.currentWidget.setData(None)
         self.statusOut('当前车次面板刷新完毕')
         self.sysWidget.setData()
         self.statusOut('默认面板刷新完毕')
         self.forbidWidget.setData()
         self.circuitWidget.setData()
         self.trainInfoWidget.setData()
-        self.trainTimetableWidget.setData()
+        self.trainTimetableWidget.setData(None)
         self.interactiveTimetableWidget.setData()
         self.statusOut('所有停靠面板刷新完毕')
 
@@ -893,7 +894,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         rulerWidget = RulerWidget(self.graph.line, self)
         self.rulerWidget = rulerWidget
         self.rulerDockWidget.setWidget(rulerWidget)
-        rulerWidget.setData()
 
     def _initTrainDock(self):
         trainDock = QtWidgets.QDockWidget()
@@ -1424,7 +1424,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.graph.clearAll()
         self.GraphWidget.graph = self.graph
         self.GraphWidget.paintGraph()
-        self._initDockWidgetContents()
+        self._refreshDockWidgets()
         self.setWindowTitle(f"{self.title}   {self.graph.filename if self.graph.filename else '新运行图'}")
 
     def _openGraph(self):
@@ -1438,11 +1438,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         else:
             return
 
-        filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
-        if not filename:
+        filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
+                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')
+        if not ok:
             return
+        self.open_graph_ok(filename)
 
+    def open_graph_ok(self,filename:str):
         self.GraphWidget._line_un_selected()
         self.graph.clearAll()
         self.showFilter.setGraph(self.graph)
@@ -1465,9 +1467,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self._derr("文件错误！请检查")
             traceback.print_exc()
         else:
-            self._initDockWidgetContents()
+            # self._initDockWidgetContents()
+            self._refreshDockWidgets()
             self.setWindowTitle(f"{self.title} {self.graph.filename if self.graph.filename else '新运行图'}")
             self._checkGraph()
+        self.statusOut('就绪')
 
     def _outputGraph(self):
         filename, ok = QtWidgets.QFileDialog.getSaveFileName(self,
@@ -1555,7 +1559,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                 self._derr("文件错误！请检查。")
         self.GraphWidget.scene.clear()
         self.GraphWidget.paintGraph()
-        self._initDockWidgetContents()
+        self._refreshDockWidgets()
 
     def _refresh_graph(self):
         self.statusOut("正在刷新数据")
@@ -1733,7 +1737,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
         self.graph.reverse()
         self.GraphWidget.paintGraph()
-        self._initDockWidgetContents()
+        self._refreshDockWidgets()
 
     def _line_info_out(self):
         dialog = QtWidgets.QDialog(self)
@@ -1969,7 +1973,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         self.graph.jointGraph(graph_another, former, reverse, line_only)
         self.GraphWidget.paintGraph()
-        self._initDockWidgetContents()
+        self._refreshDockWidgets()
         self.statusOut("就绪")
         dialog.close()
 
@@ -2221,7 +2225,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.graph.resetAllItems()
         self.graph.setOrdinateRuler(None)
         self.GraphWidget.paintGraph()
-        self._initDockWidgetContents()
+        self._refreshDockWidgets()
         self.statusOut("导入线路数据成功")
         dialogStations.close()
         dialogLines.close()
@@ -2260,7 +2264,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                 new_line.addStation_by_info(name, mile, level)
         self.graph.setLine(new_line)
         self.GraphWidget.paintGraph(throw_error=False)
-        self._initDockWidgetContents()
+        self._refreshDockWidgets()
         self._dout("导入成功！")
 
     def _change_station_name(self):
@@ -2276,7 +2280,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget.paintGraph()
         self.trainWidget.updateAllTrains()
         self.lineWidget.updateData()
-        self.rulerWidget.setData()
+        self.rulerWidget.updateRulerTabs()
         self.forbidWidget.setData()
 
         self.statusOut("站名变更成功")
@@ -2335,7 +2339,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             num = self.graph.addTrainByGraph(graph)
             self._dout(f"成功导入{num}个车次的实际运行线。")
             self.GraphWidget.paintGraph()
-            self._initDockWidgetContents()
+            self._refreshDockWidgets()
 
     def _change_massive_station(self):
         """

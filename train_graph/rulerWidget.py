@@ -15,8 +15,12 @@ class RulerWidget(QtWidgets.QTabWidget):
         self.line = line
         self.main = main
         self.updating = False
+        self.initUI()
 
-    def setData(self):
+    def initUI(self):
+        """
+        初始化数据。
+        """
         self.updating=True
         self.clear()
         line = self.line
@@ -24,6 +28,34 @@ class RulerWidget(QtWidgets.QTabWidget):
             self._addRulerTab(ruler)
         new_ruler = Ruler(line=line)
         self._addRulerTab(new_ruler)
+        self.updating=False
+
+    def setData(self):
+        """
+        2019.07.19新增。
+        标尺数量可能变化，更新内容。由刷新操作调用。
+        """
+        self.updating=True
+        cnt = len(self.line.rulers)
+        while self.count() > cnt+1:
+            self.removeTab(self.count()-1)
+        # 先更新既有的widget
+        for i,ruler in enumerate(self.line.rulers):
+            if i < self.count():
+                widget = self.widget(i)
+                widget.ruler=ruler
+                self._updateRulerTabWidget(widget)
+                self.setTabText(i,ruler.name())
+            else:
+                self._addRulerTab(ruler)
+        if self.count() != len(self.line.rulers)+1:
+            # 差最后一个“新建”，补上。
+            self._addRulerTab(Ruler(line=self.line,name='新建'))
+        else:
+            widget = self.widget(self.count()-1)
+            widget.ruler = Ruler(name='新建',line=self.line)
+            self.setTabText(self.count()-1,'新建')
+            self._updateRulerTabWidget(widget)
         self.updating=False
 
     def updateRulerTabs(self):
@@ -105,8 +137,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         """
         设置ruler的table。
         """
-        tableWidget.clear()
-        tableWidget.setRowCount(0)
+        tableWidget.setRowCount(self.line.stationCount()*2)  # 先给一个明显超过需要的值
 
         tableWidget.verticalHeader().setVisible(False)
         tableWidget.setColumnCount(7)
@@ -124,6 +155,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         station_dicts = line.stations
         blocker = "->" if ruler.different() else "<->"
 
+        row = 0  # 下一次要添加的行号
         former_dict = None
         for i, st_dict in enumerate(station_dicts):
             if not ruler.isDownPassed(st_dict["zhanming"]):
@@ -131,7 +163,8 @@ class RulerWidget(QtWidgets.QTabWidget):
                     mile = abs(st_dict["licheng"] - former_dict["licheng"])
                     self._addRulerRow(former_dict["zhanming"], st_dict["zhanming"], blocker
                                       , ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
-                                      tableWidget, mile)
+                                      tableWidget, mile,row)
+                    row+=1
                 former_dict = st_dict
 
         former_dict = None
@@ -143,14 +176,14 @@ class RulerWidget(QtWidgets.QTabWidget):
                         mile = abs(st_dict["licheng"] - former_dict["licheng"])
                         self._addRulerRow(former_dict["zhanming"], st_dict["zhanming"], blocker
                                           , ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
-                                          tableWidget, mile)
+                                          tableWidget, mile, row)
+                        row += 1
                     former_dict = st_dict
+        tableWidget.setRowCount(row)
 
     def _addRulerRow(self, fazhan, daozhan, blocker
                      , node: dict, tableWidget: QtWidgets.QTableWidget,
-                     mile):
-        tableWidget.insertRow(tableWidget.rowCount())
-        now_line = tableWidget.rowCount() - 1
+                     mile,now_line):
         tableWidget.setRowHeight(now_line, self.main.graph.UIConfigData()['table_row_height']
             if self.main is not None else 30)
 
@@ -221,6 +254,7 @@ class RulerWidget(QtWidgets.QTabWidget):
     def _updateRulerTabWidget(self,widget):
         ruler:Ruler = widget.ruler
         widget.check.setChecked(ruler.different())
+        widget.nameEdit.setText(ruler.name())
         self._updateRulerTable(widget.tableWidget,ruler)
 
     def _updateRulerTable(self,tableWidget:QtWidgets.QTableWidget,ruler:Ruler):
@@ -230,16 +264,19 @@ class RulerWidget(QtWidgets.QTabWidget):
         blocker = "->" if ruler.different() else "<->"
 
         former_dict = None
+        nrows_previous = tableWidget.rowCount()
+        tableWidget.setRowCount(self.line.stationCount()*2)
         row_cnt = 0
         for i, st_dict in enumerate(self.line.stationDicts()):
             if not ruler.isDownPassed(st_dict["zhanming"]):
                 if former_dict is not None:
-                    if row_cnt >= tableWidget.rowCount():
+                    if row_cnt >= nrows_previous:
                         # 原来没有的行，直接插入
                         mile = abs(st_dict["licheng"] - former_dict["licheng"])
                         self._addRulerRow(former_dict["zhanming"], st_dict["zhanming"], blocker
                                           , ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
-                                          tableWidget, mile)
+                                          tableWidget, mile,row_cnt)
+                        row_cnt+=1
                     else:
                         # 原来有的行，更新
                         mile = abs(st_dict["licheng"] - former_dict["licheng"])
@@ -256,12 +293,13 @@ class RulerWidget(QtWidgets.QTabWidget):
         for i, st_dict in enumerate(self.line.reversedStationDicts()):
             if not ruler.isUpPassed(st_dict["zhanming"]):
                 if former_dict is not None:
-                    if row_cnt >= tableWidget.rowCount():
+                    if row_cnt >= nrows_previous:
                         # 原来没有的行，直接插入
                         mile = abs(st_dict["licheng"] - former_dict["licheng"])
                         self._addRulerRow(former_dict["zhanming"], st_dict["zhanming"], blocker
                                           , ruler.getInfo(former_dict["zhanming"], st_dict["zhanming"]),
-                                          tableWidget, mile)
+                                          tableWidget, mile,row_cnt)
+                        row_cnt+=1
                     else:
                         # 原来有的行，更新
                         mile = abs(st_dict["licheng"] - former_dict["licheng"])
@@ -304,6 +342,8 @@ class RulerWidget(QtWidgets.QTabWidget):
 
     #slots
     def _ruler_different_changed(self, ruler: Ruler, checked: bool, tableWidget):
+        if self.updating:
+            return
         if checked == False:
             if self.line.isSplited():
                 self._derr("本线存在上下行分设站，不能设置上下行一致的标尺！")
@@ -378,7 +418,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         ruler = widget.ruler
         widget.nameEdit.setText(ruler.name())
         #第一重parent是stackedWidget，第二重才是tabWidget
-        self.setData()
+        self.updateRulerTabs()
 
     def _del_ruler(self, ruler: Ruler):
         new = False

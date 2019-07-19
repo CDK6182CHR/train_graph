@@ -1023,7 +1023,7 @@ class Graph:
                 return self.line.numberMap[self.nameMapToLine(name)]
             except KeyError:
                 print("Graph::stationIndex: Unexpected station name:",name)
-                return -1
+                return self.stationIndex_bf(name)
 
     def stationIndex_bf(self,name:str):
         """

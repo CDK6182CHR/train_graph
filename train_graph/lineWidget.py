@@ -89,6 +89,7 @@ class LineWidget(QtWidgets.QWidget):
         更新所有数据，不重新创建对象。
         """
         self.nameEdit.setText(self.line.name)
+        self.tableWidget.setRowCount(self.line.stationCount())
         self._setLineTable()
 
     def updateData(self):

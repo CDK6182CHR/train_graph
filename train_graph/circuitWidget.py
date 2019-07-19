@@ -30,6 +30,9 @@ class CircuitWidget(QtWidgets.QWidget):
         self.tableWidget.setColumnCount(6)
         tableWidget.setHorizontalHeaderLabels(['高亮','交路名','车次列','车底','担当','注释'])
         tableWidget.itemChanged.connect(self._table_item_changed)
+        header = tableWidget.horizontalHeader()
+        header.setSortIndicatorShown(True)
+        header.sectionClicked.connect(tableWidget.sortByColumn)
 
         for i,s in enumerate((40,110,110,100,100,120)):
             tableWidget.setColumnWidth(i,s)

@@ -45,7 +45,8 @@ class InteractiveTimetable(QtWidgets.QWidget):
         """
         self.updating=True
         if train is None:
-            train = self.train
+            train = Train(self.graph)
+            self.train=train
         if train is None:
             return
         self.train = train

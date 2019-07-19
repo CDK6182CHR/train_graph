@@ -66,12 +66,43 @@ def test_refresh_docks(w:mainGraphWindow):
                  filename='profile/15.pstat'
                  )
 
+def insert_rows():
+    """
+    新建一空tableWidget，向其中不断插入100个新行。
+    """
+    tw = QtWidgets.QTableWidget()
+    tw.setColumnCount(1)
+    for i in range(10000):
+        tw.insertRow(i)
+        tw.setItem(i,0,QtWidgets.QTableWidgetItem(str(i)))
+
+def set_row_count():
+    """
+    先设定100行，再逐个处理内容
+    """
+    tw = QtWidgets.QTableWidget()
+    tw.setColumnCount(1)
+    tw.setRowCount(10000)
+    for i in range(10000):
+        tw.setItem(i,0,QtWidgets.QTableWidgetItem(str(i)))
+
+def compare_insert_rows():
+    insert_rows()
+    set_row_count()
+
+def test_open_graph(w:mainGraphWindow):
+    # w.open_graph_ok('source/京广线广铁段20190105.json')
+    cProfile.run(
+        "w.open_graph_ok('source/京广线广铁段20190105.json')",
+        filename='profile/17.pstat'
+    )
+
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    w = mainGraphWindow('source/京广线广铁段20190105.json')
-    test_refresh_docks(w)
+    w = mainGraphWindow('source/达成单线20190125.json')
+    test_open_graph(w)
 
-    p = pstats.Stats('profile/15.pstat')
+    p = pstats.Stats('profile/17.pstat')
     p.strip_dirs()
     p.sort_stats('cumulative').print_stats()
 
