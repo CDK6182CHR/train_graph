@@ -1014,12 +1014,16 @@ class Graph:
 
     def stationIndex(self, name: str):
         """
-        2019.07.12新增常量级别算法。
+        2019.07.12新增常量级别算法。理论上应保证站名存在。
         """
         if self.line.numberMap is None:
             return self.stationIndex_bf(name)
         else:
-            return self.line.numberMap[name]
+            try:
+                return self.line.numberMap[self.nameMapToLine(name)]
+            except KeyError:
+                print("Graph::stationIndex: Unexpected station name:",name)
+                return -1
 
     def stationIndex_bf(self,name:str):
         """
@@ -1771,6 +1775,16 @@ class Graph:
         self.fullCheciMap = {}
         self.singleCheciMap = {}
         self._markdown = ''
+
+    def nameMapToLine(self,name:str):
+        """
+        支持域解析符的情况下，将车次中的站名映射到本线站名。
+        """
+        dct = self.stationByDict(name)
+        try:
+            return dct['zhanming']
+        except TypeError:
+            return name
 
 
 if __name__ == '__main__':
