@@ -21,6 +21,7 @@ from PyQt5.QtCore import Qt
 from .graph import Graph
 from .train import Train
 from datetime import timedelta, datetime
+import time
 from .ruler import Ruler
 from .line import Line
 from enum import Enum
@@ -45,6 +46,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
     focusChanged = QtCore.pyqtSignal(Train)  # 定义信号，选中车次变化
     rulerChanged = QtCore.pyqtSignal(Ruler)
     showNewStatus = QtCore.pyqtSignal([str], [str, int])  # 显示状态栏信息
+    lineDoubleClicked = QtCore.pyqtSignal()
 
     def __init__(self, graph:Graph, parent=None):
         super().__init__(parent)
@@ -545,14 +547,16 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         rulerTitle:QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(text)
         font = QtGui.QFont()
         font.setRawName(textFont.rawName())
-        if rulerTitle.boundingRect().width() > width:
-            stretch = int(100*width/rulerTitle.boundingRect().width())
+        width1 = rulerTitle.boundingRect().width()
+        if width1 > width:
+            stretch = 100*width//width1
             font.setStretch(stretch)
         rulerTitle.setFont(font)
         rulerTitle.setBrush(QtGui.QBrush(textColor))
-        rulerTitle.setX(start_x + (width-rulerTitle.boundingRect().width())/2)
+        rect = rulerTitle.boundingRect()
+        rulerTitle.setX(start_x + (width-rect.width())/2)
         rulerTitle.setY(start_y +
-                        (height-rulerTitle.boundingRect().height())/2)
+                        (height-rect.height())/2)
         return rulerTitle
 
     def _addStationTableText(self,text,textFont,textColor,start_x,center_y,width):
@@ -563,13 +567,15 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         rulerTitle: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(text)
         font = QtGui.QFont()
         font.setRawName(textFont.rawName())
-        if rulerTitle.boundingRect().width() > width:
-            stretch = int(100 * width / rulerTitle.boundingRect().width())
+        rulerWidth1 = rulerTitle.boundingRect().width()
+        if rulerWidth1 > width:
+            stretch = int(100 * width / rulerWidth1)
             font.setStretch(stretch)
         rulerTitle.setFont(font)
         rulerTitle.setBrush(QtGui.QBrush(textColor))
-        rulerTitle.setX(start_x + (width - rulerTitle.boundingRect().width()) / 2)
-        rulerTitle.setY(center_y-rulerTitle.boundingRect().height() / 2)
+        rulerRect = rulerTitle.boundingRect()
+        rulerTitle.setX(start_x + (width - rulerRect.width()) / 2)
+        rulerTitle.setY(center_y-rulerRect.height() / 2)
         return rulerTitle
 
     def _drawSingleHLine(self, textColor, textFont, y, name, pen, width, leftItems, rightItems, dir_,
@@ -930,6 +936,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         elif QMouseEvent.button() == Qt.RightButton:
             self.menu.popup(QMouseEvent.globalPos())
         super(GraphicsWidget, self).mousePressEvent(QMouseEvent)
+
+    def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
+        self.mousePressEvent(event)
+        self.lineDoubleClicked.emit()
 
     def posTrain(self,pos)->Train:
         """

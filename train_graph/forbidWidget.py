@@ -3,6 +3,7 @@
 """
 from .forbid import Forbid
 from PyQt5 import QtWidgets,QtCore
+from PyQt5.QtCore import Qt
 from datetime import datetime
 
 class ForbidWidget(QtWidgets.QWidget):
@@ -47,17 +48,18 @@ class ForbidWidget(QtWidgets.QWidget):
         label.setWordWrap(True)
         vlayout.addWidget(label)
 
-        actionCp1 = QtWidgets.QAction(self)
+        tableWidget = QtWidgets.QTableWidget()
+        tableWidget.setContextMenuPolicy(Qt.ActionsContextMenu)
+        actionCp1 = QtWidgets.QAction('复制数据到下一行(Alt+C)',tableWidget)
         actionCp1.setShortcut('Alt+C')
-        self.addAction(actionCp1)
+        tableWidget.addAction(actionCp1)
         actionCp1.triggered.connect(self._copy_1)
 
-        actionCpAll = QtWidgets.QAction(self)
+        actionCpAll = QtWidgets.QAction('复制数据到本方向所有行(Alt+Shift+C)',tableWidget)
         actionCpAll.setShortcut('Alt+Shift+C')
-        self.addAction(actionCpAll)
+        tableWidget.addAction(actionCpAll)
         actionCpAll.triggered.connect(self._copy_all)
 
-        tableWidget = QtWidgets.QTableWidget()
         self.tableWidget = tableWidget
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
         self.tableWidget = tableWidget

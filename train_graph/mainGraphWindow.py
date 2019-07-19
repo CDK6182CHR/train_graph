@@ -11,6 +11,9 @@ copyright (c) mxy 2018
 1.4版本系统初始化修改方案：
 1. 初始化打开文件由mainGraphWindow负责管理，GraphicsWidget不再管理。
 2. 允许初始化时直接打开文件。
+
+右键菜单参考
+https://blog.csdn.net/qq_37233607/article/details/78649151
 """
 import sys
 from PyQt5 import QtGui, QtWidgets, QtCore
@@ -64,9 +67,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self, filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.2.5"
+        self.version = "V2.2.6"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190714'
+        self.build = '20190719'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -109,6 +112,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._initUI()
         self._checkGraph()
         self.rulerPainter = None
+        self.GraphWidget.lineDoubleClicked.connect(lambda:self.trainTimetableDockWidget.setVisible(True))
         self.updating=False
 
     def _readSystemSetting(self):

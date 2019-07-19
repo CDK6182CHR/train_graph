@@ -60,12 +60,18 @@ def test_select_line(w:mainGraphWindow):
                  filename='profile/10.pstat'
                  )
 
+def test_refresh_docks(w:mainGraphWindow):
+    w._refreshDockWidgets()
+    cProfile.run('w._refreshDockWidgets()',
+                 filename='profile/15.pstat'
+                 )
+
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    w = mainGraphWindow('source/京沪线上局段20190410.json')
-    test_ruler_widget_refresh(w)
+    w = mainGraphWindow('source/京广线广铁段20190105.json')
+    test_refresh_docks(w)
 
-    p = pstats.Stats('profile/8.pstat')
+    p = pstats.Stats('profile/15.pstat')
     p.strip_dirs()
     p.sort_stats('cumulative').print_stats()
 

@@ -147,8 +147,9 @@ class CurrentWidget(QtWidgets.QWidget):
         timeTable.setColumnWidth(5, 80)
         timeTable.setEditTriggers(timeTable.CurrentChanged)
         timeTable.itemChanged.connect(self._table_item_changed)
+        timeTable.setContextMenuPolicy(Qt.ActionsContextMenu)
         self.timeTable = timeTable
-        actionCpy = QtWidgets.QAction(timeTable)
+        actionCpy = QtWidgets.QAction('复制到达时间为出发时间(Alt+D)',timeTable)
         actionCpy.setShortcut('Alt+D')
         actionCpy.triggered.connect(lambda: self._copy_time(timeTable))
         timeTable.addAction(actionCpy)

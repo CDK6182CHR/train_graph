@@ -10,6 +10,7 @@ from .ruler import Ruler
 from .train import Train
 from .graph import Graph
 from PyQt5 import QtWidgets,QtGui,QtCore
+from PyQt5.QtCore import Qt
 from datetime import datetime,timedelta
 import cgitb
 cgitb.enable(format='text')
@@ -40,6 +41,7 @@ class rulerPainter(QtWidgets.QWidget):
         self.isAppend = False
         self.toEnd = True
         # self.train.setIsDown(True)
+        self.maxRow = 0
         self._initUI()
 
     def _initUI(self):
@@ -205,7 +207,7 @@ class rulerPainter(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout()
         text = f"现在使用*{self.ruler.name()}*标尺从*{self.start_station}*起始，" \
-               f"按*{'下行'if self.down else '上行'}*方向排图。双击排图到指定行，按Alt+C进行冲突检查。"
+               f"按*{'下行'if self.down else '上行'}*方向排图。双击排图到指定行，按Alt+X进行冲突检查。"
         label = QtWidgets.QLabel(text)
         label.setWordWrap(True)
         layout.addWidget(label)
@@ -233,14 +235,20 @@ class rulerPainter(QtWidgets.QWidget):
         self.checkEndThis.toggled.connect(self._end_at_this_changed)
         layout.addLayout(flayout)
 
+        checkCurrentChanged = QtWidgets.QCheckBox()
+        flayout.addRow('即时模式',checkCurrentChanged)
+        checkCurrentChanged.setChecked(True)
+        self.checkCurrentChanged = checkCurrentChanged
+
         timeTable = QtWidgets.QTableWidget()
         timeTable.setEditTriggers(timeTable.NoEditTriggers)
         timeTable.setColumnCount(8)
-        timeTable.setToolTip("按alt+C检测所在行时刻冲突情况")
-        actionText = QtWidgets.QAction(timeTable)
-        actionText.setShortcut('alt+C')
+        timeTable.setToolTip("按Alt+X检测所在行时刻冲突情况")
+        actionText = QtWidgets.QAction('冲突检查(Alt+X)',timeTable)
+        actionText.setShortcut('Alt+X')
         actionText.triggered.connect(self._test_collid)
         timeTable.addAction(actionText)
+        timeTable.setContextMenuPolicy(Qt.ActionsContextMenu)
         self.timeTable = timeTable
         column_width = {
             0:80,
@@ -395,7 +403,6 @@ class rulerPainter(QtWidgets.QWidget):
     def _cancel(self):
         """
         中途点击取消触发。
-        :return:
         """
         self.interrupted = True
 
@@ -436,9 +443,13 @@ class rulerPainter(QtWidgets.QWidget):
         车站停时改变触发。
         """
         self._reCalculate(row)
+        if self.checkCurrentChanged.isChecked():
+            self._paint_to_here(max((row,self.maxRow)))
 
     def _adjust_changed(self,row:int):
         self._reCalculate(row)
+        if self.checkCurrentChanged.isChecked():
+            self._paint_to_here(max((row,self.maxRow)))
 
     def _paint_to_here(self,row:int):
         """
@@ -446,7 +457,8 @@ class rulerPainter(QtWidgets.QWidget):
         2.0版本新增逻辑：当现在铺画的运行线的行别与原车次行别在【铺画开始站】左邻域内相同时，
         选择覆盖，否则不覆盖。如果原车次在该点邻域上下行数据为None，则按覆盖处理。
         """
-        if row<1:
+        self.maxRow = row
+        if row<1 or row > self.timeTable.rowCount()-1:
             return
 
         if self.isAppend:

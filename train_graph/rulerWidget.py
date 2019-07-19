@@ -14,14 +14,17 @@ class RulerWidget(QtWidgets.QTabWidget):
         super().__init__()
         self.line = line
         self.main = main
+        self.updating = False
 
     def setData(self):
+        self.updating=True
         self.clear()
         line = self.line
         for ruler in line.rulers:
             self._addRulerTab(ruler)
         new_ruler = Ruler(line=line)
         self._addRulerTab(new_ruler)
+        self.updating=False
 
     def updateRulerTabs(self):
         """
@@ -516,6 +519,8 @@ class RulerWidget(QtWidgets.QTabWidget):
 
     def _ruler_interval_changed(self, now_line: int, tableWidget: QtWidgets.QTableWidget,
                                 mile: float):
+        if self.updating:
+            return
         # 重新计算均速
         spinMin = tableWidget.cellWidget(now_line, 1)
         spinSec = tableWidget.cellWidget(now_line, 2)
