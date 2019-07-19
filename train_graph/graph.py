@@ -599,6 +599,12 @@ class Graph:
                 return True
         return False
 
+    def circuitNameExisted(self,name,ignore:Circuit=None):
+        for c in self.circuits():
+            if c is not ignore and c.name() == name:
+                return True
+        return False
+
     def isNewRuler(self, ruler: Ruler):
         for r in self.line.rulers:
             if ruler is r:
@@ -1104,8 +1110,22 @@ class Graph:
                         train.setCarriageCircuit(circuit)
                     self.delTrain(t)
                     self.addTrain(train)
-
         return num
+
+    def preAddTrainByGraph(self,graph):
+        """
+        2019.07.19新增。预导入所有与本线有关涉的车次和交路。
+        此函数只能在临时对象中调用。自身的车次表、交路表应当是空的。
+        注意，此操作后的circuits是不安全的，执行train()可能会引发TrianNotFoundException。
+        """
+        for train in graph.trains():
+            if train.localCount(self) >= 2:
+                self.addTrain(train)
+                circuit = train.carriageCircuit()
+                if circuit is not None:
+                    if circuit not in self._circuits:
+                        circuit.graph = self
+                        self.addCircuit(circuit)
 
     def setMarkdown(self, mark: str):
         self._markdown = mark
@@ -1775,6 +1795,13 @@ class Graph:
         self.fullCheciMap = {}
         self.singleCheciMap = {}
         self._markdown = ''
+
+    def clearTrains(self):
+        self._trains = []
+        self._circuits = []
+        self.typeList = []
+        self.fullCheciMap = {}
+        self.singleCheciMap = {}
 
     def nameMapToLine(self,name:str):
         """

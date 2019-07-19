@@ -26,7 +26,6 @@ class TrainDatabase(QtWidgets.QMainWindow):
         """
         trainDock = QtWidgets.QDockWidget()
         widget = TrainWidget(self.graph)
-        widget.initWidget()
         trainDock.setWidget(widget)
         self.trainDockWidget = trainDock
         self.trainWidget = widget

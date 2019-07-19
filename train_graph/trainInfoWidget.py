@@ -88,12 +88,12 @@ class TrainInfoWidget(QtWidgets.QWidget):
         circuitOrderEdit.setMinimumHeight(60)
         vlayout.addWidget(circuitOrderEdit)
 
-        vlayout.addWidget(QtWidgets.QLabel('交路说明'))
-        circuitNoteEdit = QtWidgets.QTextBrowser()
-        self.circuitNoteEdit = circuitNoteEdit
-        circuitNoteEdit.setMaximumHeight(120)
-        circuitNoteEdit.setMinimumHeight(60)
-        vlayout.addWidget(circuitNoteEdit)
+        # vlayout.addWidget(QtWidgets.QLabel('交路说明'))
+        # circuitNoteEdit = QtWidgets.QTextBrowser()
+        # self.circuitNoteEdit = circuitNoteEdit
+        # circuitNoteEdit.setMaximumHeight(120)
+        # circuitNoteEdit.setMinimumHeight(60)
+        # vlayout.addWidget(circuitNoteEdit)
 
         btnText = QtWidgets.QPushButton('导出文本信息')
         vlayout.addWidget(btnText)
@@ -146,10 +146,10 @@ class TrainInfoWidget(QtWidgets.QWidget):
         if circuit is not None:
             self.circuitNameEdit.setText(circuit.name())
             self.circuitOrderEdit.setText(circuit.orderStr())
-            self.circuitNoteEdit.setText(circuit.note())
+            # self.circuitNoteEdit.setText(circuit.note())
         else:
             self.circuitNameEdit.setText('(无交路信息)')
-            self.circuitNoteEdit.setText('')
+            # self.circuitNoteEdit.setText('')
             self.circuitOrderEdit.setText('')
         self.modelEdit.setText(train.model())
         self.ownerEdit.setText(train.owner())

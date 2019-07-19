@@ -21,6 +21,7 @@ class TrainWidget(QtWidgets.QWidget):
         self.main = main
         self.trainMapToRow=dict()  # dict<train,item>
         self.filter = TrainFilter(self.graph,self)
+        self.initWidget()
 
     def initWidget(self):
         vlayout = QtWidgets.QVBoxLayout()
@@ -68,7 +69,7 @@ class TrainWidget(QtWidgets.QWidget):
         btnEdit = QtWidgets.QPushButton("编辑")
         btnEdit.setMinimumWidth(80)
         btnChange = QtWidgets.QPushButton("批量调整")
-        btnChange.setMaximumWidth(80)
+        btnChange.setMinimumWidth(80)
         btnAdd = QtWidgets.QPushButton("添加")
         btnAdd.setMinimumWidth(80)
         btnDel = QtWidgets.QPushButton("删除")

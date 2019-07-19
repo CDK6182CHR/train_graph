@@ -334,10 +334,9 @@ class CircuitDialog(QtWidgets.QDialog):
         if not name:
             QtWidgets.QMessageBox.warning(self,'错误','交路名称不能为空！')
             return
-        for circuit in self.graph.circuits():
-            if circuit.name() == name and circuit is not self.circuit:
-                QtWidgets.QMessageBox.warning(self,'错误',f'交路名称{name}已存在，不能重复添加！')
-                return
+        if self.graph.circuitNameExisted(name,self.circuit):
+            QtWidgets.QMessageBox.warning(self,'错误',f'交路名称{name}已存在，不能重复添加！')
+            return
         if self.circuit is None:
             self.isNewCircuit = True
             self.circuit = Circuit(self.graph)

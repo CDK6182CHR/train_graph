@@ -88,16 +88,11 @@ class Ruler():
     def del_station(self,station_name:str):
         """
         删除某个站点，连接前后区间数据
-        :param station_name:
-        :return:
         """
 
     def getInfo(self,fazhan:str,daozhan:str,allow_multi=False):
         """
-        :param fazhan:
-        :param daozhan:
-        :param allow_multi:是否允许跨区间。
-        :return:
+        allow_multi:是否允许跨区间。
         """
         for node in self._nodes:
             if stationEqual(node['fazhan'],fazhan,strict=True) and \
@@ -157,13 +152,6 @@ class Ruler():
                     queue.append(w)
         return None
 
-    def stationEqual(self,st1,st2):
-        if st1==st2:
-            return True
-        elif ('::' in st1) != ('::' in st2) and st1.split('::')[0]==st2.split('::')[0]:
-            return True
-        return False
-
     def _find_path(self,fazhan,daozhan,passed:list):
         """
         找出从fazhan到daozhan间的一条路径，返回经过的站点表
@@ -185,12 +173,12 @@ class Ruler():
     def _find_neighbors(self,name:str):
         neighbors = []
         for st in self._nodes:
-            if self.stationEqual(st["fazhan"],name):
+            if stationEqual(st["fazhan"],name):
                 neighbors.append(st["daozhan"])
 
         if not self._different:
             for st in self._nodes:
-                if self.stationEqual(st['daozhan'],name):
+                if stationEqual(st['daozhan'],name):
                     neighbors.append(st["fazhan"])
 
         return neighbors

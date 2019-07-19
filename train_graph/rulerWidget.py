@@ -166,7 +166,7 @@ class RulerWidget(QtWidgets.QTabWidget):
                                       tableWidget, mile,row)
                     row+=1
                 former_dict = st_dict
-
+        print("初始化上行")
         former_dict = None
         if ruler.different():
             # 上下行不一致，增加上行部分
@@ -184,6 +184,7 @@ class RulerWidget(QtWidgets.QTabWidget):
     def _addRulerRow(self, fazhan, daozhan, blocker
                      , node: dict, tableWidget: QtWidgets.QTableWidget,
                      mile,now_line):
+        print("RulerWidget::addRulerRow",fazhan,blocker,daozhan)
         tableWidget.setRowHeight(now_line, self.main.graph.UIConfigData()['table_row_height']
             if self.main is not None else 30)
 
@@ -290,6 +291,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         if not ruler.different():
             tableWidget.setRowCount(row_cnt)
             return
+        former_dict = None
         for i, st_dict in enumerate(self.line.reversedStationDicts()):
             if not ruler.isUpPassed(st_dict["zhanming"]):
                 if former_dict is not None:
