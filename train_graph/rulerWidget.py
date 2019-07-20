@@ -93,7 +93,7 @@ class RulerWidget(QtWidgets.QTabWidget):
             btnRead.clicked.connect(lambda: self._ruler_from_train(widget))
             btnSet = QtWidgets.QPushButton("设为排图标尺")
             btnSet.clicked.connect(lambda: self._apply_ruler_change(widget))  # 先提交标尺信息
-            btnSet.clicked.connect(lambda: self.main.changeOrdinateRuler(ruler))  # 直接触发修改函数
+            btnSet.clicked.connect(lambda: self._set_ordinate_ruler(widget))  # 直接触发修改函数
             btnMerge = QtWidgets.QPushButton("合并标尺")
             btnMerge.clicked.connect(lambda:self._merge_ruler(widget))
             hlayout = QtWidgets.QHBoxLayout()
@@ -166,7 +166,7 @@ class RulerWidget(QtWidgets.QTabWidget):
                                       tableWidget, mile,row)
                     row+=1
                 former_dict = st_dict
-        print("初始化上行")
+        # print("初始化上行")
         former_dict = None
         if ruler.different():
             # 上下行不一致，增加上行部分
@@ -184,7 +184,7 @@ class RulerWidget(QtWidgets.QTabWidget):
     def _addRulerRow(self, fazhan, daozhan, blocker
                      , node: dict, tableWidget: QtWidgets.QTableWidget,
                      mile,now_line):
-        print("RulerWidget::addRulerRow",fazhan,blocker,daozhan)
+        # print("RulerWidget::addRulerRow",fazhan,blocker,daozhan)
         tableWidget.setRowHeight(now_line, self.main.graph.UIConfigData()['table_row_height']
             if self.main is not None else 30)
 
@@ -362,6 +362,10 @@ class RulerWidget(QtWidgets.QTabWidget):
 
         self._setRulerTable(tableWidget, ruler)
 
+    def _set_ordinate_ruler(self,widget):
+        if self.main:
+            self.main.changeOrdinateRuler(widget.ruler)
+
     def _apply_ruler_change(self, widget: QtWidgets.QWidget):
         name = widget.nameEdit.text()
         if not name:
@@ -383,7 +387,7 @@ class RulerWidget(QtWidgets.QTabWidget):
             interval = tableWidget.cellWidget(row, 1).value() * 60 + \
                        tableWidget.cellWidget(row, 2).value()
             if not interval:
-                #这一行标红
+                # 这一行标红
                 color = QtGui.QColor(Qt.red)
                 color.setAlpha(150)
                 for col in range(tableWidget.columnCount()):

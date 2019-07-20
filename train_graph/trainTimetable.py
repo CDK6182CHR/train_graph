@@ -25,12 +25,10 @@ class TrainTimetable(QtWidgets.QWidget):
         tableWidget.verticalHeader().hide()
         vlayout = QtWidgets.QVBoxLayout()
 
-        flayout = QtWidgets.QFormLayout()
         checiEdit = QtWidgets.QLineEdit()
         checiEdit.setFocusPolicy(Qt.NoFocus)
-        flayout.addRow('当前车次',checiEdit)
         self.checiEdit = checiEdit
-        vlayout.addLayout(flayout)
+        vlayout.addWidget(checiEdit)
 
         # label = QtWidgets.QLabel("下表中红色字体表示该站营业，蓝色表示该站停车但不营业。")
         # label.setWordWrap(True)
@@ -54,7 +52,8 @@ class TrainTimetable(QtWidgets.QWidget):
         tw = self.tableWidget
         # if train is None:
         #     return
-        self.checiEdit.setText(train.fullCheci())
+        self.checiEdit.setText(f"{train.fullCheci()}({train.sfz}->{train.zdz})")
+        self.checiEdit.setCursorPosition(0)
         tw.setRowCount(train.stationCount()*2)
         TWI = QtWidgets.QTableWidgetItem
 

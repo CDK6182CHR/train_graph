@@ -938,7 +938,22 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         super(GraphicsWidget, self).mousePressEvent(QMouseEvent)
 
     def mouseDoubleClickEvent(self, event: QtGui.QMouseEvent):
-        self.mousePressEvent(event)
+        pos = self.mapToScene(event.pos())
+        # print("mousePressEvent",pos)
+        # self.scene.addRect(pos.x()-1,pos.y()-1,2,2)
+        if self.selectedTrain is not None:
+            self._line_un_selected()
+
+        item: QtWidgets.QGraphicsItem = self.scene.itemAt(pos, self.transform())
+        if item is None:
+            return
+        # print(item)
+        while item.parentItem():
+            item = item.parentItem()
+        if isinstance(item, TrainItem):
+            self._line_selected(item, ensure_visible=False)
+        else:
+            return
         self.lineDoubleClicked.emit()
 
     def posTrain(self,pos)->Train:

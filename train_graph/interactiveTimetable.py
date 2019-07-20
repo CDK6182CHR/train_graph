@@ -18,12 +18,10 @@ class InteractiveTimetable(QtWidgets.QWidget):
     def initUI(self):
         self.setWindowTitle('交互式时刻表')
         vlayout = QtWidgets.QVBoxLayout()
-        flayout = QtWidgets.QFormLayout()
         checiEdit = QtWidgets.QLineEdit()
         self.checiEdit = checiEdit
         checiEdit.setFocusPolicy(Qt.NoFocus)
-        flayout.addRow('当前车次',checiEdit)
-        vlayout.addLayout(flayout)
+        vlayout.addWidget(checiEdit)
 
         tableWidget = QtWidgets.QTableWidget()
         tableWidget.verticalHeader().hide()
@@ -50,7 +48,8 @@ class InteractiveTimetable(QtWidgets.QWidget):
         if train is None:
             return
         self.train = train
-        self.checiEdit.setText(train.fullCheci())
+        self.checiEdit.setText(f"{train.fullCheci()}({train.sfz}->{train.zdz})")
+        self.checiEdit.setCursorPosition(0)
 
         tw = self.tableWidget
         tw.setRowCount(train.stationCount()*2)

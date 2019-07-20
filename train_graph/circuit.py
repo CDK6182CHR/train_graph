@@ -68,6 +68,12 @@ class CircuitNode:
             raise TrainNotFoundException(self._checi)
         return self._train
 
+    def trainFromCheci(self):
+        """
+        导入车次时调用。仅按照车次，在运行图中查找Train对象。如果找不到，返回None。
+        """
+        return self.graph.trainFromCheci(self._checi,full_only=True)
+
     def checi(self)->str:
         """
         若有train对象，则以train对象为准。
@@ -94,6 +100,13 @@ class CircuitNode:
             return self.train().localLast(self.graph)
         else:
             return None
+
+    def setGraph(self,graph):
+        """
+        将Circuit对象移交给另一个运行图。清除Train对象。
+        """
+        self.graph=graph
+        self._train=None
 
 class Circuit:
     """
@@ -177,6 +190,13 @@ class Circuit:
                 train.setCarriageCircuit(None)
                 return
 
+    def removeTrainByCheci(self,train):
+        for node in self._order:
+            if node._checi == train.fullCheci():
+                self._order.remove(node)
+                train.setCarriageCircuit(None)
+                return
+
     def addTrain(self,train,index=None):
         """
         要求train不能属于其他交路。否则抛出TrainHasCircuitError。
@@ -199,6 +219,12 @@ class Circuit:
             print("Circuit::orderStr",e)
             return 'NA'
 
+    def checiList(self):
+        """
+        依次产生车次，且只运用_checi属性，不考虑Train属性。
+        """
+        for node in self.nodes():
+            yield node._checi
 
     def trainCount(self)->int:
         return len(self._order)
@@ -272,7 +298,6 @@ class Circuit:
             return postTrain,postStart['cfsj']
         return None,None
 
-
     def trainOrderNum(self,train)->int:
         """
         车次在交路中的位置序号，从0起始。如果不存在，抛出TrainNotInCircuitError。
@@ -290,3 +315,31 @@ class Circuit:
             if node.train() is old:
                 node.setTrain(new)
                 return
+
+    def anyValidTrains(self)->bool:
+        """
+        只要有一个节点能找到Train对象，就返回True。否则返回False。
+        """
+        for node in self.nodes():
+            try:
+                node.train()
+            except TrainNotFoundException:
+                pass
+            else:
+                return True
+        return False
+
+    def setGraph(self,graph):
+        self.graph=graph
+        for node in self.nodes():
+            node.setGraph(graph)
+
+    def coverBaseData(self,circuit):
+        """
+        复制不包括nodes在内的基数据。
+        """
+        self._name = circuit.name()
+        self._type = circuit._type
+        self._note = circuit._note
+        self.model = circuit._model
+        self._owner = circuit._owner

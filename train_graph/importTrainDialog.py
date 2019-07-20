@@ -8,8 +8,10 @@ from .graph import Graph,Train,Ruler,Circuit,CircuitNode
 from .trainWidget import TrainWidget
 from .trainTimetable import TrainTimetable
 from .trainInfoWidget import TrainInfoWidget
+from .pyETRCExceptions import *
 
 class ImportTrainDialog(QtWidgets.QDialog):
+    importTrainOk = QtCore.pyqtSignal()
     def __init__(self,graph:Graph,parent=None):
         super(ImportTrainDialog, self).__init__(parent)
         self.graph = graph
@@ -64,8 +66,9 @@ class ImportTrainDialog(QtWidgets.QDialog):
         radioNewCircuit = QtWidgets.QRadioButton('以新图交路为准')
         self.radioOldCircuit = radioOldCircuit
         self.radioNewCircuit = radioNewCircuit
-        radioNewCircuit.setChecked(True)
+        radioOldCircuit.setChecked(True)
         radioNoCircuit = QtWidgets.QRadioButton('不导入任何交路')
+        self.radioNoCircuit = radioNoCircuit
         group2.addButton(radioOldCircuit)
         group2.addButton(radioNewCircuit)
         group2.addButton(radioNoCircuit)
@@ -93,6 +96,9 @@ class ImportTrainDialog(QtWidgets.QDialog):
         vlayout.addLayout(chlayout)
         hlayout.addLayout(vlayout)
 
+        hlayout.setStretchFactor(self.trainWidget,6)
+        hlayout.setStretchFactor(vlayout,4)
+
         self.setLayout(hlayout)
 
     # slots
@@ -118,9 +124,6 @@ class ImportTrainDialog(QtWidgets.QDialog):
                         self.trainWidget.trainTable.item(i,c).setForeground(QtGui.QBrush(Qt.red))
                     except Exception as e:
                         pass
-
-    def _ok_clicked(self):
-        pass
 
     def _show_timetable(self):
         row = self.trainWidget.trainTable.currentRow()
@@ -161,3 +164,57 @@ class ImportTrainDialog(QtWidgets.QDialog):
 
         dialog.setLayout(vlayout)
         dialog.exec_()
+
+    def _ok_clicked(self):
+        """
+
+        """
+        cover = not self.radioIgnore.isChecked()
+        # 删除新导入运行图中不牵连的交路（车次可能会被删除）
+        circuits = []
+        for circuit in self.anGraph.circuits():
+            if circuit.anyValidTrains():
+                circuits.append(circuit)
+        self.anGraph._circuits = circuits
+
+        # 导入车次。无论交路导入设置如何，都先把覆盖的车次的circuit指向原图中的circuit。
+        new_cnt = 0
+        for train in self.anGraph.trains():
+            oldTrain = self.graph.trainFromCheci(train.fullCheci())
+            if oldTrain is None:
+                self.graph.addTrain(train)
+                new_cnt+=1
+            elif cover:
+                circuit = oldTrain.carriageCircuit()
+                if circuit is not None:
+                    circuit.replaceTrain(oldTrain,train)
+                train.setCarriageCircuit(circuit)
+                self.graph.delTrain(oldTrain)
+                self.graph.addTrain(train)
+
+        # 导入交路。重新创建所有的交路对象。
+        if not self.radioNoCircuit.isChecked():
+            coverCircuit = self.radioNewCircuit.isChecked()
+            for circuit in self.anGraph.circuits():
+                newCircuit = Circuit(self.graph)
+                newCircuit.coverBaseData(circuit)
+                while self.graph.circuitNameExisted(newCircuit.name()):
+                    newCircuit.setName(newCircuit.name()+'_导入')
+                for checi in circuit.checiList():
+                    train = self.graph.trainFromCheci(checi)
+                    if train is None:
+                        continue
+                    oldCircuit = train.carriageCircuit()
+                    if oldCircuit is None:
+                        # 原来没有，放心添加
+                        newCircuit.addTrain(train)
+                    elif coverCircuit:
+                        # 冲突，且以新图中交路为准，则删除老交路中的这个结点。
+                        # 注意，train对象不一定是原来的，所以按照车次来删除。
+                        oldCircuit.removeTrainByCheci(train)
+                        newCircuit.addTrain(train)
+                if newCircuit.anyValidTrains():
+                    self.graph.addCircuit(newCircuit)
+        self.anGraph.clearTrains()
+        self.importTrainOk.emit()
+        self.close()

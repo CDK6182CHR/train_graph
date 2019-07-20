@@ -281,6 +281,7 @@ class Graph:
         self._sysVersion = v
 
     def addTrain(self, train: Train):
+        train.graph = self
         self._trains.append(train)
         self.fullCheciMap[train.fullCheci()] = train
         self.addSingleCheciMap(train)
@@ -1120,12 +1121,12 @@ class Graph:
         """
         for train in graph.trains():
             if train.localCount(self) >= 2:
-                self.addTrain(train)
                 circuit = train.carriageCircuit()
                 if circuit is not None:
                     if circuit not in self._circuits:
-                        circuit.graph = self
+                        circuit.setGraph(self)
                         self.addCircuit(circuit)
+                self.addTrain(train)
 
     def setMarkdown(self, mark: str):
         self._markdown = mark

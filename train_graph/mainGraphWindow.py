@@ -70,7 +70,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.7"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190719'
+        self.build = '20190720'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -1313,6 +1313,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._import_train)
         menu.addAction(action)
 
+        action = QtWidgets.QAction("导入车次(旧版)",self)
+        action.setShortcut('ctrl+alt+D')
+        action.triggered.connect(self._import_train_old)
+        menu.addAction(action)
+
         action = QtWidgets.QAction("导入实际运行线", self)
         action.setShortcut('ctrl+shift+D')
         action.triggered.connect(self._import_train_real)
@@ -2293,30 +2298,38 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                    "例如，“成都东::达成场”可以匹配到“成都东”。\n"
                    "请确认您知悉以上内容并继续。\n本提示不影响确认动作的执行。")
 
+    def _import_train_old(self):
+        flag = self.qustion("选择运行图，导入其中所有在本线的车次。您是否希望覆盖重复的车次？"
+                            "选择“是”以覆盖重复车次，“否”以忽略重复车次。")
+
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
+                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
+        if not filename:
+            return
+
+        graph = Graph()
+        try:
+            graph.loadGraph(filename)
+        except Exception as e:
+            self._derr("运行图文件无效，请检查！" + str(repr(e)))
+            traceback.print_exc()
+            return
+        else:
+            num = self.graph.addTrainByGraph(graph, flag)
+            self.GraphWidget.paintGraph()
+            self.trainWidget.addTrainsFromBottom(num)
+            self.typeWidget._setTypeList()
+            self._dout(f"成功导入{num}个车次。")
+
     def _import_train(self):
-        # flag = self.qustion("选择运行图，导入其中所有在本线的车次。您是否希望覆盖重复的车次？"
-        #                     "选择“是”以覆盖重复车次，“否”以忽略重复车次。")
-        #
-        # filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-        #                                                  filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
-        # if not filename:
-        #     return
-        #
-        # graph = Graph()
-        # try:
-        #     graph.loadGraph(filename)
-        # except Exception as e:
-        #     self._derr("运行图文件无效，请检查！" + str(repr(e)))
-        #     traceback.print_exc()
-        #     return
-        # else:
-        #     num = self.graph.addTrainByGraph(graph, flag)
-        #     self.GraphWidget.paintGraph()
-        #     self.trainWidget.addTrainsFromBottom(num)
-        #     self.typeWidget._setTypeList()
-        #     self._dout(f"成功导入{num}个车次。")
         dialog = ImportTrainDialog(self.graph,parent=self)
+        dialog.importTrainOk.connect(self._import_train_ok)
         dialog.exec_()
+
+    def _import_train_ok(self):
+        self.GraphWidget.paintGraph()
+        self.trainWidget.setData()
+        self.circuitWidget.setData()
 
     def _import_train_real(self):
         flag = self.qustion("选择运行图，导入其中所有在本线的车次，车次前冠以“R”，类型为“实际”。是否继续？")
