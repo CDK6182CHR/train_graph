@@ -195,6 +195,7 @@ class ConfigWidget(QtWidgets.QWidget):
             combo.setCurrentText(ordinate.name())
 
     def setData(self):
+        self.UIDict = self.graph.UIConfigData() if not self.system else self.graph.sysConfigData()
         UIDict = self.UIDict
         self.startTimeSpin.setValue(UIDict["start_hour"])
         self.endTimeSpin.setValue(UIDict["end_hour"])

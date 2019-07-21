@@ -341,5 +341,5 @@ class Circuit:
         self._name = circuit.name()
         self._type = circuit._type
         self._note = circuit._note
-        self.model = circuit._model
+        self._model = circuit._model
         self._owner = circuit._owner

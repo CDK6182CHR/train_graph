@@ -1072,11 +1072,11 @@ class Train():
         down = self.firstDown()
         if down:
             # 本次列车下行，toStart对应始发，toEnd对应终到
-            fromStart=toStart and not graph.stationInLine(self.sfz)
-            toEnd=toEnd and not graph.stationInLine(self.zdz)
+            fromStart=toStart and not graph.stationInLine(self.sfz)  # 计算原来入图以前的区段
+            toEnd=toEnd and not graph.stationInLine(self.zdz)  # 计算原来出图以后的区段
         else:
-            toEnd = toEnd and not graph.stationInLine(self.sfz)
-            fromStart = toStart and not graph.stationInLine(self.zdz)
+            fromStart = toEnd and not graph.stationInLine(self.sfz)
+            toEnd = toStart and not graph.stationInLine(self.zdz)
         first_in_graph = self.timetable[0] #图定本线入图结点
         firstStopped=bool((first_in_graph['ddsj']-first_in_graph['cfsj']).seconds)
         last_in_graph = self.timetable[-1]  #图定本线出图

@@ -241,7 +241,6 @@ class DetectWidget(QtWidgets.QDialog):
             train.detectPassStation(self.graph,self.ruler,self.toStart,self.toEnd,self.precision)
             print("计算通过站完毕",train.fullCheci())
         self.okClicked.emit()
-        self.mainWindow._dout("计算完毕！刷新运行图以显示新运行图。")
         self.close()
 
     def _note_clicked(self):

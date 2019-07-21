@@ -78,6 +78,10 @@ class ImportTrainDialog(QtWidgets.QDialog):
         cvlayout.addWidget(radioNoCircuit)
         flayout.addRow('冲突交路',cvlayout)
 
+        prefixEdit = QtWidgets.QLineEdit()
+        self.prefixEdit = prefixEdit
+        flayout.addRow('附加前缀',prefixEdit)
+
         vlayout.addLayout(flayout)
 
         label = QtWidgets.QLabel('先选择要导入的文件名。左侧车次表中显示红色的行是冲突的车次。删除不导入的车次，然后点击确定以完成导入。'
@@ -180,8 +184,10 @@ class ImportTrainDialog(QtWidgets.QDialog):
         # 导入车次。无论交路导入设置如何，都先把覆盖的车次的circuit指向原图中的circuit。
         new_cnt = 0
         for train in self.anGraph.trains():
+            train.setFullCheci(self.prefixEdit.text()+train.fullCheci())
             oldTrain = self.graph.trainFromCheci(train.fullCheci())
             if oldTrain is None:
+                train.setCarriageCircuit(None)  # 清除新增的车次的交路信息
                 self.graph.addTrain(train)
                 new_cnt+=1
             elif cover:
@@ -193,6 +199,7 @@ class ImportTrainDialog(QtWidgets.QDialog):
                 self.graph.addTrain(train)
 
         # 导入交路。重新创建所有的交路对象。
+        ruler_cnt = 0
         if not self.radioNoCircuit.isChecked():
             coverCircuit = self.radioNewCircuit.isChecked()
             for circuit in self.anGraph.circuits():
@@ -215,6 +222,18 @@ class ImportTrainDialog(QtWidgets.QDialog):
                         newCircuit.addTrain(train)
                 if newCircuit.anyValidTrains():
                     self.graph.addCircuit(newCircuit)
+                    ruler_cnt+=1
+        all_cnt = self.anGraph.trainCount()
+        text = ""
+        if cover:
+            text += f"成功导入{all_cnt}个车次。"
+            text+=f"其中覆盖{all_cnt-new_cnt}个车次。\n"
+        else:
+            text += f"成功导入{new_cnt}个车次。"
+            text+=f"有{all_cnt-new_cnt}个重复车次被跳过\n"
+        if ruler_cnt:
+            text+=f"同时引入{ruler_cnt}个新交路。"
+        QtWidgets.QMessageBox.information(self,'信息',text)
         self.anGraph.clearTrains()
         self.importTrainOk.emit()
         self.close()

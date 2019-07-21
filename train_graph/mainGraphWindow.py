@@ -70,7 +70,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.7"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190720'
+        self.build = '20190721'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -2226,7 +2226,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                 newLine.addStationDict(line.stationDictByIndex(row))
             newLine.rulers = line.rulers
 
-        self.graph.setLine(newLine)
+        self.graph.line.copyData(line,True)
         self.graph.resetAllItems()
         self.graph.setOrdinateRuler(None)
         self.GraphWidget.paintGraph()
@@ -2267,7 +2267,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                 pass
             else:
                 new_line.addStation_by_info(name, mile, level)
-        self.graph.setLine(new_line)
+        self.graph.line.copyData(new_line,True)
         self.GraphWidget.paintGraph(throw_error=False)
         self._refreshDockWidgets()
         self._dout("导入成功！")
@@ -2385,8 +2385,13 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             if not self.qustion('此操作将删除要推定时刻列车时刻表中【非本线】的站点，是否继续？'):
                 return
         dialog = DetectWidget(self, self)
-        # dialog.okClicked.connect(self.GraphWidget.paintGraph)
+        dialog.okClicked.connect(self._detect_ok())
         dialog.exec_()
+
+    def _detect_ok(self):
+        self._dout('计算完毕！')
+        self.GraphWidget.paintGraph()
+        self._updateCurrentTrainRelatedWidgets(self.currentTrain())
 
     def _correction_timetable(self, train=None):
         if not isinstance(train, Train):

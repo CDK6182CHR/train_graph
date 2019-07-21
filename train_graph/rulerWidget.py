@@ -360,7 +360,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         else:
             ruler.setDifferent(True, change=True)
 
-        self._setRulerTable(tableWidget, ruler)
+        self._updateRulerTable(tableWidget,ruler)
 
     def _set_ordinate_ruler(self,widget):
         if self.main:

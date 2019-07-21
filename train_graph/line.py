@@ -307,6 +307,8 @@ class Line():
         self.stations = line.stations
         if withRuler:
             self.rulers = line.rulers
+            for ruler in self.rulers:
+                ruler._line = self
         self.nameMap = line.nameMap
         self.fieldMap = line.fieldMap
 
@@ -405,7 +407,4 @@ if __name__ == '__main__':
     newline = Line(origin=dict)
     newline.show()
 
-    print("yield test")
-    for n,m in line.name_mileages():
-        print(n,m)
 
