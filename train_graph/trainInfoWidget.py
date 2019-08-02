@@ -19,8 +19,6 @@ class TrainInfoWidget(QtWidgets.QWidget):
 
         self.fullCheciEdit = None # type:QtWidgets.QLineEdit
         self.trainTypeEdit = None # type:QtWidgets.QLineEdit
-        self.inDownEdit = ...  # type:QtWidgets.QLineEdit
-        self.outDownEdit = ...  # type:QtWidgets.QLineEdit
         self.localFirstEdit = ...  # type:QtWidgets.QLineEdit
         self.localLastEdit = ... # type:QtWidgets.QLineEdit
         self.localCountEdit = ... # type:QtWidgets.QLineEdit
@@ -52,8 +50,6 @@ class TrainInfoWidget(QtWidgets.QWidget):
         self._addFormRow('始发终到','startEndEdit')
 
         self._addFormRow('列车种类','trainTypeEdit')
-        self._addFormRow('本线入图方向','inDownEdit')
-        self._addFormRow('本线出图方向','outDownEdit')
         self._addFormRow('本线入图点','localFirstEdit')
         self._addFormRow('本线出图点','localLastEdit')
         self._addFormRow('本线图定站点数','localCountEdit')
@@ -127,10 +123,8 @@ class TrainInfoWidget(QtWidgets.QWidget):
         self.directionCheciEdit.setText(f"{train.downCheci()}/{train.upCheci()}")
         self.startEndEdit.setText(f"{train.sfz}->{train.zdz}")
         self.trainTypeEdit.setText(train.trainType())
-        self.inDownEdit.setText(train.firstDownStr())
-        self.outDownEdit.setText(train.lastDownStr())
-        self.localFirstEdit.setText(train.localFirst())
-        self.localLastEdit.setText(train.localLast())
+        self.localFirstEdit.setText(f"{train.localFirst()}({train.firstDownStr()})")
+        self.localLastEdit.setText(f"{train.localLast()}({train.lastDownStr()})")
         self.localCountEdit.setText(str(train.localCount()))
         mile = train.localMile(self.graph,fullAsDefault=False)
         self.localMileEdit.setText(f"{mile:.1f}")

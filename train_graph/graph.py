@@ -522,6 +522,7 @@ class Graph:
     def setStationIsShow(self, name: str, show: bool):
         """
         不支持域解析符。2019.02.02删除线性算法。
+        2019.07.30：似无调用
         """
         st = self.line.stationDictByName(name, True)
         if st is None:
@@ -588,7 +589,6 @@ class Graph:
     def lineSplited(self):
         """
         返回本线是否存在上下行分设站的情况
-        :return:
         """
         if self.line.isSplited():
             return True

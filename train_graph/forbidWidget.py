@@ -176,8 +176,8 @@ class ForbidWidget(QtWidgets.QWidget):
         beginQ:QtCore.QTime = spinBegin.time()
         endQ = spinEnd.time()
 
-        begin = datetime.strptime(beginQ.toString('hh:mm'),'%H:%M')
-        end = datetime.strptime(endQ.toString('hh:mm'),'%H:%M')
+        begin = datetime(1900,1,1,beginQ.hour(),beginQ.minute())
+        end = datetime(1900,1,1,endQ.hour(),endQ.minute())
         dt = (end-begin).seconds
         if dt<0:
             dt+=24*3600
@@ -226,8 +226,8 @@ class ForbidWidget(QtWidgets.QWidget):
             gap = tableWidget.item(row,0).data(-1)
             beginQ = tableWidget.cellWidget(row,1).time()
             endQ = tableWidget.cellWidget(row,2).time()
-            begin = datetime.strptime(beginQ.toString('hh:mm'), '%H:%M')
-            end = datetime.strptime(endQ.toString('hh:mm'), '%H:%M')
+            begin = datetime(1900, 1, 1, beginQ.hour(), beginQ.minute())
+            end = datetime(1900, 1, 1, endQ.hour(), endQ.minute())
             self.data.addForbid(gap[0],gap[1],begin,end)
         if self.data.downShow():
             self.currentShowedChanged.emit(True)

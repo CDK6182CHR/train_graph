@@ -128,9 +128,7 @@ class Train():
         for dict in self.timetable:
             if isinstance(dict["ddsj"],str):
                 ddsj = strToTime(dict['ddsj'])
-
                 cfsj = strToTime(dict['cfsj'])
-
                 dict["ddsj"] = ddsj
                 dict["cfsj"] = cfsj
 
@@ -1035,6 +1033,18 @@ class Train():
 
         self.timetable=self.timetable[:start1]+inter2+self.timetable[end1+1:]
         train.timetable=train.timetable[:start2]+inter1+train.timetable[end2+1:]
+
+    def sfzIsValid(self)->bool:
+        """
+        排除无效的始发站。
+        如果始发站是某一个中间站，返回False。否则True。
+        ====
+        暂不启用。线性算法启用代价太高。
+        """
+        return True
+
+    def zdzIsValid(self)->bool:
+        return True
 
     def relativeError(self,ruler):
         """

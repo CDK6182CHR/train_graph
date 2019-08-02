@@ -301,6 +301,14 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         line.setPen(defaultPen)
         leftItems.append(line)
 
+        nowItem: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText('-',
+                                                                  font=QtGui.QFont('Sim sum', 12))  # 当前车次信息显示在左上角
+        # timeItems.append(nowItem)
+        self.nowItem = nowItem
+        # nowItem.setDefaultTextColor(QtGui.QColor(UIDict["text_color"]))
+        nowItem.setBrush(QtGui.QBrush(QtGui.QColor(UIDict['text_color'])))
+        nowItem.setZValue(16)
+
         rulerTitle = self._addLeftTableText('排图标尺',textFont,textColor,0,rect_start_y,
                                             self.margins["ruler_label_width"],
                                             self.appendix_margins["title_row_height"]/2)
@@ -661,12 +669,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         color = QtGui.QColor(Qt.white)
         color.setAlpha(200)  # 0~255,255全不透明
         rectItem.setBrush(QtGui.QBrush(color))
-        nowItem: QtWidgets.QGraphicsTextItem = self.scene.addText(' ',
-                                                                  font=QtGui.QFont('Sim sum', 12))  # 当前车次信息显示在左上角
-        # timeItems.append(nowItem)
-        self.nowItem = nowItem
-        nowItem.setDefaultTextColor(QtGui.QColor(UIDict["text_color"]))
-        nowItem.setZValue(16)
+
         timeItems.append(rectItem)
         timeItems.append(lineItem)
 
@@ -905,7 +908,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.selectedTrain = train
         if emit:
             self.focusChanged.emit(self.selectedTrain)
-        self.nowItem.setPlainText(train.fullCheci())
+        self.nowItem.setText(train.fullCheci())
 
     def _line_un_selected(self):
         train = self.selectedTrain
@@ -914,7 +917,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         for item in train.items():
             item.unSelect()
 
-        self.nowItem.setPlainText(' ')
+        self.nowItem.setText(' ')
         self.selectedTrain = None
 
     def mousePressEvent(self, QMouseEvent:QtGui.QMouseEvent):

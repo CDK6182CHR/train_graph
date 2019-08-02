@@ -151,7 +151,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
                     "station_name":train_dict["station_name"],
                     "type":train_dict['type'],
                 }
-                print("addNewDict",new_dict)
+                # print("addNewDict",new_dict)
                 train_dict["cfsj"] = datetime(2000, 1, 1, 23, 59, 59)
                 self.station_list.append(new_dict)
             if self._isPassed(train_dict):
@@ -209,9 +209,9 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             train_dict['type'] = self.Destination
         else:
             if train_dict['ddsj'] == train_dict['cfsj']:
-                train_dict['type'] = self.Stop
-            else:
                 train_dict['type'] = self.Pass
+            else:
+                train_dict['type'] = self.Stop
         return True
 
     def _isPassed(self,train_dict)->bool:
@@ -460,11 +460,11 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
 
         text = f"{train.fullCheci()} {train.stationDownStr(self.station_name,self.graph)} "
         if train_dict['type'] == self.Pass:
-            text += f"通过  {(train_dict['ddsj']+timedelta(days=0,seconds=30)).strftime('%H:%M:%S')}"
+            text += f"通过  {(train_dict['ddsj']).strftime('%H:%M:%S')}"
         elif train_dict['type'] == self.Departure:
-            text += f"始发  {(train_dict['ddsj']+timedelta(days=0,seconds=30)).strftime('%H:%M:%S')}"
+            text += f"始发  {(train_dict['ddsj']).strftime('%H:%M:%S')}"
         elif train_dict['type'] == self.Destination:
-            text += f"终到  {(train_dict['ddsj']+timedelta(days=0,seconds=30)).strftime('%H:%M:%S')}"
+            text += f"终到  {(train_dict['ddsj']).strftime('%H:%M:%S')}"
         elif train_dict['type'] == self.Stop:
             text += f"停车  {ddsj.strftime('%H:%M:%S')} — {cfsj.strftime('%H:%M:%S')}"
         else:

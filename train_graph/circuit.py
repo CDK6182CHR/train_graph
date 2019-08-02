@@ -15,7 +15,7 @@
 4. //连线图元所处的高度由UIConfigData给出。默认为10. 字段：link_line_height. 使用虚线。
 连线暂定直接走站线上通过。
 """
-from .line import Line
+# from .line import Line
 from .pyETRCExceptions import *
 from Timetable_new.utility import stationEqual
 

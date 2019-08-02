@@ -70,7 +70,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.7"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190721'
+        self.build = '20190802'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -1195,6 +1195,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         actionAutoType.triggered.connect(self._auto_type)
         menu.addAction(actionAutoType)
 
+        actionDeleteAll = QtWidgets.QAction('删除所有车次',self)
+        actionDeleteAll.triggered.connect(self._delete_all)
+        menu.addAction(actionDeleteAll)
+
         # 查看
         menu = menubar.addMenu("查看(&I)")
 
@@ -2007,6 +2011,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
         for train in self.graph.trains():
             train.autoTrainType()
+
+    def _delete_all(self):
+        if not self.qustion('删除本图中所有车次，以便重新导入或铺画，此操作不可撤销。'
+                            '是否继续？'):
+            return
+        self.graph.clearTrains()
+        self.GraphWidget.paintGraph()
+        self._refreshDockWidgets()
 
     def _view_line_data(self):
         lineDB = LineDB()

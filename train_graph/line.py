@@ -3,8 +3,10 @@
 """
 from .ruler import Ruler
 from .forbid import Forbid
+from .route import Route
 from typing import Union
 from Timetable_new.utility import stationEqual
+from .pyETRCExceptions import *
 
 class Line():
     """
@@ -40,6 +42,7 @@ class Line():
             self.name = name
             self.stations = []
             self.rulers = []
+            self.routes = []
             self.forbid = Forbid(self)
 
     def setLineName(self,name:str):
@@ -115,6 +118,10 @@ class Line():
         for ruler_dict in origin["rulers"]:
             new_ruler = Ruler(origin=ruler_dict,line=self)
             self.rulers.append(new_ruler)
+        for route_dict in origin.get('routes',[]):
+            r = Route(self)
+            r.parseData(route_dict)
+            self.routes.append(r)
 
         try:
             self.forbid
@@ -163,6 +170,7 @@ class Line():
         info = {
             "name":self.name,
             "rulers":[],
+            "routes":[],
             "stations":self.stations,
             "forbid":self.forbid.outInfo()
         }
@@ -173,6 +181,8 @@ class Line():
 
         for ruler in self.rulers:
             info["rulers"].append(ruler.outInfo())
+        for route in self.routes:
+            info['routes'].append(route.outInfo())
         return info
 
     def stationInLine(self,station,strict=False):
@@ -184,6 +194,38 @@ class Line():
             return bool(self.nameMap.get(station))
         else:
             return bool(self.findStation(station))
+
+    def stationIndex(self, name: str):
+        """
+        2019.07.12新增常量级别算法。理论上应保证站名存在。
+        """
+        if self.numberMap is None:
+            return self.stationIndex_bf(name)
+        else:
+            try:
+                return self.numberMap[self.nameMapToLine(name)]
+            except KeyError:
+                print("Line::stationIndex: Unexpected station name:",name)
+                return self.stationIndex_bf(name)
+
+    def stationIndex_bf(self,name:str):
+        """
+        原来的暴力方法查找序号。分离此函数是为了尝试统计有多少次使用暴力方法。
+        """
+        for i, st in enumerate(self.stations):
+            if stationEqual(st["zhanming"], name):
+                return i
+        raise StationNotInLineException(name)
+
+    def nameMapToLine(self,name:str):
+        """
+        支持域解析符的情况下，将车次中的站名映射到本线站名。
+        """
+        dct = self.stationDictByName(name)
+        try:
+            return dct['zhanming']
+        except TypeError:
+            return name
 
     def rulerByName(self,name:str)->Ruler:
         for ruler in self.rulers:
@@ -385,6 +427,16 @@ class Line():
         self.stations.clear()
         self.rulers.clear()
         self.forbid.clear()
+
+    def firstStationName(self)->str:
+        if not self.stations:
+            return ''
+        return self.stations[0]['zhanming']
+
+    def lastStationName(self)->str:
+        if not self.stations:
+            return ''
+        return self.stations[-1]['zhanming']
 
     @staticmethod
     def bool2CheckState(t):
