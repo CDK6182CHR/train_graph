@@ -70,7 +70,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.2.7"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20190802'
+        self.build = '20190814'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -2397,7 +2397,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             if not self.qustion('此操作将删除要推定时刻列车时刻表中【非本线】的站点，是否继续？'):
                 return
         dialog = DetectWidget(self, self)
-        dialog.okClicked.connect(self._detect_ok())
+        dialog.okClicked.connect(self._detect_ok)
         dialog.exec_()
 
     def _detect_ok(self):
