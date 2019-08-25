@@ -1362,9 +1362,15 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         print("remove ok")
         forbid_data: Forbid = self.graph.line.forbid
         pen = QtGui.QPen(Qt.transparent)
-        color = QtGui.QColor('#AAAAAA')
-        color.setAlpha(150)
+        color = QtGui.QColor('#222222')
+        color.setAlpha(200)
         brush = QtGui.QBrush(color)
+        if not forbid_data.different():
+            brush.setStyle(Qt.DiagCrossPattern)
+        elif down:
+            brush.setStyle(Qt.FDiagPattern)
+        else:
+            brush.setStyle(Qt.BDiagPattern)
         for node in forbid_data.nodes(down):
             items = self._add_forbid_rect(node, pen, brush)
             for item in items:
@@ -1372,15 +1378,22 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
     def _add_forbid_rect(self, node, pen, brush):
         start_point = self.stationPosCalculate(node["fazhan"], node["begin"])
+        if start_point is None:
+            # 正常现象。当显示的时间段不包含天窗时会出问题。
+            # print("GW::add_forbid_rect: start_point is None!",node.get('fazhan',''),node.get('daozhan',''))
+            return []
         start_x, start_y = start_point.x(), start_point.y()
         end_point = self.stationPosCalculate(node["daozhan"], node["end"])
+        if end_point is None:
+            # print("GW::add_forbid_rect: end_point is None!",node.get('fazhan',''),node.get('daozhan',''))
+            return []
         end_x, end_y = end_point.x(), end_point.y()
         if start_y > end_y:
             # 如果上下反了，直接交换，这个无所谓
             start_y, end_y = end_y, start_y
         if start_x == end_x:
             # 天窗时间为0，不用画
-            return ()
+            return []
         if start_x < end_x:
             # 不跨日天窗，正常画
             rectItem: QtWidgets.QGraphicsRectItem = self.scene.addRect(start_x, start_y, end_x - start_x,
@@ -1388,7 +1401,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             rectItem.setPen(pen)
             rectItem.setBrush(brush)
             rectItem.setZValue(1)
-            return (rectItem,)
+            return [rectItem,]
         else:
             # 跨日
             left_x = self.margins["left"]
@@ -1401,7 +1414,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             rectItem2.setBrush(brush)
             rectItem1.setZValue(1)
             rectItem2.setZValue(1)
-            return (rectItem1, rectItem2,)
+            return [rectItem1, rectItem2,]
 
     def _remove_forbid(self, down):
         forbid = self.graph.line.forbid
