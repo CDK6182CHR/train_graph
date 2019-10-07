@@ -4,6 +4,5 @@
 !/linesNew.json
 !/install.bat
 !/config.json
-!/linedb
 !/*.py
 ReadRulerSkeleton.py
