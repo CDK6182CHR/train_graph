@@ -13,6 +13,16 @@ class LineWidget(QtWidgets.QWidget):
     def __init__(self,line:Line):
         super().__init__()
         self.line = line
+        self.toSave = False  # 2019.10.07新增
+
+    def setLine(self,line:Line):
+        """
+        2019.10.07新增。
+        重新设置line数据，并更新界面。
+        """
+        self.line=line
+        self.setData()
+
 
     def initWidget(self):
         """
@@ -26,6 +36,7 @@ class LineWidget(QtWidgets.QWidget):
 
         label = QtWidgets.QLabel("线路名称")
         lineEdit = QtWidgets.QLineEdit(line.name)
+        lineEdit.textChanged.connect(self.changed)
         self.nameEdit = lineEdit
         flayout.addRow(label, lineEdit)
 
@@ -36,6 +47,7 @@ class LineWidget(QtWidgets.QWidget):
 
         tableWidget.setColumnCount(7)
         tableWidget.setHorizontalHeaderLabels(["站名", "里程", "等级", "显示", "单向站","办客","办货"])
+        tableWidget.itemChanged.connect(self.changed)
 
         tableWidget.setColumnWidth(0, 100)
         tableWidget.setColumnWidth(1, 80)
@@ -52,10 +64,10 @@ class LineWidget(QtWidgets.QWidget):
         vlayout.addLayout(flayout)
         vlayout.addWidget(tableWidget)
 
-        btnAdd = QtWidgets.QPushButton("添加(前)")
-        btnAdd.setMinimumWidth(80)
-        btnAddL = QtWidgets.QPushButton("添加(后)")
-        btnAddL.setMinimumWidth(80)
+        btnAdd = QtWidgets.QPushButton("前插站")
+        btnAdd.setMinimumWidth(50)
+        btnAddL = QtWidgets.QPushButton("后插站")
+        btnAddL.setMinimumWidth(50)
         btnDel = QtWidgets.QPushButton("删除站")
         btnDel.setMinimumWidth(50)
         btnAdd.clicked.connect(lambda: self._add_station(tableWidget))
@@ -66,11 +78,13 @@ class LineWidget(QtWidgets.QWidget):
         hlayout.addWidget(btnAdd)
         hlayout.addWidget(btnAddL)
         hlayout.addWidget(btnDel)
+        vlayout.addLayout(hlayout)
 
+        hlayout=QtWidgets.QHBoxLayout()
         btnOk = QtWidgets.QPushButton("确定")
-        btnOk.setMaximumWidth(50)
+        btnOk.setMinimumWidth(50)
         btnReturn = QtWidgets.QPushButton("还原")
-        btnReturn.setMaximumWidth(50)
+        btnReturn.setMinimumWidth(50)
 
         btnReturn.clicked.connect(lambda: self._discard_line_info_change(tableWidget,line))
         btnOk.clicked.connect(self._apply_line_info_change)
@@ -91,6 +105,7 @@ class LineWidget(QtWidgets.QWidget):
         self.nameEdit.setText(self.line.name)
         self.tableWidget.setRowCount(self.line.stationCount())
         self._setLineTable()
+        self.toSave=False
 
     def updateData(self):
         """
@@ -106,6 +121,9 @@ class LineWidget(QtWidgets.QWidget):
             else:
                 self._setLineTable(row+1)
                 break
+
+    def changed(self):
+        self.toSave=True
 
     def _updateTableRow(self,dct,row:int):
         """
@@ -137,12 +155,14 @@ class LineWidget(QtWidgets.QWidget):
             spin1.setDecimals(1)
             tableWidget.setCellWidget(now_line, 1, spin1)
             spin1.setMinimumSize(10, 10)
+            spin1.valueChanged.connect(self.changed)
 
             spin2 = QtWidgets.QSpinBox()
             spin2.setValue(stationDict["dengji"])
             spin2.setRange(0, 20)
             tableWidget.setCellWidget(now_line, 2, spin2)
             spin2.setMinimumSize(10, 10)
+            spin2.valueChanged.connect(self.changed)
 
             check = QtWidgets.QCheckBox()
             check.setMinimumSize(1,1)
@@ -154,6 +174,7 @@ class LineWidget(QtWidgets.QWidget):
             check.setChecked(stationDict["show"])
             check.setStyleSheet("QCheckBox{margin:3px}")
             tableWidget.setCellWidget(now_line, 3, check)
+            check.toggled.connect(self.changed)
 
             combo = QtWidgets.QComboBox()
             combo.setMinimumSize(1,1)
@@ -165,6 +186,7 @@ class LineWidget(QtWidgets.QWidget):
             combo.setCurrentIndex(stationDict["direction"])
             combo.setStyleSheet("QComboBox{margin:3px}")
             tableWidget.setCellWidget(now_line, 4, combo)
+            combo.currentTextChanged.connect(self.changed)
 
             item = QtWidgets.QTableWidgetItem()
             item.setCheckState(Line.bool2CheckState(stationDict.setdefault("passenger",True)))
@@ -191,22 +213,26 @@ class LineWidget(QtWidgets.QWidget):
         spin1.setRange(-9999.0, 9999.0)
         spin1.setDecimals(1)
         tableWidget.setCellWidget(num, 1, spin1)
+        spin1.valueChanged.connect(self.changed)
 
         spin2 = QtWidgets.QSpinBox()
         spin2.setRange(0, 20)
         tableWidget.setCellWidget(num, 2, spin2)
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
+        spin2.valueChanged.connect(self.changed)
 
         check = QtWidgets.QCheckBox()
         check.setChecked(True)
         check.setStyleSheet("QCheckBox{margin:3px}")
         tableWidget.setCellWidget(num, 3, check)
+        check.toggled.connect(self.changed)
 
         combo = QtWidgets.QComboBox()
         combo.addItems(["不通过", "下行", "上行", "上下行"])
         combo.setCurrentIndex(3)
         combo.setStyleSheet("QComboBox{margin:3px}")
         tableWidget.setCellWidget(num, 4, combo)
+        combo.currentIndexChanged.connect(self.changed)
 
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Line.bool2CheckState(True))
@@ -225,6 +251,7 @@ class LineWidget(QtWidgets.QWidget):
         if not self.qustion("是否恢复线路信息？当前所有修改都将丢失。"):
             return
         self._setLineTable()
+        self.toSave=False
 
     def _apply_line_info_change(self):
         """
@@ -283,6 +310,7 @@ class LineWidget(QtWidgets.QWidget):
         self.lineChangedApplied.emit()
 
         self.showStatus.emit("线路信息更新完毕")
+        self.toSave=False
 
     def _derr(self, note: str):
         # print("_derr")

@@ -36,14 +36,14 @@ class Line():
         self.nameMap = {} # 站名查找表
         self.fieldMap = {} # 站名-站名::场名映射表
         self.numberMap = None  # 站名->序号映射表。用于初始化时临时使用。使用期间保证站表是不变的。
+        self.name = name
+        self.stations = []
+        self.rulers = []
+        self.routes = []
+        self.forbid = Forbid(self)
         if origin is not None:
             self.loadLine(origin)
-        else:
-            self.name = name
-            self.stations = []
-            self.rulers = []
-            self.routes = []
-            self.forbid = Forbid(self)
+
 
     def setLineName(self,name:str):
         self.name = name

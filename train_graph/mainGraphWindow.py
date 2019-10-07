@@ -53,6 +53,7 @@ from .helpDialog import HelpDialog
 from .changeTrainIntervalDialog import ChangeTrainIntervalDialog
 from .exchangeIntervalDialog import ExchangeIntervalDialog
 from .importTrainDialog import ImportTrainDialog
+from .linedb.lineLibDialog import LineLibDialog
 import time
 from .thread import ThreadDialog
 import traceback
@@ -1297,9 +1298,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         # 数据
         menu = menubar.addMenu("数据(&S)")
 
-        action = QtWidgets.QAction("线路数据库维护", self)
+        action = QtWidgets.QAction("线路数据库(测试)", self)
         action.setShortcut('ctrl+H')
         action.triggered.connect(self._view_line_data)
+        menu.addAction(action)
+
+        action = QtWidgets.QAction("线路数据库(旧版)",self)
+        action.setShortcut('ctrl+shift+H')
+        action.triggered.connect(self._view_line_data_old)
         menu.addAction(action)
 
         action = QtWidgets.QAction("导入线路数据", self)
@@ -2021,6 +2027,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._refreshDockWidgets()
 
     def _view_line_data(self):
+        dialog = LineLibDialog()
+        dialog.exec_()
+
+    def _view_line_data_old(self):
         lineDB = LineDB()
         lineDB.resize(1100, 700)
         lineDB.exec_()
