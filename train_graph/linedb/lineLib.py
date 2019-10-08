@@ -12,7 +12,7 @@ from .category import Category
 
 class LineLib(Category):
     def __init__(self,filename=''):
-        super(LineLib, self).__init__()
+        super(LineLib, self).__init__('root')
         self.filename=filename
 
     def getFilename(self)->str:
@@ -38,3 +38,13 @@ class LineLib(Category):
             self.filename=filename
         with open(self.filename,'w',encoding='utf-8',errors='ignore') as fp:
             json.dump(self.outInfo(),fp,ensure_ascii=False)
+
+    def validNewName(self,prefix='新线路')->str:
+        n=1
+        print("valid new name!")
+        while self.nameExisted(f"{prefix}{n}"):
+            n+=1
+        print("valid new name returns!")
+        return f"{prefix}{n}"
+
+

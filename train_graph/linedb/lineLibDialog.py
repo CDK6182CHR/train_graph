@@ -4,6 +4,7 @@
 """
 from .lineLib import Line,LineLib
 from ..lineWidget import LineWidget
+from .lineTreeWidget import LineTreeWidget
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 
@@ -25,7 +26,7 @@ class LineLibDialog(QtWidgets.QDialog):
         这次建立Layout后先添加到父级，再添加下级内容。
         """
         self.setWindowTitle("线路数据库维护")
-        self.resize(1100,700)
+        self.resize(1300,700)
 
         vlayout = QtWidgets.QVBoxLayout()
         self.setLayout(vlayout)
@@ -44,6 +45,7 @@ class LineLibDialog(QtWidgets.QDialog):
         btnSearchLine.clicked.connect(self._search_line)
 
         editFile = QtWidgets.QLineEdit(self.filename)
+        editFile.setFocusPolicy(Qt.NoFocus)
         self.editFile = editFile
         hlayout.addWidget(editFile)
 
@@ -58,17 +60,18 @@ class LineLibDialog(QtWidgets.QDialog):
         hlayout = QtWidgets.QHBoxLayout()
         vlayout.addLayout(hlayout)
 
-        treeWidget = QtWidgets.QTreeWidget()
+        treeWidget = LineTreeWidget(self.lineLib)
+        treeWidget.ShowLine.connect(self._show_line)
         hlayout.addWidget(treeWidget)
         self.treeWidget = treeWidget
 
         cvlayout = QtWidgets.QVBoxLayout()
         hlayout.addLayout(cvlayout)
         buttons = {
-            "添加线路":self._add_line,
-            "添加类别":self._add_category,
-            "删除线路":self._del_line,
-            "删除类别":self._del_category,
+            "添加线路":self._new_line,
+            "添加子类":self._new_line,
+            "添加平行类":self.treeWidget.new_parallel_category,
+            "删除选定":self._del_element,
             "移动线路":self._move_line,
             "标尺":self._edit_ruler,
             "天窗":self._edit_forbid,
@@ -83,24 +86,18 @@ class LineLibDialog(QtWidgets.QDialog):
 
         lineWidget = LineWidget(self.lineLib.firstLine())
         lineWidget.initWidget()
-        lineWidget.setData()
+        # lineWidget.setData()  # !!setData不可以重复调用
         self.lineWidget = lineWidget
         hlayout.addWidget(lineWidget)
 
+        lineWidget.lineNameChanged.connect(self.treeWidget.line_name_changed)
+        lineWidget.lineChangedApplied.connect(self._line_applied)
+
     def setData(self):
         """
-        sample
-        """
-        treeWidget = self.treeWidget
-        item0 = QtWidgets.QTreeWidgetItem(treeWidget)
-        item0.setText(0,"成局")
-        item1 = QtWidgets.QTreeWidgetItem(item0,("达成线",))
-        item2 = QtWidgets.QTreeWidgetItem(item0,("宁蓉线成局段",))
-        item0 = QtWidgets.QTreeWidgetItem(treeWidget)
-        item0.setText(0, "上局")
-        item1 = QtWidgets.QTreeWidgetItem(item0, ("京沪线上局段",))
-        item2 = QtWidgets.QTreeWidgetItem(item0, ("宁芜线","12"))
 
+        """
+        self.treeWidget.setData()
 
     # slots
     def _search_station(self):
@@ -110,22 +107,44 @@ class LineLibDialog(QtWidgets.QDialog):
         pass
 
     def _change_filename(self):
-        pass
+        filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
+                                                         filter='pyETRC数据库文件(*.json)\n所有文件(*.*)')
+        if not ok:
+            return
+        self.filename = filename
+        self.editFile.setText(filename)
 
     def _set_default_filename(self):
         pass
 
-    def _add_line(self):
-        print("addLine")
+    def _new_line(self):
+        item = self.treeWidget.currentItem()
+        if not isinstance(item,QtWidgets.QTreeWidgetItem):
+            return
+        if item.type()==0:
+            self.treeWidget.newLine(item)
+            return
+        parent = item.parent()
+        if isinstance(parent,QtWidgets.QTreeWidgetItem):
+            self.treeWidget.newLine(parent)
+        else:
+            self.treeWidget.newRootLine()
 
-    def _add_category(self):
-        print("addCategory")
+    def _new_category(self):
+        item = self.treeWidget.currentItem()
+        if not isinstance(item, QtWidgets.QTreeWidgetItem):
+            return
+        if item.type() == 0:
+            self.treeWidget.newCategory(item)
+            return
+        parent = item.parent()
+        if isinstance(parent, QtWidgets.QTreeWidgetItem):
+            self.treeWidget.newCategory(parent)
+        else:
+            self.treeWidget.newParallelCategory(item)
 
-    def _del_line(self):
-        pass
-
-    def _del_category(self):
-        pass
+    def _del_element(self):
+        self.treeWidget.del_item()
 
     def _move_line(self):
         pass
@@ -143,6 +162,15 @@ class LineLibDialog(QtWidgets.QDialog):
         pass
 
     def _save_lib(self):
-        pass
+        self.lineLib.saveLib(self.filename)
+
+    def _show_line(self,line:Line):
+        self.lineWidget.setLine(line)
+
+    def _line_applied(self):
+        line = self.lineWidget.line
+        self.treeWidget.updateLineRow(line)
+
+
 
 

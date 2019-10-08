@@ -6,11 +6,19 @@
 from ..line import Line
 
 class Category(dict):
-    def __init__(self,name='',data=None):
+    def __init__(self,name='',data=None,parent=None):
         super(Category, self).__init__()
+        self.parent = parent
         self.name=name  # 按道理这个没用
         if data is not None:
             self.parse(data=data)
+
+    def setName(self,name):
+        oldName = self.name
+        self.name = name
+        if isinstance(self.parent,Category):
+            del self.parent[oldName]
+            self.parent[name]=self
 
     @staticmethod
     def isLineDict(dct:dict):
@@ -24,14 +32,17 @@ class Category(dict):
     def parse(self,data:dict):
         """
         解析数据。传入分类下的一套数据字典，解析。
+        把所有的Category放在最前面。
         """
+        line_dct = {}
         for name,dct in data.items():
             if Category.isLineDict(dct):
                 line=Line(origin=dct)
-                self[name]=line
+                line_dct[name]=line
             else:
-                cat=Category(name,dct)
+                cat=Category(name,dct,parent=self)
                 self[name]=cat
+        self.update(line_dct)
 
     def outInfo(self)->dict:
         """
@@ -62,18 +73,31 @@ class Category(dict):
                 result.update(data.searchStation(station))
         return result
 
-    def lineByNameStrict(self,name:str)->Line:
+    def nameExisted(self, name:str,ignore=None)->bool:
         """
-        返回严格匹配的线名对应的Line对象。如果不存在，返回None。
+        返回严格匹配的线名对应的Line或者Category对象是否存在。
         """
         for _,data in self.items():
             if isinstance(data,Line):
-                if name==data.name:
-                    return data
+                if name==data.name and data is not ignore:
+                    return True
             elif isinstance(data,Category):
-                rec=data.lineByNameStrict(name)
-                if rec is not None:
+                if name==data.name and data is not ignore:
+                    return True
+                rec=data.nameExisted(name)
+                if rec:
                     return rec
+        return False
+
+    def parentFromName(self,name:str):
+        """
+        返回name指向名称的父对象。
+        """
+        if self.get(name,None) is not None:
+            return self
+        for _,t in self.items():
+            if isinstance(t,Category):
+                return t.parentFromName(name)
         return None
 
     def firstLine(self)->Line:
@@ -83,6 +107,40 @@ class Category(dict):
             elif isinstance(data,Category):
                 return data.firstLine()
         return Line()
+
+    def delLine(self,line:Line)->bool:
+        """
+        保证只用删除一次即可。
+        """
+        for name,data in self.items():
+            if isinstance(data,Category):
+                if data.delLine(line):
+                    return True
+            elif isinstance(data,Line):
+                if data is line:
+                    del self[name]
+                    return True
+        return False
+
+    def delChildCategory(self,cat)->bool:
+        for name,data in self.copy().items():
+            if isinstance(data,Category):
+                if data is cat:
+                    del self[name]
+                    return True
+                else:
+                    self.delChildCategory(data)
+        return False
+
+    def addCategory(self,category):
+        """
+        按自动生成的名字添加新分类，并返回对象
+        """
+        category.parent=self
+        self[category.name]=category
+
+    def addLine(self,line):
+        self[line.name] = line
 
 
 
