@@ -41,9 +41,15 @@ class Line():
         self.rulers = []
         self.routes = []
         self.forbid = Forbid(self)
+        self.item = None  # lineDB中使用。
         if origin is not None:
             self.loadLine(origin)
 
+    def setItem(self,item):
+        self.item = item
+
+    def getItem(self):
+        return self.item
 
     def setLineName(self,name:str):
         self.name = name

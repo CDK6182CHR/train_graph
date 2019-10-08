@@ -10,6 +10,7 @@ from .line import Line
 class LineWidget(QtWidgets.QWidget):
     showStatus = QtCore.pyqtSignal(str)
     lineChangedApplied = QtCore.pyqtSignal()
+    LineApplied = QtCore.pyqtSignal(Line)
     lineNameChanged = QtCore.pyqtSignal(Line,str,str)  # new,old 2019.10.08新增
     def __init__(self,line:Line):
         super().__init__()
@@ -265,7 +266,7 @@ class LineWidget(QtWidgets.QWidget):
         oldName = line.name
         line.setLineName(name)
         if name != oldName:
-            self.lineNameChanged.emit(name,oldName)
+            self.lineNameChanged.emit(self.line,name,oldName)
 
         # 应用修改
         self.showStatus.emit("正在更新线路数据")
@@ -312,6 +313,7 @@ class LineWidget(QtWidgets.QWidget):
 
         # 2018.12.14将确认信息后的操作移动回主窗口
         self.lineChangedApplied.emit()
+        self.LineApplied.emit(self.line)
 
         self.showStatus.emit("线路信息更新完毕")
         self.toSave=False

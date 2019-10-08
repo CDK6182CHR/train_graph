@@ -13,6 +13,8 @@ class LineLibDialog(QtWidgets.QDialog):
         super(LineLibDialog, self).__init__(parent)
         self.filename=filename
         self.lineLib = LineLib(filename)
+        self.updating=False
+        self.toSave = False
         try:
             self.lineLib.loadLib(filename)
         except:
@@ -62,6 +64,7 @@ class LineLibDialog(QtWidgets.QDialog):
 
         treeWidget = LineTreeWidget(self.lineLib)
         treeWidget.ShowLine.connect(self._show_line)
+        treeWidget.currentItemChanged.connect(self._tree_item_changed)
         hlayout.addWidget(treeWidget)
         self.treeWidget = treeWidget
 
@@ -83,6 +86,9 @@ class LineLibDialog(QtWidgets.QDialog):
             btn = QtWidgets.QPushButton(txt)
             cvlayout.addWidget(btn)
             btn.clicked.connect(func)
+        check = QtWidgets.QCheckBox('批量模式')
+        check.toggled.connect(self.treeWidget.batch_changed)
+        cvlayout.addWidget(check)
 
         lineWidget = LineWidget(self.lineLib.firstLine())
         lineWidget.initWidget()
@@ -91,7 +97,7 @@ class LineLibDialog(QtWidgets.QDialog):
         hlayout.addWidget(lineWidget)
 
         lineWidget.lineNameChanged.connect(self.treeWidget.line_name_changed)
-        lineWidget.lineChangedApplied.connect(self._line_applied)
+        lineWidget.LineApplied.connect(self._line_applied)
 
     def setData(self):
         """
@@ -99,12 +105,49 @@ class LineLibDialog(QtWidgets.QDialog):
         """
         self.treeWidget.setData()
 
+    def question(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self, '提示', note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default
+
+    def checkUnsavedLine(self, line)->bool:
+        """
+        询问是否保存，返回是否要返回原来的位置。
+        i.e. 返回True iff 选择Cancel或直接关闭。
+        """
+        if not isinstance(line,Line):
+            return
+        flag = QtWidgets.QMessageBox.question(self, "提示", f"是否保存对线路[{line.name}]的修改？",
+                                              QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No |
+                                              QtWidgets.QMessageBox.Cancel)
+        if flag == QtWidgets.QMessageBox.Yes:
+            self.lineWidget._apply_line_info_change()
+        elif flag == QtWidgets.QMessageBox.Cancel or flag == QtWidgets.QMessageBox.NoButton:
+            return True
+        return False
+
+    def checkUnsavedLib(self):
+        flag = QtWidgets.QMessageBox.question(self, "提示",
+                                              f"是否保存对数据库文件[{self.filename}]的修改？",
+                                              QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No |
+                                              QtWidgets.QMessageBox.Cancel)
+        if flag == QtWidgets.QMessageBox.Yes:
+            self._save_lib()
+        elif flag == QtWidgets.QMessageBox.Cancel or flag == QtWidgets.QMessageBox.NoButton:
+            return True
+        return False
+
     # slots
     def _search_station(self):
-        pass
+        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
 
     def _search_line(self):
-        pass
+        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
 
     def _change_filename(self):
         filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
@@ -115,7 +158,7 @@ class LineLibDialog(QtWidgets.QDialog):
         self.editFile.setText(filename)
 
     def _set_default_filename(self):
-        pass
+        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
 
     def _new_line(self):
         item = self.treeWidget.currentItem()
@@ -129,6 +172,7 @@ class LineLibDialog(QtWidgets.QDialog):
             self.treeWidget.newLine(parent)
         else:
             self.treeWidget.newRootLine()
+        self.toSave=True
 
     def _new_category(self):
         item = self.treeWidget.currentItem()
@@ -142,34 +186,69 @@ class LineLibDialog(QtWidgets.QDialog):
             self.treeWidget.newCategory(parent)
         else:
             self.treeWidget.newParallelCategory(item)
+        self.toSave=True
 
     def _del_element(self):
         self.treeWidget.del_item()
+        self.toSave=True
 
     def _move_line(self):
-        pass
+        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
 
     def _edit_ruler(self):
-        pass
+        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
 
     def _edit_forbid(self):
-        pass
+        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
 
     def _import_line(self):
-        pass
+        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
 
     def _merge_line(self):
-        pass
+        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
 
     def _save_lib(self):
         self.lineLib.saveLib(self.filename)
+        self.toSave=False
 
     def _show_line(self,line:Line):
         self.lineWidget.setLine(line)
 
-    def _line_applied(self):
-        line = self.lineWidget.line
+    def _line_applied(self,line:Line):
         self.treeWidget.updateLineRow(line)
+        self.toSave=True
+
+    def _tree_item_changed(self,item:QtWidgets.QTreeWidgetItem,pre:QtWidgets.QTreeWidgetItem):
+        if self.updating:
+            return
+        elif pre is item:
+            return
+        if not isinstance(item,QtWidgets.QTreeWidgetItem):
+            return
+        line = item.data(0,Qt.UserRole)
+        if pre is None:
+            self._show_line(line)
+            return
+        oldLine = pre.data(0,Qt.UserRole)
+        if not isinstance(line,Line) or not isinstance(oldLine,Line):
+            return
+        if self.lineWidget.toSave:
+            if self.checkUnsavedLine(oldLine):
+                self.updating=True
+                self.treeWidget.setCurrentItem(pre)
+                self.updating=False
+            else:
+                self._show_line(line)
+        else:
+            self._show_line(line)
+
+    def closeEvent(self, event:QtGui.QCloseEvent):
+        # if self.toSave:
+        if self.checkUnsavedLib():
+            event.ignore()
+            return
+        event.accept()
+
 
 
 
