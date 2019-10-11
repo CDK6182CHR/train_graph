@@ -79,7 +79,7 @@ class TrainDatabase(QtWidgets.QMainWindow):
         #     return
 
         filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-        filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')
+        filter='pyETRC运行图文件(*.pyetgr;*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')
         if not ok:
             return
 

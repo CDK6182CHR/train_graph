@@ -42,6 +42,7 @@ class Line():
         self.routes = []
         self.forbid = Forbid(self)
         self.item = None  # lineDB中使用。
+        self.parent = None  # lineDB中使用
         if origin is not None:
             self.loadLine(origin)
 
@@ -50,6 +51,12 @@ class Line():
 
     def getItem(self):
         return self.item
+
+    def setParent(self,p):
+        self.parent=p
+
+    def getParent(self):
+        return self.parent
 
     def setLineName(self,name:str):
         self.name = name

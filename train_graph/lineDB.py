@@ -216,9 +216,9 @@ class LineDB(QtWidgets.QDialog):
         forbidDialog.exec_()
 
     def _load_line_to_database(self):
-        filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                            filter='JSON运行图文件(*.json)\n文本运行图文件(*.trc)\n所有文件(*.*)')[0]
-        if not filename:
+        filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
+                            filter='JSON运行图文件(*.json)\n文本运行图文件(*.trc)\n所有文件(*.*)')
+        if not ok:
             return
         graph = Graph()
         try:

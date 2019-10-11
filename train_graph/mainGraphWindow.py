@@ -71,7 +71,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.3.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20191007'
+        self.build = '20191011'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -134,7 +134,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         system_default = {
             "last_file": '',
-            "default_file": 'sample.json',
+            "default_file": 'sample.pyetgr',
             "dock_show": {}
         }
         system_default.update(self._system)
@@ -1308,7 +1308,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._view_line_data_old)
         menu.addAction(action)
 
-        action = QtWidgets.QAction("导入线路数据", self)
+        action = QtWidgets.QAction("导入线路数据（旧版）", self)
         action.setShortcut('ctrl+K')
         action.triggered.connect(self._import_line)
         menu.addAction(action)
@@ -1454,7 +1454,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
 
         filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')
+                                                         filter='pyETRC运行图文件(*.pyetgr;*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')
         if not ok:
             return
         self.open_graph_ok(filename)
@@ -1522,7 +1522,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         if not self.graph.graphFileName():
             filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件",
                                                                  directory=self.graph.lineName() + '.json',
-                                                                 filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')
+                                                                 filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')
             if not ok:
                 return
         self.graph.setVersion(self.version)
@@ -1536,7 +1536,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         另存为
         """
         filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
-                                                         filter='pyETRC运行图文件(*.json)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')[0]
         self.statusOut("正在保存")
         self.graph.setVersion(self.version)
         self.graph.save(filename)
@@ -1957,11 +1957,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _joint_select(self, dialog):
         """
         选择文件
-        :param dialog:
-        :return:
         """
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.pyetgr;*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
         if not filename:
             return
 
@@ -2027,8 +2025,21 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._refreshDockWidgets()
 
     def _view_line_data(self):
-        dialog = LineLibDialog()
+        dialog = LineLibDialog(self.graph.UIConfigData()['default_db_file'],fromPyetrc=True,parent=self)
+        dialog.DefaultDBFileChanged.connect(self._default_db_file_changed)
+        dialog.ExportLineToGraph.connect(self._import_line_from_db)
         dialog.exec_()
+
+    def _default_db_file_changed(self,name):
+        self.graph.UIConfigData()['default_db_file'] = name
+
+    def _import_line_from_db(self,line:Line):
+        self.graph.line.copyData(line, True)
+        self.graph.resetAllItems()
+        self.graph.setOrdinateRuler(None)
+        self.GraphWidget.paintGraph()
+        self._refreshDockWidgets()
+        self.statusOut("导入线路数据成功")
 
     def _view_line_data_old(self):
         lineDB = LineDB()
@@ -2131,7 +2142,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             fp = open('lines.json', encoding='utf-8', errors='ignore')
             line_dicts = json.load(fp)
         except:
-            self._derr("线路数据库文件错误！请检查lines.json文件。")
+            self._derr("线路数据库文件错误！请检查lines.json文件。此功能已被标记过时，请在新版的线路数据库维护中，选择“导出到运行图”来完成此功能。")
             self.statusOut('就绪')
             return
 
@@ -2325,7 +2336,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                             "选择“是”以覆盖重复车次，“否”以忽略重复车次。")
 
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.pyetgr;*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
         if not filename:
             return
 
@@ -2359,7 +2370,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             return
 
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='pyETRC运行图文件(*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
+                                                         filter='pyETRC运行图文件(*.pyetgr;*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')[0]
         if not filename:
             return
 

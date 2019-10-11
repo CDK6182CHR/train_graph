@@ -15,6 +15,15 @@ class LineLib(Category):
         super(LineLib, self).__init__('root')
         self.filename=filename
 
+    def copyData(self, another:Category):
+        """
+        将所有数据复制过来，包括名字。此对象仅作为临时对象。
+        """
+        self.parent = another.parent
+        self.name = another.name
+        for name,data in another.items():
+            self[name]=data
+
     def getFilename(self)->str:
         return self.filename
 
@@ -41,10 +50,8 @@ class LineLib(Category):
 
     def validNewName(self,prefix='新线路')->str:
         n=1
-        print("valid new name!")
         while self.nameExisted(f"{prefix}{n}"):
             n+=1
-        print("valid new name returns!")
         return f"{prefix}{n}"
 
 

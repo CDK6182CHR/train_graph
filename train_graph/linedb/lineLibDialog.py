@@ -2,18 +2,22 @@
 2019.10.07新增，重新设计的lineDB界面。
 注意，线名不可重复。
 """
-from .lineLib import Line,LineLib
+from .lineLib import Line,LineLib,Category
 from ..lineWidget import LineWidget
 from .lineTreeWidget import LineTreeWidget
+from ..graph import Graph
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 
 class LineLibDialog(QtWidgets.QDialog):
-    def __init__(self,filename='linesNew.json',parent=None):
+    ExportLineToGraph = QtCore.pyqtSignal(Line)
+    DefaultDBFileChanged = QtCore.pyqtSignal(str)
+    def __init__(self,filename='linesNew.pyetlib',fromPyetrc=True,parent=None):
         super(LineLibDialog, self).__init__(parent)
         self.filename=filename
+        self.fromPyetrc=fromPyetrc
         self.lineLib = LineLib(filename)
-        self.updating=False
+        self.updating=False  # 此状态不弹出对话框
         self.toSave = False
         try:
             self.lineLib.loadLib(filename)
@@ -22,6 +26,14 @@ class LineLibDialog(QtWidgets.QDialog):
                                                     f"数据为空，可自行构建。")
         self.initUI()
         self.setData()
+
+    def updateBegins(self):
+        self.updating=True
+        self.treeWidget.updating=True
+
+    def updateEnds(self):
+        self.updating=False
+        self.treeWidget.updating=False
 
     def initUI(self):
         """
@@ -62,7 +74,7 @@ class LineLibDialog(QtWidgets.QDialog):
         hlayout = QtWidgets.QHBoxLayout()
         vlayout.addLayout(hlayout)
 
-        treeWidget = LineTreeWidget(self.lineLib)
+        treeWidget = LineTreeWidget(self.lineLib,detail=True)
         treeWidget.ShowLine.connect(self._show_line)
         treeWidget.currentItemChanged.connect(self._tree_item_changed)
         hlayout.addWidget(treeWidget)
@@ -75,11 +87,14 @@ class LineLibDialog(QtWidgets.QDialog):
             "添加子类":self._new_line,
             "添加平行类":self.treeWidget.new_parallel_category,
             "删除选定":self._del_element,
-            "移动线路":self._move_line,
+            "移动选定":self._move_line,
             "标尺":self._edit_ruler,
             "天窗":self._edit_forbid,
             "导入文件":self._import_line,
-            "合并数据":self._merge_line,
+            "批量导入":self._batch_import_line,
+            "合并数据":self._merge_lib,
+            "导出文件":self._export_data,
+            "导出到运行图":self._export_to_graph,
             "保存":self._save_lib,
         }
         for txt,func in buttons.items():
@@ -126,7 +141,7 @@ class LineLibDialog(QtWidgets.QDialog):
                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No |
                                               QtWidgets.QMessageBox.Cancel)
         if flag == QtWidgets.QMessageBox.Yes:
-            self.lineWidget._apply_line_info_change()
+            self.lineWidget.apply_line_info_change()
         elif flag == QtWidgets.QMessageBox.Cancel or flag == QtWidgets.QMessageBox.NoButton:
             return True
         return False
@@ -142,37 +157,89 @@ class LineLibDialog(QtWidgets.QDialog):
             return True
         return False
 
+    def selectSearchedItems(self,matched:dict)->QtWidgets.QTreeWidgetItem:
+        """
+        搜索之后弹出选择对话框，返回要设为当前的item。
+        """
+        if len(matched) == 0:
+            QtWidgets.QMessageBox.information(self,'搜索站名','无符合条件线路！')
+            return None
+        elif len(matched) == 1:
+            selected = list(matched.keys())[0]
+        else:
+            selected,ok = QtWidgets.QInputDialog.getItem(self,'选择线名','有下列线路符合,请选择: ',list(matched.keys()))
+            if not ok:
+                return None
+        line:Line = matched[selected]
+        item:QtWidgets.QTreeWidgetItem = line.getItem()
+        return item
+
+    def importLine(self,newLine:Line,filename:str)->bool:
+        """
+        先创建好Line对象，再将其数据设置为filename所指向的运行图文件中的线路数据。
+        返回是否成功。
+        为批量导入提供接口。
+        """
+        graph = Graph()
+        try:
+            graph.loadGraph(filename)
+        except:
+            self._derr("文件错误，请重试！")
+            return False
+        newLine.copyData(graph.line, True)
+        return True
+
+
     # slots
     def _search_station(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+        kw = self.editSearch.text()
+        matched = self.lineLib.searchStation(kw)
+        item = self.selectSearchedItems(matched)
+        if item is not None:
+            self.treeWidget.setCurrentItem(item)
 
     def _search_line(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+        kw = self.editSearch.text()
+        matched = self.lineLib.searchLineName(kw)
+        item = self.selectSearchedItems(matched)
+        if item is not None:
+            self.treeWidget.setCurrentItem(item)
 
     def _change_filename(self):
         filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
-                                                         filter='pyETRC数据库文件(*.json)\n所有文件(*.*)')
+                                                         filter='pyETRC数据库文件(*.pyetlib;*.json)\n所有文件(*.*)')
         if not ok:
             return
         self.filename = filename
+        try:
+            self.lineLib.loadLib(filename)
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self,'错误','文件错误：\n'+repr(e))
+            return
         self.editFile.setText(filename)
+        self.setData()
 
     def _set_default_filename(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+        if not self.fromPyetrc:
+            QtWidgets.QMessageBox.warning(self,'提示','设为默认数据库文件：此功能仅当在pyETRC主系统启动本维护窗口时有效！')
+            return
+        if not self.question('此功能设置当前的数据库文件为默认数据库文件，以后从pyETRC主系统启动数据库管理时，将自动打开该文件。是否继续？'):
+            return
+        self.DefaultDBFileChanged.emit(self.editFile.text())
 
-    def _new_line(self):
+    def _new_line(self)->Line:
         item = self.treeWidget.currentItem()
         if not isinstance(item,QtWidgets.QTreeWidgetItem):
-            return
+            QtWidgets.QMessageBox.information(self,'提示','请先选择一条线路或一个类别，再使用“添加线路”功能！')
+            return None
+        self.toSave = True
         if item.type()==0:
-            self.treeWidget.newLine(item)
-            return
+            return self.treeWidget.newLine(item)
         parent = item.parent()
         if isinstance(parent,QtWidgets.QTreeWidgetItem):
-            self.treeWidget.newLine(parent)
+            return self.treeWidget.newLine(parent)
         else:
-            self.treeWidget.newRootLine()
-        self.toSave=True
+            return self.treeWidget.newRootLine()
 
     def _new_category(self):
         item = self.treeWidget.currentItem()
@@ -193,19 +260,85 @@ class LineLibDialog(QtWidgets.QDialog):
         self.toSave=True
 
     def _move_line(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+        self.treeWidget.moveSomeItems(self.treeWidget.selectedItems())
 
     def _edit_ruler(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+        self.treeWidget.showRuler(self.lineWidget.line)
 
     def _edit_forbid(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+        self.treeWidget.showForbid(self.lineWidget.line)
 
     def _import_line(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+        """
+        导入线路，先执行添加线路的逻辑，再导入和读取，然后执行。
+        """
+        newLine = self._new_line()
+        if newLine is None:
+            return
+        filename, ok = QtWidgets.QFileDialog.getOpenFileName(self, "导入运行图",
+                                                             filter='pyETRC运行图文件(*.pyetgr;*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')
+        if not ok:
+            return
+        self.updateBegins()
+        if self.importLine(newLine,filename):
+            self.lineWidget.setLine(newLine)
+            self.lineWidget.apply_line_info_change()
+            self.treeWidget.setCurrentLine(newLine)
+        else:
+            self.treeWidget.setCurrentLine(newLine)
+            self.treeWidget.del_line(force=True)
+        self.updateEnds()
 
-    def _merge_line(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+
+    def _batch_import_line(self):
+        newLine = self._new_line()
+        if newLine is None:
+            return
+        filenames, ok = QtWidgets.QFileDialog.getOpenFileNames(self, "批量导入运行图",
+                                                              filter='pyETRC运行图文件(*.pyetgr;*.json)\nETRC运行图文件(*.trc)\n所有文件(*.*)')
+        if not ok:
+            return
+        self.updateBegins()
+        cntok,cntignore = 0,0
+        for filename in filenames:
+            oldName = newLine.name
+            if self.importLine(newLine,filename):
+                # 读取成功，先检查名字
+                if self.lineLib.nameExisted(newLine.name,newLine):
+                    print('名称冲突',newLine.name)
+                    cntignore+=1
+                else:
+                    cntok+=1
+                    self._line_applied(newLine)
+                    self.treeWidget.line_name_changed(newLine,newLine.name,oldName)
+                    newLine=self._new_line()
+        self.treeWidget.setCurrentLine(newLine)  # 最后一个肯定是多余的！
+        self.treeWidget.del_line(force=True)
+        self.updateEnds()
+        QtWidgets.QMessageBox.information(self,'提示',f'成功导入{cntok}条线路，另有{cntignore}条线路因名称冲突被忽略。')
+
+
+    def _merge_lib(self):
+        """
+        选择数据库文件，然后合并两个数据库，忽略所有重复项。
+        """
+        cat = self.treeWidget.currentWorkingCategory()
+        if not self.question(f'选择另一个数据库文件，将其和本数据库合并，并忽略所有名称重复项。\n'
+                             f'当前将导入{cat.name}分类下。是否继续？'):
+            return
+        filename, ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
+                                                             filter='pyETRC数据库文件(*.pyetlib;*.json)\n所有文件(*.*)')
+        if not ok:
+            return
+        newLib = LineLib()
+        try:
+            newLib.loadLib(filename)
+        except:
+            QtWidgets.QMessageBox.warning(self,'错误','文件无效！')
+            return
+        c,d = cat.merge(self.lineLib,newLib)  # 有问题！
+        QtWidgets.QMessageBox.information(self,'提示',f'成功导入{c}条线路。\n有{d}条线路因名称或类名称冲突而被忽略。')
+        self.setData()
 
     def _save_lib(self):
         self.lineLib.saveLib(self.filename)
@@ -226,14 +359,16 @@ class LineLibDialog(QtWidgets.QDialog):
         if not isinstance(item,QtWidgets.QTreeWidgetItem):
             return
         line = item.data(0,Qt.UserRole)
+        if not isinstance(line,Line):
+            return
         if pre is None:
             self._show_line(line)
             return
         oldLine = pre.data(0,Qt.UserRole)
-        if not isinstance(line,Line) or not isinstance(oldLine,Line):
+        if not isinstance(oldLine,Line):
             return
         if self.lineWidget.toSave:
-            if self.checkUnsavedLine(oldLine):
+            if self.updating or self.checkUnsavedLine(oldLine):
                 self.updating=True
                 self.treeWidget.setCurrentItem(pre)
                 self.updating=False
@@ -241,6 +376,88 @@ class LineLibDialog(QtWidgets.QDialog):
                 self._show_line(line)
         else:
             self._show_line(line)
+
+    def _export_data(self):
+        """
+        导出数据，如果选中的是类则导出数据库文件，如果选中的是线路则导出运行图文件。
+        """
+        item:QtWidgets.QTreeWidgetItem = self.treeWidget.currentItem()
+        if item is None:
+            QtWidgets.QMessageBox.warning(self,'提示','导出数据：请先选择一个类或者线路再执行此操作。如果选中一个类则导出数据库文件，如果选中一条线路则导出运行图文件。')
+            return
+        data = item.data(0,Qt.UserRole)
+        if isinstance(data,Category):
+            newLib = LineLib()
+            newLib.copyData(data)
+            filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "导出子数据库",
+                                                                 filter='pyETRC数据库文件(*.pyetlib;*.json)\n所有文件(*.*)')
+            if not ok:
+                return
+            newLib.saveLib(filename)
+        elif isinstance(data,Line):
+            newGraph = Graph()
+            newGraph.setLine(data)
+            filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "导出运行图",
+                                                                 filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')
+            if not ok:
+                return
+            newGraph.save(filename)
+
+    def _export_to_graph(self):
+        if not self.fromPyetrc:
+            QtWidgets.QMessageBox.warning(self,'提示','导出到运行图：此功能仅当在pyETRC主系统启动本维护窗口时有效！')
+            return
+        line = self.treeWidget.currentLine()
+        if line is None:
+            QtWidgets.QMessageBox.warning(self,'提示','导出到运行图：请先在列表中选择一条线路再执行本操作！')
+            return
+        if not self.question('此功能相当于旧版的导入线路（ctrl+K）功能。此操作将覆盖当前运行图的线路数据，是否确认？'):
+            return
+        stDialog = QtWidgets.QDialog(self)
+        stDialog.setWindowTitle('选择车站')
+        vlayout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel("请在下表中选择要导入的车站（按ctrl或shift或直接拖动来多选），"
+                                 "或直接选择下方的“全选”。")
+        label.setWordWrap(True)
+        vlayout.addWidget(label)
+
+        listWidget = QtWidgets.QListWidget()
+        listWidget.setSelectionMode(listWidget.MultiSelection)
+        for st in line.stationDicts():
+            name, mile = st["zhanming"], st["licheng"]
+            listWidget.addItem(f"{mile} km  {name}")
+        vlayout.addWidget(listWidget)
+        stDialog.listWidget = listWidget
+
+        btnOk = QtWidgets.QPushButton("确定")
+        btnAll = QtWidgets.QPushButton("全选")
+        btnCancel = QtWidgets.QPushButton("取消")
+
+        btnOk.clicked.connect(lambda: self._export_line_ok(line, stDialog, False))
+        btnAll.clicked.connect(lambda: self._export_line_ok(line, stDialog, True))
+        btnCancel.clicked.connect(stDialog.close)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(btnOk)
+        hlayout.addWidget(btnAll)
+        hlayout.addWidget(btnCancel)
+        vlayout.addLayout(hlayout)
+
+        stDialog.setLayout(vlayout)
+        stDialog.exec_()
+
+    def _export_line_ok(self,line:Line,dialog:QtWidgets.QDialog,all:bool):
+        newLine = Line(line.name)
+        if all:
+            newLine.copyData(line, withRuler=True)
+        else:
+            listWidget: QtWidgets.QListWidget = dialog.listWidget
+            for idx in listWidget.selectedIndexes():
+                row = idx.row()
+                newLine.addStationDict(line.stationDictByIndex(row))
+            newLine.rulers = line.rulers
+        self.ExportLineToGraph.emit(newLine)
+        dialog.close()
 
     def closeEvent(self, event:QtGui.QCloseEvent):
         # if self.toSave:

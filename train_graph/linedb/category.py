@@ -20,6 +20,9 @@ class Category(dict):
             del self.parent[oldName]
             self.parent[name]=self
 
+    def setParent(self,parent):
+        self.parent=parent
+
     @staticmethod
     def isLineDict(dct:dict):
         """
@@ -38,7 +41,8 @@ class Category(dict):
         for name,dct in data.items():
             if Category.isLineDict(dct):
                 line=Line(origin=dct)
-                line_dct[name]=line
+                line_dct[line.name]=line
+                line.setParent(self)
             else:
                 cat=Category(name,dct,parent=self)
                 self[name]=cat
@@ -55,10 +59,10 @@ class Category(dict):
 
     def searchLineName(self,name:str)->dict:
         result = {}
-        for name,data in self.items():
+        for _,data in self.items():
             if isinstance(data,Line):
                 if name in data.name:
-                    result[name]=data
+                    result[data.name]=data
             elif isinstance(data,Category):
                 result.update(data.searchLineName(name))
         return result
@@ -67,7 +71,7 @@ class Category(dict):
         result={}
         for name,data in self.items():
             if isinstance(data,Line):
-                if data.stationExisted(name):
+                if data.stationExisted(station):
                     result[name]=data
             elif isinstance(data,Category):
                 result.update(data.searchStation(station))
@@ -84,9 +88,8 @@ class Category(dict):
             elif isinstance(data,Category):
                 if name==data.name and data is not ignore:
                     return True
-                rec=data.nameExisted(name)
-                if rec:
-                    return rec
+                if data.nameExisted(name,ignore):
+                    return True
         return False
 
     def parentFromName(self,name:str):
@@ -141,6 +144,62 @@ class Category(dict):
 
     def addLine(self,line):
         self[line.name] = line
+        line.setParent(self)
+
+    def merge(self,checker,category)->(int,int):
+        """
+        将category中所有元素导入当前层次。
+        如果名称冲突，则跳过。如果冲突的是分类名，则整个分类被忽略。
+        返回成功导入的【线路】总数和被忽略的线路总数。
+        """
+        cnt = 0
+        cntIgnore = 0
+        for name,data in category.items():
+            if isinstance(data,Line):
+                if not checker.nameExisted(name):
+                    self[name]=data
+                    cnt+=1
+                else:
+                    cntIgnore+=1
+            elif isinstance(data,Category):
+                # 递归！
+                if not checker.nameExisted(name):
+                    self[name]=Category(name)
+                    cnt+=self[name].merge(data)
+                else:
+                    cntIgnore+=category.lineCount()
+        return cnt,cntIgnore
+
+    def lineCount(self)->int:
+        """
+        递归地返回线路总数。
+        """
+        cnt = 0
+        for name,data in self.items():
+            if isinstance(data,Category):
+                try:
+                    cnt+=data.lineCount()
+                except RecursionError:
+                    print("recursion Error!")
+            else:
+                cnt+=1
+        return cnt
+
+    def moveDrops(self,obj):
+        """
+        将line或category移动到本类的管理下。
+        line和category具有相同的接口。
+        """
+        print("moveDrops",obj.name)
+        parent = obj.parent
+        print("parent is",parent.name)
+        name = obj.name
+        if parent is not None:
+            # 删除父类引用
+            del parent[name]
+        self[name]=obj
+        obj.setParent(self)
+
 
 
 

@@ -11,19 +11,18 @@ from ..rulerWidget import RulerWidget
 from ..forbidWidget import ForbidWidget
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
+from typing import List
 
 class LineTreeWidget(QtWidgets.QTreeWidget):
     ShowLine = QtCore.pyqtSignal(Line)
-    def __init__(self,lineLib,parent=None):
+    def __init__(self,lineLib,detail=True,parent=None):
         super(LineTreeWidget, self).__init__(parent)
         self.lineLib = lineLib  # type: LineLib
+        self.updating=False
+        self.detail=detail
         self.initUI()
 
     def initUI(self):
-        self.setColumnCount(4)
-        self.setHeaderLabels(('线名','里程','起点','终点'))
-        for i,s in enumerate((200,60,90,90)):
-            self.setColumnWidth(i,s)
         self.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.initActions()
         self.currentItemChanged.connect(self._item_changed)
@@ -91,6 +90,8 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
 
 
     def contextMenuEvent(self, event:QtGui.QContextMenuEvent):
+        if not self.detail:
+            return
         pos = self.mapToGlobal(event.pos())
         item:QtWidgets.QTreeWidgetItem = self.currentItem()
         if item is None:
@@ -104,35 +105,59 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
         """
         解析并显示LineLib中的全部线路内容。
         """
-        for name,t in self.lineLib.items():
-            if isinstance(t,Category):
-                self.addData(t,self)
-            elif isinstance(t,Line):
-                item0 = QtWidgets.QTreeWidgetItem(self,
-                        (t.name,str(t.lineLength()),
-                         t.firstStationName(),t.lastStationName()),1)
-                item0.setData(0,Qt.UserRole,t)
-            else:
-                print("invalid",type(t))
-        self.expandAll()
+        self.clear()
+        self.setColumnCount(4)
+        self.setHeaderLabels(('线名', '里程', '起点', '终点'))
+        for i, s in enumerate((200, 60, 90, 90)):
+            self.setColumnWidth(i, s)
+        self.addData(self.lineLib)
 
     def addData(self,data:Category,parentItem=None):
         """
         DFS，递归添加所有线路信息
         """
-        item = QtWidgets.QTreeWidgetItem(parentItem,(data.name,),0)
-        item.setData(0,Qt.UserRole,data)  # col,role
+        if parentItem is not None:
+            item = QtWidgets.QTreeWidgetItem(parentItem,(data.name,str(data.lineCount())),0)
+            item.setData(0,Qt.UserRole,data)  # col,role
+        else:
+            item = self
         for name,t in data.items():
             if isinstance(t,Category):
                 self.addData(t,item)
-            elif isinstance(t,Line):
+            elif isinstance(t,Line) and self.detail:
                 item0 = QtWidgets.QTreeWidgetItem(item,
                         (t.name,str(t.lineLength()),
                          t.firstStationName(),t.lastStationName()),1)
                 item0.setData(0,Qt.UserRole,t)
                 t.setItem(item0)
-            else:
-                print("invalid",type(t))
+
+    def updateParentItemCount(self,item:QtWidgets.QTreeWidgetItem,dx=1):
+        item = item.parent()
+        while isinstance(item,QtWidgets.QTreeWidgetItem):
+            if item.type()==0:
+                try:
+                    cur = int(item.text(1))
+                except ValueError:
+                    cur=0
+                item.setText(1,str(cur+dx))
+            item=item.parent()
+
+    def addItem(self,obj,parent):
+        """
+        将Line或者Category添加到treeWidget中，对Line设置映射。
+        主要由move过程调用。
+        """
+        if isinstance(obj,Line):
+            item = QtWidgets.QTreeWidgetItem(parent,
+                                             (obj.name,str(obj.lineLength()),obj.firstStationName(),
+                                              obj.lastStationName()),1
+                                             )
+        elif isinstance(obj,Category):
+            item = QtWidgets.QTreeWidgetItem(parent,
+                                             (obj.name,str(obj.lineCount())),0)
+        item.setData(0,Qt.UserRole,obj)
+        self.updateParentItemCount(item,1)
+
 
     def updateLineRow(self,line:Line):
         """
@@ -172,21 +197,31 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
         forbidDialog.setLayout(vlayout)
         forbidDialog.exec_()
 
-    def newLine(self,item:QtWidgets.QTreeWidgetItem):
+    def newLine(self,item:QtWidgets.QTreeWidgetItem)->Line:
+        """
+        返回新增的线路
+        """
         cat = item.data(0,Qt.UserRole)
         if item.type()!=0 or not isinstance(cat,Category):
-            return
+            return None
         line = Line(self.lineLib.validNewName('新线路'))
         cat.addLine(line)
         item0 = QtWidgets.QTreeWidgetItem(item,(line.name,str(line.lineLength()),line.firstStationName(),line.lastStationName()),1)
         item0.setData(0,Qt.UserRole,line)
+        line.setItem(item0)
+        self.setCurrentItem(item0)
+        self.updateParentItemCount(item0, 1)
+        return line
 
-    def newRootLine(self):
+    def newRootLine(self)->Line:
         line = Line(self.lineLib.validNewName('新线路'))
         self.lineLib.addLine(line)
         item0 = QtWidgets.QTreeWidgetItem(self, (
         line.name, str(line.lineLength()), line.firstStationName(), line.lastStationName()), 1)
         item0.setData(0, Qt.UserRole, line)
+        line.setItem(item0)
+        self.setCurrentItem(item0)
+        return line
 
     def newCategory(self,item:QtWidgets.QTreeWidgetItem):
         cat = item.data(0, Qt.UserRole)
@@ -195,8 +230,10 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
         newCat = Category(self.lineLib.validNewName('新分类'),parent=cat)
         cat.addCategory(newCat)
         item0 = QtWidgets.QTreeWidgetItem(item, (
-        newCat.name,), 0)
+        newCat.name,'0'), 0)
         item0.setData(0, Qt.UserRole, newCat)
+        self.updateParentItemCount(item0, 1)
+        self.setCurrentItem(item0)
 
     def newParallelCategory(self,item:QtWidgets.QTreeWidgetItem):
         parent = item.parent()
@@ -207,9 +244,10 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             newCat = Category(self.lineLib.validNewName('新分类'),parent=None)
             self.lineLib.addCategory(newCat)
             item = QtWidgets.QTreeWidgetItem(
-                self,(newCat.name,),0,
+                self,(newCat.name,'0'),0,
             )
             item.setData(0,Qt.UserRole,newCat)
+            self.setCurrentItem(item)
 
     def itemByLine(self,line:Line)->QtWidgets.QTreeWidgetItem:
         itr = QtWidgets.QTreeWidgetItemIterator(self)
@@ -219,6 +257,33 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             itr+=1
         return None
 
+    def itemByName(self,name:str)->QtWidgets.QTreeWidgetItem:
+        """
+        给出名称，返回item。
+        """
+        for i in range(self.topLevelItemCount()):
+            item:QtWidgets.QTreeWidgetItem = self.topLevelItem(i)
+            if item.type()==0:  # Cat结点
+                sub = self.findSubItemByName(name,item)
+                if sub is not None:
+                    return sub
+            else:
+                if item.text(0)==name:
+                    return item
+        return None
+
+    def findSubItemByName(self,name:str,root:QtWidgets.QTreeWidgetItem)->QtWidgets.QTreeWidgetItem:
+        for i in range(root.childCount()):
+            item:QtWidgets.QTreeWidgetItem = root.child(i)
+            if item.type()==0:
+                rec = self.findSubItemByName(name,item)
+                if rec is not None:
+                    return rec
+            else:
+                if item.text(0)==name:
+                    return item
+        return None
+
     def currentLine(self)->Line:
         item: QtWidgets.QTreeWidgetItem = self.currentItem()
         line: Line = item.data(0, Qt.UserRole)
@@ -226,12 +291,130 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             return None
         return line
 
+    def setCurrentLine(self,line:Line):
+        if isinstance(line,Line):
+            item = line.getItem()
+            if item is not None:
+                self.setCurrentItem(item)
+
     def currentCategory(self)->Category:
         item: QtWidgets.QTreeWidgetItem = self.currentItem()
         cat:Category = item.data(0, Qt.UserRole)
         if not isinstance(cat, Category):
             return None
         return cat
+
+    def currentWorkingCategory(self)->Category:
+        """
+        当前选中的item对应category，并必须返回值。
+        如果当前选中的是Line，返回它的父对象。
+        如果没有父对象，返回根目录！
+        """
+        item = self.currentItem()
+        if isinstance(item,QtWidgets.QTreeWidgetItem):
+            if item.type() == 0:
+                # 目录
+                return item.data(0,Qt.UserRole)
+            else:
+                parent = item.parent()
+                if isinstance(parent,QtWidgets.QTreeWidgetItem):
+                    return parent.data(0,Qt.UserRole)
+                else:
+                    return self.lineLib
+        else:
+            return self.lineLib
+
+    def moveSomeItems(self,items:List[QtWidgets.QTreeWidgetItem]):
+        """
+        接口。移动一组选中的对象到指定的分类下。
+        items中的数据可能是None，跨过它们。
+        先显示对话框来选择对象，再调起相关操作。
+        对每一个对象分别调用。先处理数据域，再处理item。item就在本类处理。数据域不管item。
+        数据域处理方法：目标cat.moveDrops(obj).
+        """
+        for item in items.copy():
+            if item is None:
+                items.remove(item)
+        if not items:
+            QtWidgets.QMessageBox.warning(self,'提示','请先选择一个（一组）线路或分类，再执行此操作！')
+            return
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle('选择目标目录')
+        vlayout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QLabel(f'请选择目标目录。如果不选择，则放到根目录下。\n'
+                                 f'当前选择了{len(items)}个对象，所选的线路、分类及其下所有线路都将被移动到目标目录下，且选择的所有对象，除非存在包含关系，都视为平级。\n'
+                                 f'不要尝试会引发递归的操作，否则可能导致不可预料的结果。')
+        label.setWordWrap(True)
+        vlayout.addWidget(label)
+        label = QtWidgets.QLabel(f"当前选择的分类为：[root]")
+        vlayout.addWidget(label)
+        dialog.label = label
+        self.moveDialog = dialog
+
+        tree = LineTreeWidget(self.lineLib,detail=False)
+        tree.setData()
+        # 只有Line->Item存在映射，但Line部分被跳过了，所以对lineLib应该没影响
+        self.subTree = tree
+        vlayout.addWidget(tree)
+        btnRoot = QtWidgets.QPushButton('选择根目录')
+        btnRoot.clicked.connect(self._move_select_root)
+        vlayout.addWidget(btnRoot)
+        tree.currentItemChanged.connect(lambda x:self._move_target_changed(x,dialog))
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton('确定')
+        hlayout.addWidget(btnOk)
+        btnCancel = QtWidgets.QPushButton('取消')
+        hlayout.addWidget(btnCancel)
+        btnOk.clicked.connect(lambda:self._move_ok(items,dialog))
+        btnCancel.clicked.connect(dialog.close)
+        vlayout.addLayout(hlayout)
+        dialog.setLayout(vlayout)
+
+        dialog.exec_()
+
+    def _move_select_root(self):
+        self.subTree.setCurrentItem(None)
+
+    def _move_target_changed(self,item,dialog):
+        dialog.label.setText(f"当前选择的分类为：[{item.text(0) if item is not None else 'root'}]")
+
+    def _move_ok(self,items:List[QtWidgets.QTreeWidgetItem],dialog):
+        """
+        items不会有None
+        """
+        targetItem0 = self.subTree.currentItem()
+        if targetItem0 is None:
+            target = self.lineLib
+        else:
+            target:Category = targetItem0.data(0,Qt.UserRole)
+        del targetItem0
+        while items:
+            item = items.pop(0)
+            data = item.data(0,Qt.UserRole)
+            # 数据域
+            target.moveDrops(data)
+            # 显示域。从以前的位置删除。
+            parent = item.parent()
+            self.updateParentItemCount(item, -1)
+            if isinstance(parent,QtWidgets.QTreeWidgetItem):
+                parent.removeChild(item)
+            else:
+                self.takeTopLevelItem(self.indexOfTopLevelItem(item))
+            # 添加到新位置
+            if target is self.lineLib:
+                self.addItem(data,self)
+            else:
+                targetParent = self.itemByName(target.name)
+                if targetParent is item:
+                    QtWidgets.QMessageBox.warning(self,'错误','不能将自己移动到自己下面！')
+                self.addItem(data,targetParent)
+            for it in items[1:]:
+                if it.parent() is item:
+                    items.remove(it)
+        dialog.close()
+        self.setData()
+
 
     def question(self, note: str, default=True):
         flag = QtWidgets.QMessageBox.question(self, '提示', note,
@@ -250,15 +433,16 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             parent.removeChild(item)
         else:
             self.takeTopLevelItem(self.indexOfTopLevelItem(item))
+        self.updateParentItemCount(item, -1)
 
     # slots
     def _show_item(self):
         self.ShowLine.emit(self.currentLine())
 
-    def del_line(self):
+    def del_line(self,*,force=False):
         line = self.currentLine()
         item:QtWidgets.QTreeWidgetItem = self.currentItem()
-        if item is None or not self.question(f'是否确认删除线路[{line.name}]？'):
+        if item is None or not force and not self.question(f'是否确认删除线路[{line.name}]？'):
             return
         self.lineLib.delLine(line)
         self._deleteItem(item)
@@ -307,16 +491,16 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             self.showForbid(line)
 
     def _move_line(self):
-        QtWidgets.QMessageBox.information(self,'提示','尚未实现！')
+        self.moveSomeItems([self.currentItem(),])
 
     def _expand_current(self):
-        self.currentItem().expand()
+        self.currentItem().setExpanded(True)
 
     def _collapse_current(self):
-        self.currentItem().collapse()
+        self.currentItem().setExpanded(False)
 
     def _move_category(self):
-        QtWidgets.QMessageBox.information(self, '提示', '尚未实现！')
+        self.moveSomeItems([self.currentItem(),])
 
     def del_category(self):
         cat = self.currentCategory()
@@ -345,6 +529,8 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
         item = self.currentItem()
         if isinstance(item,QtWidgets.QTreeWidgetItem):
             self.newParallelCategory(item)
+        else:
+            QtWidgets.QMessageBox.warning(self,'提示','请先选中一线路或分类，再执行此操作！')
 
     def new_line(self):
         item = self.currentItem()
@@ -375,8 +561,13 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             QtWidgets.QMessageBox.warning(self,'警告','线名冲突！请重新修改一个不与其他类名、线名重合的线名。'
                                             '如果忽略此警告，可能导致不可预料的结果。')
             return
-        cat = self.lineLib.parentFromName(oldName)
-        del cat[oldName]
+        cat = line.getParent()
+        if cat is None:
+            return
+        try:
+            del cat[oldName]
+        except KeyError:
+            print("LineNameChanged::oldName not existed",oldName,newName)
         cat[newName]=line
 
     showTip = True

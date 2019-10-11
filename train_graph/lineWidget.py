@@ -89,7 +89,7 @@ class LineWidget(QtWidgets.QWidget):
         btnReturn.setMinimumWidth(50)
 
         btnReturn.clicked.connect(lambda: self._discard_line_info_change(tableWidget,line))
-        btnOk.clicked.connect(self._apply_line_info_change)
+        btnOk.clicked.connect(self.apply_line_info_change)
 
         self.btnReturn = btnReturn
         self.btnOk = btnOk
@@ -255,7 +255,7 @@ class LineWidget(QtWidgets.QWidget):
         self._setLineTable()
         self.toSave=False
 
-    def _apply_line_info_change(self):
+    def apply_line_info_change(self):
         """
         线路信息确定
         """

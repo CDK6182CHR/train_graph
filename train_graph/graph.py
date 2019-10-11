@@ -72,6 +72,7 @@ class Graph:
             "text_color": "#0000FF",
             "default_keche_width": 1.5,
             "default_huoche_width": 0.75,
+            "default_db_file":"linesNew.pyetlib",
             "start_hour": 0,
             "end_hour": 24,
             "minutes_per_vertical_line": 10.0,
