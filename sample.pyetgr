@@ -144,6 +144,7 @@
                 "up_pass": []
             }
         ],
+        "routes": [],
         "stations": [
             {
                 "zhanming": "遂宁",
@@ -2041,6 +2042,8 @@
         {
             "name": "K4293-4",
             "note": "25G型DC600V",
+            "model": "",
+            "owner": "",
             "order": [
                 {
                     "checi": "K4293",
@@ -2059,6 +2062,8 @@
         {
             "name": "K4707-8",
             "note": "广铁绿皮",
+            "model": "",
+            "owner": "",
             "order": [
                 {
                     "checi": "K4706/7",
@@ -2264,8 +2269,9 @@
         "default_grid_width": 1,
         "bold_grid_width": 2.5,
         "valid_width": 3,
-        "auto_paint": true
+        "auto_paint": true,
+        "link_line_height": 10
     },
-    "version": "V2.1.2",
+    "version": "V2.2.7",
     "markdown": "2019.1.25爬取图定运行图。\n1.28 爬取数据增加K4293。"
 }

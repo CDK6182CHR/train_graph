@@ -19,7 +19,6 @@ class LineLib(Category):
         """
         将所有数据复制过来，包括名字。此对象仅作为临时对象。
         """
-        self.parent = another.parent
         self.name = another.name
         for name,data in another.items():
             self[name]=data
@@ -34,6 +33,7 @@ class LineLib(Category):
         """
         利用内置filename，读取json文件。
         """
+        self.clear()
         self.filename=filename
         with open(self.filename,encoding='utf-8',errors='ignore') as fp:
             data = json.load(fp)

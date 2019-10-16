@@ -241,13 +241,16 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             self.newCategory(parent)
         else:
             # 表明是根目录下新增
-            newCat = Category(self.lineLib.validNewName('新分类'),parent=None)
-            self.lineLib.addCategory(newCat)
-            item = QtWidgets.QTreeWidgetItem(
-                self,(newCat.name,'0'),0,
-            )
-            item.setData(0,Qt.UserRole,newCat)
-            self.setCurrentItem(item)
+            self.newRootCategory()
+
+    def newRootCategory(self):
+        newCat = Category(self.lineLib.validNewName('新分类'), parent=None)
+        self.lineLib.addCategory(newCat)
+        item = QtWidgets.QTreeWidgetItem(
+            self, (newCat.name, '0'), 0,
+        )
+        item.setData(0, Qt.UserRole, newCat)
+        self.setCurrentItem(item)
 
     def itemByLine(self,line:Line)->QtWidgets.QTreeWidgetItem:
         itr = QtWidgets.QTreeWidgetItemIterator(self)
@@ -524,13 +527,15 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
         item = self.currentItem()
         if isinstance(item,QtWidgets.QTreeWidgetItem):
             self.newCategory(item)
+        else:
+            self.newRootCategory()
 
     def new_parallel_category(self):
         item = self.currentItem()
         if isinstance(item,QtWidgets.QTreeWidgetItem):
             self.newParallelCategory(item)
         else:
-            QtWidgets.QMessageBox.warning(self,'提示','请先选中一线路或分类，再执行此操作！')
+            self.newRootCategory()
 
     def new_line(self):
         item = self.currentItem()

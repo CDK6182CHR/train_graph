@@ -84,7 +84,7 @@ class LineLibDialog(QtWidgets.QDialog):
         hlayout.addLayout(cvlayout)
         buttons = {
             "添加线路":self._new_line,
-            "添加子类":self._new_line,
+            "添加子类":self._new_category,
             "添加平行类":self.treeWidget.new_parallel_category,
             "删除选定":self._del_element,
             "移动选定":self._move_line,
@@ -206,6 +206,8 @@ class LineLibDialog(QtWidgets.QDialog):
             self.treeWidget.setCurrentItem(item)
 
     def _change_filename(self):
+        if self.checkUnsavedLib():
+            return
         filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
                                                          filter='pyETRC数据库文件(*.pyetlib;*.json)\n所有文件(*.*)')
         if not ok:
@@ -230,8 +232,8 @@ class LineLibDialog(QtWidgets.QDialog):
     def _new_line(self)->Line:
         item = self.treeWidget.currentItem()
         if not isinstance(item,QtWidgets.QTreeWidgetItem):
-            QtWidgets.QMessageBox.information(self,'提示','请先选择一条线路或一个类别，再使用“添加线路”功能！')
-            return None
+            # 添加到根目录下
+            return self.treeWidget.newRootLine()
         self.toSave = True
         if item.type()==0:
             return self.treeWidget.newLine(item)
@@ -244,6 +246,8 @@ class LineLibDialog(QtWidgets.QDialog):
     def _new_category(self):
         item = self.treeWidget.currentItem()
         if not isinstance(item, QtWidgets.QTreeWidgetItem):
+            # 根目录
+            self.treeWidget.newRootCategory()
             return
         if item.type() == 0:
             self.treeWidget.newCategory(item)
@@ -389,7 +393,7 @@ class LineLibDialog(QtWidgets.QDialog):
         if isinstance(data,Category):
             newLib = LineLib()
             newLib.copyData(data)
-            filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "导出子数据库",
+            filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "导出子数据库",newLib.name,
                                                                  filter='pyETRC数据库文件(*.pyetlib;*.json)\n所有文件(*.*)')
             if not ok:
                 return
@@ -397,7 +401,7 @@ class LineLibDialog(QtWidgets.QDialog):
         elif isinstance(data,Line):
             newGraph = Graph()
             newGraph.setLine(data)
-            filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "导出运行图",
+            filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "导出运行图",newGraph.lineName(),
                                                                  filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')
             if not ok:
                 return
@@ -466,6 +470,12 @@ class LineLibDialog(QtWidgets.QDialog):
             return
         event.accept()
 
+    def keyPressEvent(self, event:QtGui.QKeyEvent):
+        """
+        禁用ESC退出
+        """
+        if event.key() != Qt.Key_Escape:
+            super().keyPressEvent(event)
 
 
 

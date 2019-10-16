@@ -16,6 +16,7 @@ class ForbidWidget(QtWidgets.QWidget):
         self.setWindowTitle('天窗编辑')
         self.data = data
         self.line = data.line()  # type:Line
+        self.updating = False
         self.initUI()
 
     def initUI(self):
@@ -83,10 +84,12 @@ class ForbidWidget(QtWidgets.QWidget):
         self.setLayout(vlayout)
 
     def setData(self):
+        self.updating=True
         self.checkDifferent.setChecked(self.data.different())
         self.checkDownShow.setChecked(self.data.downShow())
         self.checkUpShow.setChecked(self.data.upShow())
         self._setTableWidget()  # 此处效率问题较明显
+        self.updating=False
 
     def _setTableWidget(self):
         tableWidget = self.tableWidget
@@ -156,6 +159,8 @@ class ForbidWidget(QtWidgets.QWidget):
         tableWidget.setItem(row,3,item)
 
     def _different_changed(self,checked:bool):
+        if self.updating:
+            return
         if checked is False:
             flag = self.question("删除所有上行区间数据，用下行区间天窗数据代表双向（单线）数据。"
                                       "是否继续？")

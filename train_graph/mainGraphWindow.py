@@ -71,7 +71,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.3.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.build = '20191011'
+        self.date = '20191016'
+        self.release = 'R32'
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -1304,7 +1305,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         menu.addAction(action)
 
         action = QtWidgets.QAction("线路数据库(旧版)",self)
-        action.setShortcut('ctrl+shift+H')
+        action.setShortcut('ctrl+alt+H')
         action.triggered.connect(self._view_line_data_old)
         menu.addAction(action)
 
@@ -1584,8 +1585,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut('就绪')
 
     def _about(self):
-        text = f"{self.title}  {self.build}\n六方车迷会谈 马兴越  保留一切权利\n"
-        text += "联系方式： 邮箱 mxy0268@outlook.com"
+        text = f"{self.title}  release {self.release}\n{self.date} \n六方车迷会谈 马兴越  保留一切权利\n"
+        text += "联系方式： 邮箱 mxy0268@qq.com"
         text += '\n本系统官方交流群：865211882'
         QtWidgets.QMessageBox.about(self, '关于', text)
 
@@ -2025,13 +2026,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._refreshDockWidgets()
 
     def _view_line_data(self):
-        dialog = LineLibDialog(self.graph.UIConfigData()['default_db_file'],fromPyetrc=True,parent=self)
+        dialog = LineLibDialog(self.graph.sysConfigData()['default_db_file'],fromPyetrc=True,parent=self)
         dialog.DefaultDBFileChanged.connect(self._default_db_file_changed)
         dialog.ExportLineToGraph.connect(self._import_line_from_db)
         dialog.exec_()
 
     def _default_db_file_changed(self,name):
-        self.graph.UIConfigData()['default_db_file'] = name
+        self.graph.sysConfigData()['default_db_file'] = name
+        self.graph.saveSysConfig()
 
     def _import_line_from_db(self,line:Line):
         self.graph.line.copyData(line, True)
