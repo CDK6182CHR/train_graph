@@ -566,13 +566,17 @@ class CurrentWidget(QtWidgets.QWidget):
         ddsjEdit = QtWidgets.QTimeEdit()
         ddsjEdit.setDisplayFormat('hh:mm:ss')
         timeTable.setCellWidget(row, 1, ddsjEdit)
+        ddsjEdit.row = row
+        ddsjEdit.timeChanged.connect(self._time_changed)
 
         cfsjEdit = QtWidgets.QTimeEdit()
         cfsjEdit.setDisplayFormat('hh:mm:ss')
         timeTable.setCellWidget(row, 2, cfsjEdit)
+        cfsjEdit.row = row
+        cfsjEdit.timeChanged.connect(self._time_changed)
 
         item = QtWidgets.QTableWidgetItem()
-        item.setFlags(Qt.NoItemFlags)
+        item.setFlags(Qt.ItemIsEnabled)
         timeTable.setItem(row, 5, item)
 
         item = QtWidgets.QTableWidgetItem()

@@ -77,6 +77,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.selectedTrain = None
 
         self.setGraph(self.graph)
+        self.setMouseTracking(True)
 
     def _initMenu(self):
         """

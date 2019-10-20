@@ -153,9 +153,22 @@ python main.py
 * `trainComparator.py` 两车次时刻对照。快捷键为`ctrl+shift+W`。
 * `trainDatabase.py` 为导入车次功能中的相关设定提供支持。功能快捷键为`ctrl+D`。
 
+#### 线路数据库
 
+`2.3.0`版本彻底的重构了线路数据库这个模块，因而重新设计了有关代码，写成一个包（package），名为`linedb`。它主要包含这些类（文件）。
+
+* `category.py` 线路“分类”的类。新版本的线路数据库中支持对库中的线路做任意多级别的分类，其中分类的数据部分 由本类实现。本类继承`dict`。
+* `lineLib.py` 是`Category`的派生类，在顶层分类的基础上添加了文件io部分，并作为与GUI部分通信的主要接口。
+* `lineTreeWidget.py` 对话框左侧的文件树类。继承`QtWidgets.QTreeWidget`实现。关于线路、类别的增删逻辑，全都在本类实现。
+* `lineLibDialog.py` 线路数据库对话框。在主界面中由`ctrl+H`快捷键直接打开的就是这个对话框。
 
 #### 其他杂项
 
 * `trainFilter.py` 车次筛选器。在全局用快捷键`ctrl+shift+L`启动“高级显示车次设置”时，会调用本类。在车次编辑、车站时刻表等处也有使用。
 * `thread.py` 与多线程有关的部分。目前仅用于处理“车次事件表”（`ctrl+Z`）。
+
+
+
+## 文件格式
+
+`pyETRC`依赖的数据文件全部是基于`JSON`格式的。所有文件，无论扩展名，都是基于`UTF-8`的无签名（不带`BOM`，否则会出错）编码。使用Python标准库`json`读取和写入。

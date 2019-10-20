@@ -1135,8 +1135,9 @@ class Train():
                     continue
                 for name in interval_queue:
                     ruler_node=ruler.getInfo(last_tudy_dict['zhanming'],name,allow_multi=True)
-                    new_dict=self.makeStationDict(name,rate,last_tudy_dict,ruler_node,precision)
-                    new_timetable.append(new_dict)
+                    if ruler_node:
+                        new_dict=self.makeStationDict(name,rate,last_tudy_dict,ruler_node,precision)
+                        new_timetable.append(new_dict)
                 new_timetable.append(this_dict)
                 last_tudy_dict = this_dict
                 interval_queue=[]
