@@ -1,10 +1,11 @@
 """
 车次编辑功能的封装类
 2019.07.09将trainMapToRow数据结构改为：Train->QTableWidgetItem，指向的是每行第0个Item，即车次一格。
+2019.10.21重构：肃清cellWidget。
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph
+from .graph import Graph,Line
 from .train import Train
 from .trainFilter import TrainFilter
 
@@ -63,8 +64,24 @@ class TrainWidget(QtWidgets.QWidget):
         self.trainTable = tableWidget
 
         self.setData()
+        tableWidget.itemChanged.connect(self._item_changed)
 
         vlayout.addWidget(tableWidget)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnUp = QtWidgets.QPushButton('上移')
+        btnUp.setMinimumWidth(80)
+        btnDown = QtWidgets.QPushButton('下移')
+        btnDown.setMinimumWidth(80)
+        hlayout.addWidget(btnUp)
+        hlayout.addWidget(btnDown)
+        btnSaveOrder = QtWidgets.QPushButton('保存顺序')
+        btnSaveOrder.setMinimumWidth(80)
+        hlayout.addWidget(btnSaveOrder)
+        vlayout.addLayout(hlayout)
+        btnUp.clicked.connect(self._move_up)
+        btnDown.clicked.connect(self._move_down)
+        btnSaveOrder.clicked.connect(self._save_order)
 
         btnEdit = QtWidgets.QPushButton("编辑")
         btnEdit.setMinimumWidth(80)
@@ -145,14 +162,18 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.setItem(now_line, 6, item)
 
         # 修改直接生效
-        check = QtWidgets.QCheckBox()
-        check.setChecked(train.isShow())
-        check.setMinimumSize(1, 1)
-        check.setStyleSheet("QCheckBox{margin:3px}")
-        # check.toggled.connect(lambda x:self._train_show_changed(now_line,tableWidget,x))
-        check.train = train
-        check.toggled.connect(self._train_show_changed)
-        tableWidget.setCellWidget(now_line, 4, check)
+        # check = QtWidgets.QCheckBox()
+        # check.setChecked(train.isShow())
+        # check.setMinimumSize(1, 1)
+        # check.setStyleSheet("QCheckBox{margin:3px}")
+        # # check.toggled.connect(lambda x:self._train_show_changed(now_line,tableWidget,x))
+        # check.train = train
+        # check.toggled.connect(self._train_show_changed)
+        # tableWidget.setCellWidget(now_line, 4, check)
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Line.bool2CheckState(train.isShow()))
+        tableWidget.setItem(now_line,4,item)
+
 
     def delTrain(self,train:Train):
         """
@@ -177,7 +198,7 @@ class TrainWidget(QtWidgets.QWidget):
             train = self.trainByRow(row)
             if train is None:
                 continue
-            tableWidget.cellWidget(row,col).setChecked(train.isShow())
+            tableWidget.item(row,col).setCheckState(Line.bool2CheckState(train.isShow()))
 
     def updateRowByNum(self,row:int):
         """
@@ -193,7 +214,7 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.item(row,1).setText(train.sfz)
         tableWidget.item(row,2).setText(train.zdz)
         tableWidget.item(row,3).setText(train.trainType())
-        tableWidget.cellWidget(row,4).setChecked(train.isShow())
+        tableWidget.item(row,4).setCheckState(Line.bool2CheckState(train.isShow()))
         mile = train.localMile(self.graph,fullAsDefault=False)
         tableWidget.item(row,5).setData(Qt.DisplayRole,mile)
         tableWidget.item(row,5).setText(f"{mile:.1f}")
@@ -241,7 +262,7 @@ class TrainWidget(QtWidgets.QWidget):
             print("TrainWidget::setCurrentTrain: train not found!",train)
             return
         self.trainTable.setCurrentCell(item.row(),0)
-        self.trainTable.cellWidget(item.row(),4).setChecked(train.isShow())
+        self.trainTable.item(item.row(),4).setCheckState(Line.bool2CheckState(train.isShow()))
 
 
     # slots
@@ -264,9 +285,24 @@ class TrainWidget(QtWidgets.QWidget):
             return
         self.train_double_clicked.emit(train)
 
+    def _item_changed(self,item:QtWidgets.QTableWidgetItem):
+        """
+        2019.10.21添加
+        """
+        if item is None or item.column() != 4:
+            return
+        train = self.trainTable.item(item.row(),0).data(-1)
+        if train is None:
+            return
+        on=bool(item.checkState())
+        train.setIsShow(on)
+        self.trainShowChanged.emit(train,on)
+
     def _train_show_changed(self):
         """
+        2019.10.21撤销定义
         """
+        print("Warning: TrainWidget::train_show_changed: 取消定义的函数。")
         sender = self.sender()
         train = sender.train
         train.setIsShow(sender.isChecked())
@@ -407,4 +443,48 @@ class TrainWidget(QtWidgets.QWidget):
             return False
         else:
             return default
+
+    def _swapRow(self,x,y):
+        """
+        交换表中的两行x和y。
+        precondition: x,y的行有效。
+        postcondition: 交换后的item对象仍然不变。
+        """
+        ncols = self.trainTable.columnCount()
+        for c in range(ncols):
+            item0 = self.trainTable.takeItem(x,c)
+            item1 = self.trainTable.takeItem(y,c)
+            self.trainTable.setItem(x,c,item1)
+            self.trainTable.setItem(y,c,item0)
+
+    def _move_up(self):
+        """
+        只处理当前的一个。逐个item的交换。
+        """
+        row = self.trainTable.currentRow()
+        if row <= 0:
+            return
+        self._swapRow(row,row-1)
+        self.trainTable.setCurrentCell(row-1,0)
+
+    def _move_down(self):
+        row = self.trainTable.currentRow()
+        if row >= self.trainTable.rowCount()-1:
+            return
+        self._swapRow(row,row+1)
+        self.trainTable.setCurrentCell(row+1,0)
+
+    def _save_order(self):
+        """
+        没有显示的车次，全都放到后面去。记得调整映射表
+        """
+        origin = self.graph._trains[:]
+        newList = []
+        for row in range(self.trainTable.rowCount()):
+            train = self.trainTable.item(row,0).data(-1)
+            origin.remove(train)
+            newList.append(train)
+        self.graph._trains.clear()
+        self.graph._trains = newList + origin  # 剩下的是没有显示的
+        self.showStatus.emit('保存车次顺序成功')
 

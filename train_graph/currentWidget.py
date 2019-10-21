@@ -10,7 +10,7 @@ from .circuit import Circuit
 from .train import Train
 from datetime import datetime,timedelta
 from Timetable_new.checi3 import Checi
-from Timetable_new.utility import judge_type,strToTime
+from Timetable_new.utility import strToTime
 
 class CurrentWidget(QtWidgets.QWidget):
     checkCurrentTrainRuler=QtCore.pyqtSignal(Train)
@@ -696,10 +696,7 @@ class CurrentWidget(QtWidgets.QWidget):
         trainType = self.comboType.currentText()
 
         if not trainType:
-            try:
-                trainType = judge_type(fullCheci)
-            except:
-                trainType = '未知'
+            trainType = train.autoTrainType()
 
         elif trainType not in self.graph.typeList:
             self.graph.typeList.append(trainType)

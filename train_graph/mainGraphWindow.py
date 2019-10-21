@@ -71,7 +71,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.3.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20191020'
+        self.date = '20191021'
         self.release = 'R32'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -1286,6 +1286,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.triggered.connect(self._detect_pass_time)
         menu.addAction(action)
 
+        action = QtWidgets.QAction('撤销全部推定结果',self)
+        action.triggered.connect(self._withdraw_detect)
+        menu.addAction(action)
+
         action = QtWidgets.QAction('高级显示车次设置', self)
         action.setShortcut('ctrl+shift+L')
         action.triggered.connect(self.showFilter.setFilter)
@@ -1522,7 +1526,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut("正在保存")
         if not self.graph.graphFileName():
             filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件",
-                                                                 directory=self.graph.lineName() + '.json',
+                                                                 directory=self.graph.lineName() + '.pyetgr',
                                                                  filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')
             if not ok:
                 return
@@ -1536,7 +1540,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         另存为
         """
-        filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.json',
+        filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.pyetgr',
                                                          filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')[0]
         self.statusOut("正在保存")
         self.graph.setVersion(self.version)
@@ -1550,7 +1554,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         先显示提示信息，然后导出为trc。
         """
-        text = "注意：显著的信息丢失。由于文本运行图格式不支持本系统的部分功能，导出的.trc格式运行图包含的信息少于本系统的.json格式运行图。这就是说，若先导出.trc格式，再用本系统读取该文件，仍将造成显著的信息丢失。本功能不改变原运行图，只是导出一个副本。请确认知悉以上内容，并继续。"
+        text = "注意：显著的信息丢失。由于ETRC运行图格式不支持本系统的部分功能，导出的.trc格式运行图包含的信息少于本系统的.pyetgr/.json格式运行图。这就是说，若先导出.trc格式，再用本系统读取该文件，仍将造成显著的信息丢失。本功能不改变原运行图，只是导出一个副本。请确认知悉以上内容，并继续。"
         self._dout(text)
         filename, ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.trc',
                                                              filter='ETRC运行图文件(*.trc)\n所有文件(*.*)')
@@ -2427,6 +2431,15 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._dout('计算完毕！')
         self.GraphWidget.paintGraph()
         self._updateCurrentTrainRelatedWidgets(self.currentTrain())
+
+    def _withdraw_detect(self):
+        if not self.qustion('此操作将删除时刻表中所有备注为“推定”的站，无论是否是由系统推定添加的。此操作不可撤销，是否继续？'):
+            return
+        for train in self.graph.trains():
+            train.withdrawDetectStations()
+        self.GraphWidget.paintGraph()
+        self._updateCurrentTrainRelatedWidgets(self.currentTrain())
+
 
     def _correction_timetable(self, train=None):
         if not isinstance(train, Train):

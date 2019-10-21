@@ -1158,7 +1158,7 @@ class Graph:
         ws.merge_cells('A7:A8')
         ws['A9'] = '车次'
         ws['A10'] = '车站'
-        for row in range(3, 9):
+        for row in range(3, 11):
             ws.row_dimensions[row].font = Font(name='SimSum', size=9)
             ws.row_dimensions[row].alignment = Alignment(horizontal='center', vertical='center')
             ws.row_dimensions[row].height = 9.7
@@ -1195,7 +1195,7 @@ class Graph:
                 else:
                     ws.merge_cells(start_row=3, end_row=4, start_column=col, end_column=col)
                     last_merge_sfz = col
-                ws.cell(row=3, column=col, value=train.sfz)
+                ws.cell(row=3, column=last_merge_sfz, value=train.sfz)  # 必须访问最左边的才行
 
                 if last_train and train.zdz == last_train.zdz:
                     try:
@@ -1206,8 +1206,8 @@ class Graph:
                 else:
                     ws.merge_cells(start_row=5, end_row=6, start_column=col, end_column=col)
                     last_merge_zdz = col
-                c = ws.cell(row=5, column=col, value=train.zdz)
-                col_str = c.column
+                c = ws.cell(row=5, column=last_merge_zdz, value=train.zdz)
+                col_str = c.column_letter
                 ws.column_dimensions[col_str].width = 6  # 设置列宽为5
 
                 if last_train and train.type == last_train.type:
@@ -1219,7 +1219,7 @@ class Graph:
                 else:
                     ws.merge_cells(start_row=7, end_row=8, start_column=col, end_column=col)
                     last_merge_type = col
-                ws.cell(row=7, column=col, value=train.type)
+                ws.cell(row=7, column=last_merge_type, value=train.type)
 
                 checi = train.fullCheci()
                 if '/' in checi:
@@ -1302,8 +1302,8 @@ class Graph:
                 else:
                     ws.merge_cells(start_row=3, end_row=4, start_column=col, end_column=col)
                     last_merge_sfz = col
-                c = ws.cell(row=3, column=col, value=train.sfz)
-                col_str = c.column
+                c = ws.cell(row=3, column=last_merge_sfz, value=train.sfz)
+                col_str = c.column_letter
                 ws.column_dimensions[col_str].width = 6  # 设置列宽为5
 
                 if last_train and train.zdz == last_train.zdz:
@@ -1315,7 +1315,7 @@ class Graph:
                 else:
                     ws.merge_cells(start_row=5, end_row=6, start_column=col, end_column=col)
                     last_merge_zdz = col
-                ws.cell(row=5, column=col, value=train.zdz)
+                ws.cell(row=5, column=last_merge_zdz, value=train.zdz)
 
                 if last_train and train.type == last_train.type:
                     try:
@@ -1326,7 +1326,7 @@ class Graph:
                 else:
                     ws.merge_cells(start_row=7, end_row=8, start_column=col, end_column=col)
                     last_merge_type = col
-                ws.cell(row=7, column=col, value=train.type)
+                ws.cell(row=7, column=last_merge_type, value=train.type)
 
                 checi = train.fullCheci()
                 if '/' in checi:
@@ -1797,6 +1797,7 @@ class Graph:
         self.fullCheciMap = {}
         self.singleCheciMap = {}
         self._markdown = ''
+        self.filename=''
 
     def clearTrains(self):
         self._trains = []

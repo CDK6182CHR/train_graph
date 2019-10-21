@@ -13,6 +13,7 @@ class TrainTimetable(QtWidgets.QWidget):
         super(TrainTimetable, self).__init__(parent)
         self.graph = graph
         self.train = None
+        self.businessOnly = False
         self.initUI()
 
     def initUI(self):
@@ -29,6 +30,10 @@ class TrainTimetable(QtWidgets.QWidget):
         checiEdit.setFocusPolicy(Qt.NoFocus)
         self.checiEdit = checiEdit
         vlayout.addWidget(checiEdit)
+
+        checkBusiness = QtWidgets.QCheckBox('仅停车/营业站')
+        vlayout.addWidget(checkBusiness)
+        checkBusiness.toggled.connect(self.business_only_changed)
 
         # label = QtWidgets.QLabel("下表中红色字体表示该站营业，蓝色表示该站停车但不营业。")
         # label.setWordWrap(True)
@@ -54,7 +59,13 @@ class TrainTimetable(QtWidgets.QWidget):
         #     return
         self.checiEdit.setText(f"{train.fullCheci()}({train.sfz}->{train.zdz})")
         self.checiEdit.setCursorPosition(0)
-        tw.setRowCount(train.stationCount()*2)
+
+        if self.businessOnly:
+            st_list = train.businessOrStoppedStations()
+        else:
+            st_list = train.timetable
+
+        tw.setRowCount(len(st_list)*2)
         TWI = QtWidgets.QTableWidgetItem
 
         tw.setAlternatingRowColors(True)
@@ -80,11 +91,11 @@ class TrainTimetable(QtWidgets.QWidget):
         #     for i,item in enumerate(items):
         #         item.setForeground(QtGui.QBrush(color))
         #         tw.setItem(row,i,item)
-        for i in range(0,2*train.stationCount(),2):
+        for i in range(0,2*len(st_list),2):
             tw.setRowHeight(i,self.graph.UIConfigData()['table_row_height']*0.9)
             tw.setRowHeight(i+1,self.graph.UIConfigData()['table_row_height']*0.9)
             tw.setSpan(i,0,2,1)
-            st_dict = train.timetable[i//2]
+            st_dict = st_list[i//2]
             zm, ddsj, cfsj = st_dict['zhanming'], st_dict['ddsj'], st_dict['cfsj']
             item0 = TWI(zm)
             item0.setTextAlignment(Qt.AlignCenter)
@@ -122,3 +133,7 @@ class TrainTimetable(QtWidgets.QWidget):
             tw.setItem(i+1,1,item2)
             tw.setItem(i,2,item3)
             tw.setItem(i+1,2,item4)
+
+    def business_only_changed(self,on):
+        self.businessOnly = on
+        self.setData(self.train)

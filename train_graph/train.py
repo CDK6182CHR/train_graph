@@ -149,11 +149,12 @@ class Train():
             #traceback.print_exc()
         # print(self.type)
 
-    def autoTrainType(self):
+    def autoTrainType(self)->str:
         """
         2.0.2新增，调用graph获得自动类型。取代autoType函数。
         """
         self.setType(self.graph.checiType(self.fullCheci()))
+        return self.type
 
     def _autoUI(self):
         print("Train::autoUI: 标记过时的函数")
@@ -1172,6 +1173,11 @@ class Train():
                 new_timetable.append(new_dict)
         self.timetable=new_timetable
 
+    def withdrawDetectStations(self):
+        for st in self.timetable.copy():
+            if st['note'] == '推定':
+                self.timetable.remove(st)
+
     def stationInTimetable(self,name:str,strict=False):
         return bool(filter(lambda x:stationEqual(name,x,strict),
                            map(lambda x:x['zhanming'],self.timetable)))
@@ -1501,6 +1507,13 @@ class Train():
                 day+=1
             last_dict = st_dict
         return day
+
+    def businessOrStoppedStations(self)->list:
+        lst = []
+        for st in self.timetable:
+            if self.stationStopped(st) or st.get('business',True):
+                lst.append(st)
+        return lst
 
 
     def __str__(self):
