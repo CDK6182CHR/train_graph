@@ -7,8 +7,7 @@
 import sys
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from .graph import Graph,Train
-from .circuit import Circuit
+from .data.graph import Graph,Train,Circuit
 from datetime import datetime,timedelta
 
 class StationGraphWidget(QtWidgets.QGraphicsView):

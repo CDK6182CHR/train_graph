@@ -4,9 +4,7 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph
-from .train import Train
-from .circuit import Circuit
+from .data.graph import Graph,Train,Circuit
 from Timetable_new.utility import stationEqual
 import re
 from typing import List

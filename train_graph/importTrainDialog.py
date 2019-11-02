@@ -4,7 +4,7 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph,Train,Ruler,Circuit,CircuitNode
+from .data.graph import Graph,Train,Ruler,Circuit,CircuitNode
 from .trainWidget import TrainWidget
 from .trainTimetable import TrainTimetable
 from .trainInfoWidget import TrainInfoWidget

@@ -5,8 +5,8 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph,Line
-from .train import Train
+from .data.graph import Graph,Line
+from .data.train import Train
 from .trainFilter import TrainFilter
 
 class TrainWidget(QtWidgets.QWidget):

@@ -3,11 +3,7 @@
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from .ruler import Ruler
-from .line import Line
-from .graph import Graph
-from .circuit import Circuit
-from .train import Train
+from .data.graph import Ruler,Line,Graph,Circuit,Train
 from datetime import datetime,timedelta
 from Timetable_new.checi3 import Checi
 from Timetable_new.utility import strToTime

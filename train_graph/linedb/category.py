@@ -3,7 +3,7 @@
 对应一“类”线路数据。数据结构为广义表，成员可以是Line或Category。
 是Python基础dict的封装和扩展。
 """
-from ..line import Line
+from ..data.line import Line
 
 class Category(dict):
     def __init__(self,name='',data=None,parent=None):

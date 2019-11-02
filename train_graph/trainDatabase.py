@@ -7,7 +7,7 @@ from .trainWidget import TrainWidget
 from .currentWidget import CurrentWidget
 from .circuitWidget import CircuitWidget,CircuitDialog
 from .pyETRCExceptions import *
-from .graph import Graph
+from .data.graph import Graph
 
 class TrainDatabase(QtWidgets.QMainWindow):
     def __init__(self,parent=None):

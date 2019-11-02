@@ -18,10 +18,7 @@ https://blog.csdn.net/qq_37233607/article/details/78649151
 import sys
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph
-from .ruler import Ruler
-from .line import Line
-from .train import Train
+from .data.graph import Graph,Ruler,Line,Train
 from datetime import datetime, timedelta
 from .forbidWidget import ForbidWidget
 from .rulerWidget import RulerWidget

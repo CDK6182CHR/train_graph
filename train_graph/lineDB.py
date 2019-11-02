@@ -4,11 +4,10 @@
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from .line import Line
 from .lineWidget import LineWidget
 from .rulerWidget import RulerWidget
 from .forbidWidget import ForbidWidget
-from .graph import Graph
+from .data.graph import Graph,Line
 import json
 
 class LineDB(QtWidgets.QDialog):

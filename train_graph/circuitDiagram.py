@@ -4,7 +4,7 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore,QtPrintSupport
 from PyQt5.QtCore import Qt
-from .graph import Graph,Train,Circuit,CircuitNode
+from .data.graph import Graph,Train,Circuit,CircuitNode
 from datetime import datetime,timedelta
 from .pyETRCExceptions import *
 from Timetable_new.utility import stationEqual

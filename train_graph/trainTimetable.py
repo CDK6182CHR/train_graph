@@ -5,8 +5,8 @@
 
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .train import Train
-from .graph import Graph
+from .data.train import Train
+from .data.graph import Graph
 
 class TrainTimetable(QtWidgets.QWidget):
     def __init__(self,graph:Graph,parent=None):
@@ -34,6 +34,7 @@ class TrainTimetable(QtWidgets.QWidget):
         checkBusiness = QtWidgets.QCheckBox('仅停车/营业站')
         vlayout.addWidget(checkBusiness)
         checkBusiness.toggled.connect(self.business_only_changed)
+        self.checkBusinessOnly = checkBusiness
 
         # label = QtWidgets.QLabel("下表中红色字体表示该站营业，蓝色表示该站停车但不营业。")
         # label.setWordWrap(True)
@@ -60,7 +61,7 @@ class TrainTimetable(QtWidgets.QWidget):
         self.checiEdit.setText(f"{train.fullCheci()}({train.sfz}->{train.zdz})")
         self.checiEdit.setCursorPosition(0)
 
-        if self.businessOnly:
+        if self.checkBusinessOnly.isChecked():
             st_list = train.businessOrStoppedStations()
         else:
             st_list = train.timetable
@@ -135,5 +136,4 @@ class TrainTimetable(QtWidgets.QWidget):
             tw.setItem(i+1,2,item4)
 
     def business_only_changed(self,on):
-        self.businessOnly = on
         self.setData(self.train)

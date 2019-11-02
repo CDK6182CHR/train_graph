@@ -2,8 +2,8 @@
 2019.02.05抽离typeWidget
 """
 from PyQt5 import QtWidgets, QtGui, QtCore
-from .graph import Graph
-from .train import Train
+from .data.graph import Graph
+from .data.train import Train
 
 
 class TypeWidget(QtWidgets.QWidget):

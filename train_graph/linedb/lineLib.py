@@ -7,7 +7,7 @@
 主要增加了文件名等项目。
 """
 import json
-from ..line import Line
+from ..data.line import Line
 from .category import Category
 
 class LineLib(Category):

@@ -6,7 +6,7 @@ from .forbid import Forbid
 from .route import Route
 from typing import Union
 from Timetable_new.utility import stationEqual
-from .pyETRCExceptions import *
+from train_graph.pyETRCExceptions import *
 
 class Line():
     """
@@ -40,6 +40,7 @@ class Line():
         self.stations = []
         self.rulers = []
         self.routes = []
+        self.notes = {}
         self.forbid = Forbid(self)
         self.item = None  # lineDB中使用。
         self.parent = None  # lineDB中使用
@@ -60,6 +61,21 @@ class Line():
 
     def setLineName(self,name:str):
         self.name = name
+
+    def verifyNotes(self):
+        """
+        2019.11.02新增线路备注数据，此函数提供默认版本。
+        """
+        default_notes = {
+            "author":"",
+            "version":"",
+            "note":"",
+        }
+        default_notes.update(self.notes)
+        self.notes=default_notes
+
+    def getNotes(self)->dict:
+        return self.notes
 
     def setNameMap(self):
         """
@@ -124,6 +140,7 @@ class Line():
     def loadLine(self,origin):
         self.name = origin["name"]
         self.stations = origin["stations"]
+        self.notes = origin.get("notes",{})
         try:
             self.rulers
         except:
@@ -148,6 +165,7 @@ class Line():
             self.forbid.loadForbid(origin["forbid"])
         self.setNameMap()
         self.setFieldMap()
+        self.verifyNotes()
 
     def addStation_by_origin(self,origin,index=-1):
         if index==-1:
@@ -185,7 +203,8 @@ class Line():
             "rulers":[],
             "routes":[],
             "stations":self.stations,
-            "forbid":self.forbid.outInfo()
+            "forbid":self.forbid.outInfo(),
+            "notes":self.notes,
         }
         try:
             self.rulers

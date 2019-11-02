@@ -5,9 +5,7 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .train import Train
-from .graph import Graph
-from .ruler import Ruler
+from .data.graph import Graph,Train,Ruler
 
 class DetectWidget(QtWidgets.QDialog):
     """

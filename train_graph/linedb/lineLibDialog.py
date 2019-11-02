@@ -5,7 +5,7 @@
 from .lineLib import Line,LineLib,Category
 from ..lineWidget import LineWidget
 from .lineTreeWidget import LineTreeWidget
-from ..graph import Graph
+from ..data.graph import Graph
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 

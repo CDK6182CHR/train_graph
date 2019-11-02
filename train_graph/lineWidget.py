@@ -5,7 +5,7 @@
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from .line import Line
+from .data.line import Line
 
 class LineWidget(QtWidgets.QWidget):
     showStatus = QtCore.pyqtSignal(str)
@@ -52,8 +52,8 @@ class LineWidget(QtWidgets.QWidget):
         tableWidget.itemChanged.connect(self.changed)
 
         tableWidget.setColumnWidth(0, 100)
-        tableWidget.setColumnWidth(1, 80)
-        tableWidget.setColumnWidth(2, 60)
+        tableWidget.setColumnWidth(1, 100)
+        tableWidget.setColumnWidth(2, 40)
         tableWidget.setColumnWidth(3, 40)
         tableWidget.setColumnWidth(4, 80)
         tableWidget.setColumnWidth(5, 50)
@@ -87,15 +87,19 @@ class LineWidget(QtWidgets.QWidget):
         btnOk.setMinimumWidth(50)
         btnReturn = QtWidgets.QPushButton("还原")
         btnReturn.setMinimumWidth(50)
+        btnNotes = QtWidgets.QPushButton("注释")
+        btnNotes.setMinimumWidth(50)
 
         btnReturn.clicked.connect(lambda: self._discard_line_info_change(tableWidget,line))
         btnOk.clicked.connect(self.apply_line_info_change)
+        btnNotes.clicked.connect(self._edit_notes)
 
         self.btnReturn = btnReturn
         self.btnOk = btnOk
 
         hlayout.addWidget(btnOk)
         hlayout.addWidget(btnReturn)
+        hlayout.addWidget(btnNotes)
         vlayout.addLayout(hlayout)
 
         self.setLayout(vlayout)
@@ -152,9 +156,9 @@ class LineWidget(QtWidgets.QWidget):
             tableWidget.setItem(now_line, 0, item)
 
             spin1 = QtWidgets.QDoubleSpinBox()
-            spin1.setRange(-9999.0, 9999.0)
+            spin1.setRange(-9999.000, 9999.000)
+            spin1.setDecimals(3)
             spin1.setValue(stationDict["licheng"])
-            spin1.setDecimals(1)
             tableWidget.setCellWidget(now_line, 1, spin1)
             spin1.setMinimumSize(10, 10)
             spin1.valueChanged.connect(self.changed)
@@ -213,7 +217,7 @@ class LineWidget(QtWidgets.QWidget):
 
         spin1 = QtWidgets.QDoubleSpinBox()
         spin1.setRange(-9999.0, 9999.0)
-        spin1.setDecimals(1)
+        spin1.setDecimals(3)
         tableWidget.setCellWidget(num, 1, spin1)
         spin1.valueChanged.connect(self.changed)
 
@@ -254,6 +258,54 @@ class LineWidget(QtWidgets.QWidget):
             return
         self._setLineTable()
         self.toSave=False
+
+    def _edit_notes(self):
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle('线路数据注释')
+        self.noteDialog = dialog
+
+        label = QtWidgets.QLabel('此处可编辑线路的注释信息。如果当前线路被加入数据库，则这些信息也会加入。'
+                                 '在本页面点击确定直接生效。')
+        label.setWordWrap(True)
+
+        vlayout = QtWidgets.QVBoxLayout()
+        flayout = QtWidgets.QFormLayout()
+
+        authorEdit = QtWidgets.QLineEdit()
+        authorEdit.setText(self.line.getNotes()['author'])
+        self.authorEdit = authorEdit
+        flayout.addRow('贡献者',authorEdit)
+
+        versionEdit = QtWidgets.QLineEdit()
+        versionEdit.setText(self.line.getNotes()['version'])
+        self.versionEdit = versionEdit
+        flayout.addRow('版本',versionEdit)
+
+        vlayout.addLayout(flayout)
+        vlayout.addWidget(QtWidgets.QLabel('其他说明'))
+
+        noteEdit = QtWidgets.QTextEdit()
+        self.noteEdit = noteEdit
+        vlayout.addWidget(noteEdit)
+        noteEdit.setText(self.line.getNotes()['note'])
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnOk = QtWidgets.QPushButton('确定')
+        hlayout.addWidget(btnOk)
+        btnOk.clicked.connect(self._edit_note_ok)
+
+        btnCancel = QtWidgets.QPushButton('取消')
+        hlayout.addWidget(btnCancel)
+        btnCancel.clicked.connect(dialog.close)
+        vlayout.addLayout(hlayout)
+        dialog.setLayout(vlayout)
+        dialog.exec_()
+
+    def _edit_note_ok(self):
+        self.line.getNotes()['author']=self.authorEdit.text()
+        self.line.getNotes()['version']=self.versionEdit.text()
+        self.line.getNotes()['note']=self.noteEdit.toPlainText()
+        self.noteDialog.close()
 
     def apply_line_info_change(self):
         """

@@ -18,14 +18,11 @@ cgitb.enable(format='text')
 import sys
 from PyQt5 import QtWidgets, QtGui, QtCore, QtPrintSupport
 from PyQt5.QtCore import Qt
-from .graph import Graph
-from .train import Train
+from .data.graph import Graph,Train,Ruler,Line
+from .data.forbid import Forbid
 from datetime import timedelta, datetime
 import time
-from .ruler import Ruler
-from .line import Line
 from enum import Enum
-from .forbid import Forbid
 from .trainItem import TrainItem
 
 

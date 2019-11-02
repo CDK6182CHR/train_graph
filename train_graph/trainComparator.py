@@ -3,9 +3,8 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .train import Train
-from .graph import Graph
-from .line import Line
+from .data.train import Train
+from .data.graph import Graph,Train,Line
 
 class TrainComparator(QtWidgets.QDialog):
     def __init__(self,graph:Graph,parent=None):

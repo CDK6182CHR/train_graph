@@ -4,7 +4,7 @@
 
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph
+from .data.graph import Graph
 
 help_str = """
 ctrl+A	调整当前车次时刻	1.0.7	将当前车次的某些站点的到发时刻向前或后移动一定时间

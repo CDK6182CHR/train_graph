@@ -107,8 +107,8 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
         """
         self.clear()
         self.setColumnCount(4)
-        self.setHeaderLabels(('线名', '里程', '起点', '终点'))
-        for i, s in enumerate((200, 60, 90, 90)):
+        self.setHeaderLabels(('线名', '里程', '起点', '终点','贡献者','版本'))
+        for i, s in enumerate((200, 60, 90, 90, 80, 80)):
             self.setColumnWidth(i, s)
         self.addData(self.lineLib)
 
@@ -127,7 +127,9 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             elif isinstance(t,Line) and self.detail:
                 item0 = QtWidgets.QTreeWidgetItem(item,
                         (t.name,str(t.lineLength()),
-                         t.firstStationName(),t.lastStationName()),1)
+                         t.firstStationName(),t.lastStationName(),
+                         t.getNotes()['author'],t.getNotes()['version']
+                         ),1)
                 item0.setData(0,Qt.UserRole,t)
                 t.setItem(item0)
 
@@ -168,7 +170,9 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             print("LineTreeWidget::updateLineRow: item is None",line)
             return
         for i,s in enumerate((line.name,str(line.lineLength()),
-                              line.firstStationName(),line.lastStationName())):
+                              line.firstStationName(),line.lastStationName(),
+                              line.getNotes()['author'],line.getNotes()['version']
+                              )):
             item.setText(i,s)
 
 

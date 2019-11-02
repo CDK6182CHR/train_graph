@@ -7,8 +7,7 @@
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 import sys
-from .train import Train
-from .graph import Graph
+from .data.graph import Graph,Train
 
 class CorrectionWidget(QtWidgets.QDialog):
     correctionOK = QtCore.pyqtSignal(Train)

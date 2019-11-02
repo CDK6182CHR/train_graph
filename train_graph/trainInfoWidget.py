@@ -5,8 +5,8 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .train import Train
-from .graph import Graph
+from .data.train import Train
+from .data.graph import Graph
 from .pyETRCExceptions import *
 
 class TrainInfoWidget(QtWidgets.QWidget):
@@ -127,7 +127,7 @@ class TrainInfoWidget(QtWidgets.QWidget):
         self.localLastEdit.setText(f"{train.localLast()}({train.lastDownStr()})")
         self.localCountEdit.setText(str(train.localCount()))
         mile = train.localMile(self.graph,fullAsDefault=False)
-        self.localMileEdit.setText(f"{mile:.1f}")
+        self.localMileEdit.setText(f"{mile:.3f}")
         running, stay = train.localRunStayTime(self.graph)
         time = running + stay
         self.localTimeEdit.setText(self._sec2str(time))
@@ -186,7 +186,7 @@ class TrainInfoWidget(QtWidgets.QWidget):
         text += f"本线入图点：{train.localFirst(self.graph)}\n"
         text += f"本线出图点：{train.localLast(self.graph)}\n"
         text += f"本线图定站点数：{train.localCount(self.graph)}\n"
-        text += f"本线运行里程：{train.localMile(self.graph):.1f}\n"
+        text += f"本线运行里程：{train.localMile(self.graph):.3f}\n"
         running, stay = train.localRunStayTime(self.graph)
         time = running + stay
         text += f"本线运行时间：{'%d:%02d:%02d'%(int(time/3600),int((time%3600)/60),int(time%60))}\n"

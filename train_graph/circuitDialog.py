@@ -4,10 +4,9 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .circuit import Circuit,CircuitNode
+from .data.circuit import Circuit,CircuitNode
 from .pyETRCExceptions import *
-from .graph import Graph
-from .train import Train
+from .data.graph import Graph,Train
 from .circuitDiagramWidget import CircuitDiagramWidget
 
 class CircuitDialog(QtWidgets.QDialog):

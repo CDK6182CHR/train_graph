@@ -16,7 +16,7 @@
 连线暂定直接走站线上通过。
 """
 # from .line import Line
-from .pyETRCExceptions import *
+from train_graph.pyETRCExceptions import *
 from Timetable_new.utility import stationEqual
 
 class CircuitNode:

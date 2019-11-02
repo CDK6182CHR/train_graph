@@ -10,7 +10,7 @@ from copy import copy
 from Timetable_new.utility import stationEqual
 import json, re
 from datetime import datetime
-from .pyETRCExceptions import *
+from train_graph.pyETRCExceptions import *
 
 config_file = 'config.json'
 

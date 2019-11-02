@@ -3,9 +3,9 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .train import Train
+from .data.train import Train
 from .trainFilter import TrainFilter
-from .graph import Graph
+from .data.graph import Graph
 
 class IntervalTrainDialog(QtWidgets.QDialog):
     def __init__(self,graph:Graph,parent=None):

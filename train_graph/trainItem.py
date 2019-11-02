@@ -7,8 +7,8 @@
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 
-from .graph import Graph
-from .train import Train
+from .data.graph import Graph
+from .data.train import Train
 from datetime import datetime,timedelta
 
 class TrainItem(QtWidgets.QGraphicsItem):

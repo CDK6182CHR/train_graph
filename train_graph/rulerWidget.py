@@ -4,8 +4,7 @@
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from .ruler import Ruler
-from .line import Line
+from .data.line import Line,Ruler
 
 class RulerWidget(QtWidgets.QTabWidget):
     okClicked = QtCore.pyqtSignal()

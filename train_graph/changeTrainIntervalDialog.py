@@ -5,7 +5,7 @@
 """
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
-from .graph import Train, Graph
+from .data.graph import Train, Graph
 from .rulerPaint import rulerPainter
 from datetime import datetime
 
@@ -40,7 +40,7 @@ class ChangeTrainIntervalDialog(QtWidgets.QDialog):
         self.listWidget = listWidget
         for st_dict in self.train.stationDicts():
             text = f"{st_dict['zhanming']:10s} "
-            if self.train.stationStopped(st_dict):
+            if not self.train.stationStopped(st_dict):
                 text += '...'
             else:
                 text += st_dict['ddsj'].strftime('%H:%M:%S')

@@ -6,9 +6,7 @@
 """
 
 from .GraphicWidget import GraphicsWidget
-from .ruler import Ruler
-from .train import Train
-from .graph import Graph
+from .data.graph import Graph,Train,Ruler
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from datetime import datetime,timedelta

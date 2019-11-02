@@ -5,8 +5,8 @@
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 import sys,re
-from .train import Train
-from .graph import Graph
+from .data.train import Train
+from .data.graph import Graph
 
 class TypeDialog(QtWidgets.QDialog):
     def __init__(self,graph:Graph,system:bool,parent=None):

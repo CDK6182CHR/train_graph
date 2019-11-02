@@ -3,7 +3,7 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .graph import Train,Graph
+from .data.graph import Train,Graph
 
 class ExchangeIntervalDialog(QtWidgets.QDialog):
     exchangeOk = QtCore.pyqtSignal(Train,Train)

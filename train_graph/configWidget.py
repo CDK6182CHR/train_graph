@@ -3,7 +3,7 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph
+from .data.graph import Graph
 from .colorWidget import ColorWidget
 from .typeDialog import TypeDialog
 

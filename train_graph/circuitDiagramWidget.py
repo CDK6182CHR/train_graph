@@ -4,7 +4,7 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
-from .graph import Graph,CircuitNode,Circuit
+from .data.graph import Graph,CircuitNode,Circuit
 from .pyETRCExceptions import *
 from .circuitDiagram import CircuitDiagram
 

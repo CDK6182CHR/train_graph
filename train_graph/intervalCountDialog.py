@@ -5,8 +5,8 @@
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 import sys
-from .graph import Graph
-from .train import Train
+from .data.graph import Graph
+from .data.train import Train
 from .trainFilter import TrainFilter
 from .intervalTrainDialog import IntervalTrainDialog
 

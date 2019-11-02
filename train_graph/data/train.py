@@ -14,7 +14,7 @@ from Timetable_new.utility import judge_type,stationEqual,strToTime
 import re,bisect
 from typing import Iterable,Union
 from .circuit import Circuit
-from .pyETRCExceptions import *
+from train_graph.pyETRCExceptions import *
 
 import cgitb
 cgitb.enable(format='text')
@@ -1511,7 +1511,7 @@ class Train():
     def businessOrStoppedStations(self)->list:
         lst = []
         for st in self.timetable:
-            if self.stationStopped(st) or st.get('business',True):
+            if self.stationStopped(st) or st.get('business',False):
                 lst.append(st)
         return lst
 

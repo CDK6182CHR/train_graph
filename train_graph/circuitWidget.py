@@ -4,9 +4,8 @@
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from .pyETRCExceptions import *
-from .circuit import Circuit
-from .graph import Graph
-from .train import Train
+from .data.circuit import Circuit
+from .data.graph import Graph,Train
 from .circuitDialog import CircuitDialog
 
 class CircuitWidget(QtWidgets.QWidget):
