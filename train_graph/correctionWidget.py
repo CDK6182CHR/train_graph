@@ -22,7 +22,7 @@ class CorrectionWidget(QtWidgets.QDialog):
 
     def initUI(self):
         self.setWindowTitle(f'时刻表重排*{self.train.fullCheci()}')
-        self.resize(600,800)
+        self.resize(700,800)
         vlayout = QtWidgets.QVBoxLayout()
         label = QtWidgets.QLabel('本功能提供时刻表排序中常见问题的手动更正功能。请先选择要操作的行，然后选择相应的操作。\n'
                                  '说明：上移（下移）功能将所有选中的行从当前位置向上（向下）移动一行；置顶、置底功能保持当前选中的行的顺序不变，而将它们移动到时刻表最前或者最后；反排功能将当前选中的第一行和最后一行之间的所有行顺序反排。')
@@ -70,10 +70,10 @@ class CorrectionWidget(QtWidgets.QDialog):
         btnSelectFlip.clicked.connect(self._select_flip)
 
         tableWidget = QtWidgets.QTableWidget()
-        tableWidget.setColumnCount(6)
+        tableWidget.setColumnCount(7)
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-        tableWidget.setHorizontalHeaderLabels(['选择','站名','到点','开点','停时','备注'])
-        for i,s in enumerate((40,100,100,100,80,80)):
+        tableWidget.setHorizontalHeaderLabels(['选择','站名','到点','开点','停时','区间','备注'])
+        for i,s in enumerate((40,100,100,100,80,80,80)):
             tableWidget.setColumnWidth(i,s)
         self.tableWidget = tableWidget
         vlayout.addWidget(tableWidget)
@@ -135,7 +135,45 @@ class CorrectionWidget(QtWidgets.QDialog):
             color.setAlpha(150)
             item.setBackground(QtGui.QBrush(color))
 
-        tableWidget.setItem(row,5,QtWidgets.QTableWidgetItem(note))
+        if row == 0:
+            dt_inter_str = '-'
+            dt_inter = 0
+        else:
+            cfsj_last = tableWidget.item(row-1,3).data(Qt.UserRole)
+            dt_inter = self.train.dt(cfsj_last,ddsj)
+            dt_inter_str = self.train.sec2str(dt_inter)
+        item = QtWidgets.QTableWidgetItem(dt_inter_str)
+        if dt_inter > 2*3600:
+            color = QtGui.QColor(Qt.red)
+            color.setAlpha(150)
+            item.setBackground(QtGui.QBrush(color))
+        tableWidget.setItem(row,5,item)
+        tableWidget.setItem(row,6,QtWidgets.QTableWidgetItem(note))
+
+    def updateIntervalTime(self,row:int):
+        """
+        已知指定行存在，更新它的区间时分。
+        """
+        if not 0<=row<self.tableWidget.rowCount():
+            return
+        tableWidget = self.tableWidget
+        ddsj = tableWidget.item(row,2).data(Qt.UserRole)
+        if row == 0:
+            dt_inter_str = '-'
+            dt_inter = 0
+        else:
+            cfsj_last = tableWidget.item(row-1,3).data(Qt.UserRole)
+            dt_inter = self.train.dt(cfsj_last,ddsj)
+            dt_inter_str = self.train.sec2str(dt_inter)
+        item = tableWidget.item(row,5)
+        item.setText(dt_inter_str)
+        if dt_inter > 2*3600:
+            color = QtGui.QColor(Qt.red)
+            color.setAlpha(150)
+            item.setBackground(QtGui.QBrush(color))
+        else:
+            item.setBackground(Qt.transparent)
+
 
     # slots
     def _up(self):
@@ -152,6 +190,8 @@ class CorrectionWidget(QtWidgets.QDialog):
             tableWidget.insertRow(row-1)
             self.setTableRow(dct,row-1)
             tableWidget.item(row-1,0).setCheckState(Qt.Checked)
+            self.updateIntervalTime(row)
+            self.updateIntervalTime(row+1)
 
     def _down(self):
         tableWidget = self.tableWidget
@@ -166,6 +206,8 @@ class CorrectionWidget(QtWidgets.QDialog):
             tableWidget.insertRow(row + 1)
             self.setTableRow(dct, row + 1)
             tableWidget.item(row + 1, 0).setCheckState(Qt.Checked)
+            self.updateIntervalTime(row)
+            self.updateIntervalTime(row+2)
 
     def _top(self):
         n=0  # 插入位置
@@ -181,6 +223,8 @@ class CorrectionWidget(QtWidgets.QDialog):
             if self.tableWidget.item(row,0).checkState() == Qt.Checked:
                 self.train.timetable.insert(n,self.train.timetable.pop(row))
                 n-=1
+            self.updateIntervalTime(n)
+            self.updateIntervalTime(row)
         self.setData()
 
     def _exchange(self):
@@ -190,6 +234,8 @@ class CorrectionWidget(QtWidgets.QDialog):
                 dct['ddsj'],dct['cfsj'] = dct['cfsj'],dct['ddsj']
                 self.setTableRow(dct,row)
                 self.tableWidget.item(row,0).setCheckState(Qt.Checked)
+                self.updateIntervalTime(row)
+                self.updateIntervalTime(row+1)
 
     def _reverse(self):
         low,high=self.tableWidget.rowCount()-1,0

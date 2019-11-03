@@ -68,8 +68,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.3.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20191021'
-        self.release = 'R32'  # 发布时再改这个
+        self.date = '20191103'
+        self.release = 'R33'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -1300,7 +1300,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         # 数据
         menu = menubar.addMenu("数据(&S)")
 
-        action = QtWidgets.QAction("线路数据库(测试)", self)
+        action = QtWidgets.QAction("线路数据库", self)
         action.setShortcut('ctrl+H')
         action.triggered.connect(self._view_line_data)
         menu.addAction(action)

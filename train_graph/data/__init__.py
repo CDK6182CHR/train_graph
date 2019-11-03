@@ -1,9 +1,13 @@
+from .graph import Graph,Circuit,Line,Ruler,Train
+from .forbid import Forbid
+from .route import Route
+
 __all__ = [
-    'circuit.Circuit',
-    'graph.Graph',
-    'forbid.Forbid',
-    'line.Line',
-    'route.Route',
-    'ruler.Ruler',
-    'train.Train',
+    'Graph',
+    'Circuit',
+    'Line',
+    'Ruler',
+    'Train',
+    'Forbid',
+    'Route'
 ]

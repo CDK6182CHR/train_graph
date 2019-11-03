@@ -246,7 +246,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         except ZeroDivisionError:
             speed = 0
 
-        tableWidget.setItem(now_line,5,QtWidgets.QTableWidgetItem(f"{mile:.1f}"))
+        tableWidget.setItem(now_line,5,QtWidgets.QTableWidgetItem(f"{mile:.3f}"))
 
         item = QtWidgets.QTableWidgetItem("%.2f" % speed)
         tableWidget.setItem(now_line, 6, item)
@@ -338,7 +338,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         tableWidget.cellWidget(row,2).setValue(int_sec%60)
         tableWidget.cellWidget(row,3).setValue(info.get("start",0))
         tableWidget.cellWidget(row,4).setValue(info.get("stop",0))
-        tableWidget.item(row,5).setText(f"{mile:.1f}")
+        tableWidget.item(row,5).setText(f"{mile:.3f}")
 
 
     #slots

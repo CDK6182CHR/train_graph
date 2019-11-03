@@ -111,7 +111,7 @@ class IntervalWidget(QtWidgets.QDialog):
         stationCount=self.train.intervalCount(self.graph,self.startStation,self.endStation)
         stopCount=self.train.intervalStopCount(self.graph,self.startStation,self.endStation)
 
-        self.mileEdit.setText(f'{mile:.2f} km')
+        self.mileEdit.setText(f'{mile:.3f} km')
         self.stationCountEdit.setText(str(stationCount))
         self.stopCountEdit.setText(str(stopCount))
         self.runTimeEdit.setText(f"{int(runTime/3600):02d}:{int(runTime%3600/60):02d}:{runTime%60:02d}")
@@ -120,13 +120,13 @@ class IntervalWidget(QtWidgets.QDialog):
 
         try:
             travelSpeed=mile/totalTime*3600
-            travelSpeed_str=f"{travelSpeed:.3f} km/h"
+            travelSpeed_str=f"{travelSpeed:.4f} km/h"
         except ZeroDivisionError:
             travelSpeed_str='NA'
 
         try:
             technicalSpeed=mile/runTime*3600
-            technicalSpeed_str=f"{technicalSpeed:.3f} km/h"
+            technicalSpeed_str=f"{technicalSpeed:.4f} km/h"
         except ZeroDivisionError:
             technicalSpeed_str='NA'
 

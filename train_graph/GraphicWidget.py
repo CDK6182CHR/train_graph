@@ -299,7 +299,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         line.setPen(defaultPen)
         leftItems.append(line)
 
-        nowItem: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText('-',
+        nowItem: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(' ',
                                                                   font=QtGui.QFont('Sim sum', 12))  # 当前车次信息显示在左上角
         # timeItems.append(nowItem)
         self.nowItem = nowItem
