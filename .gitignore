@@ -26,4 +26,6 @@ MANIFEST
 运行图项目 设计.pdf
 system.json
 config.json
+.pytype
+.mypy_cache
 

@@ -14,7 +14,9 @@ from Timetable_new.utility import judge_type,stationEqual,strToTime
 import re,bisect
 from typing import Iterable,Union
 from .circuit import Circuit
-from train_graph.pyETRCExceptions import *
+from ..pyETRCExceptions import *
+from enum import Enum
+from typing import List,Dict,Union
 
 import cgitb
 cgitb.enable(format='text')
@@ -69,6 +71,7 @@ class Train():
         self._passenger=passenger
         self._carriageCircuitName = None
         self._carriageCircuit = None
+        self._nameToIndexMap = None  # type: Dict[str,List[int]]  # 临时的随机访问工具
         if origin is not None:
             #从既有字典读取数据
             self.loadTrain(origin)
@@ -89,6 +92,17 @@ class Train():
                 self.type = tempcheci.type
             # self.autoType()  # 取消
             # self._autoUI()
+
+    def enableRandomAccess(self):
+        """
+        启用临时的站名->index随机访问映射。
+        """
+        self._nameToIndexMap = {}
+        for i,dct in enumerate(self.timetable):
+            self._nameToIndexMap.setdefault(dct['zhanming'],[]).append(i)
+
+    def disableRandomAccess(self):
+        self._nameToIndexMap = None
 
 
     def loadTrain(self,origin):
@@ -135,38 +149,12 @@ class Train():
     def setType(self,type:str):
         self.type = type
 
-    def autoType(self):
-        print("Train::autoType: 标记过时的函数")
-        checi = self.checi[1]
-        if not checi or checi == 'null':
-            checi = self.checi[2]
-        if not checi:
-            return
-        try:
-            self.type = judge_type(checi)
-        except:
-            print("judge checi",checi,self.checi)
-            #traceback.print_exc()
-        # print(self.type)
-
     def autoTrainType(self)->str:
         """
         2.0.2新增，调用graph获得自动类型。取代autoType函数。
         """
         self.setType(self.graph.checiType(self.fullCheci()))
         return self.type
-
-    def _autoUI(self):
-        print("Train::autoUI: 标记过时的函数")
-        # 默认颜色
-        if self.type == '快速':
-            self.UI["Color"] = '#FF0000'
-        elif self.type == '特快':
-            self.UI["Color"] = '#0000FF'
-        else:
-            self.UI["Color"] = ''
-
-        self.UI["LineWidth"] = 2
 
     def fullCheci(self):
         return self.checi[0]
@@ -511,6 +499,8 @@ class Train():
         """
         2.0新增。线性算法。
         """
+        if self._nameToIndexMap is not None and strict:
+            return self._nameToIndexMap.get(name,[-1])[0]
         for i,st in enumerate(self.timetable):
             if stationEqual(st['zhanming'],name,strict):
                 return i
@@ -1514,6 +1504,178 @@ class Train():
             if self.stationStopped(st) or st.get('business',False):
                 lst.append(st)
         return lst
+
+    class StationDiffType(Enum):
+        """
+        仅支持列出的这些。如果时刻和站名都改了，就不能认为有关联，直接定成不相关的，一个added一个deleted。
+        支持小于比较：越小表示修改程度越小。
+        """
+        Unchanged = 0b0  # 站名，时刻完全一致
+        ArriveModified = 0b01  # 名字没变，但时刻变了
+        DepartModified = 0b10
+        BothModified = 0b11
+        NameChanged = 0b100  # 站名改了，但时刻没变，一般用不到。
+        NewAdded = 0b1000  # 原来的没有，新增的
+        Deleted = 0b10000  # 本车次有，对方删了
+        def __lt__(self, other):
+            return self.value < other.value
+
+    def localDiff(self,train)->(list,int):
+        """
+        只考虑本线站，且不考虑折返情况下的粗糙比较。
+        """
+
+
+    def globalDiff(self,train)->(list,int):
+        """
+        2019年11月12日：未完成。
+        与train所示对象比较时刻表信息，返回加标签的时刻表和不同的数目。
+        以本车次为中心，对方车次修改本车次的视角来看。
+        返回：带有标记的本次列车时刻表和新时刻表序列并集，以及不同的数目。
+        返回数据结构：List<Tuple>
+        [
+            ( 调整类型，{原始时刻表结点数据1},{数据2}),
+            ...
+        ]
+        考虑洛谷P1140 相似基因的动态规划算法，或者编辑距离问题。对两个时刻表进行比较。
+        DP目标：使得两个时刻表的重叠度总和最大。
+        重叠度定义为：两个站表站名相同重叠度3，时刻相同重叠度1.
+        """
+        train:Train
+        def similarity(st1:dict,st2:dict)->int:
+            """
+            暂时只考虑站名相匹配而不考虑修改站名的情况
+            """
+            if st1['zhanming'] == st2['zhanming']:
+                return 1
+            elif st1['ddsj']==st2['ddsj'] and st1['cfsj']==st2['cfsj']:
+                return 0
+            return 0
+
+        table = []  # 动规字典。规定table[i][j]表示本车次从第i位开始，对方车次从第j位开始的子问题的解。
+        next_i = []  # 记录动规路径。记载table[i][j]的解跳转到了哪一个。
+        next_j = []
+        for i in range(len(self.timetable)):
+            lst = [-1 for j in range(len(train.timetable))]
+            table.append(lst)
+            next_i.append(lst[:])
+            next_j.append(lst[:])
+
+        def solve(s1:int,s2:int)->int:
+            """
+            递归的动规求解过程。s1, s2表示本车次和对方车次的开始下标子问题。返回相似度。
+            """
+            if s1>=len(self.timetable) and s2>=len(train.timetable):
+                # 一起越界，直接返回0
+                return 0
+            elif s1>=len(self.timetable):
+                # s1越界，则2和空白匹配一位，并移动一位。
+                next_i[s1-1][s2] = s1
+                next_j[s1-1][s2] = s2+1
+                return 0+solve(s1,s2+1)
+            elif s2>=len(self.timetable):
+                next_i[s1][s2-1] = s1+1
+                next_j[s1][s2-1] = s2
+                return 0+solve(s1+1,s2)
+
+            if table[s1][s2]!=-1:
+                return table[s1][s2]
+            rec1 = similarity(self.timetable[s1],train.timetable[s2])+solve(s1+1,s2+1)  # 直接对应
+            rec2 = 0+solve(s1,s2+1)  # 插入一个站
+            rec3 = 0+solve(s1+1,s2)  # 删除一个站
+            sol = max((rec1,rec2,rec3))
+            table[s1][s2] = sol
+            if sol==rec1:
+                next_i[s1][s2] = s1+1
+                next_j[s1][s2] = s2+1
+            elif sol==rec2:
+                next_i[s1][s2] = s1
+                next_j[s1][s2] = s2+1
+            else:
+                next_i[s1][s2] = s1+1
+                next_j[s1][s2] = s2
+            return sol
+
+        result = []  # 约定的返回格式
+
+        def addTuple(i:int,j:int)->None:
+            if i == -1:
+                tp = Train.StationDiffType.NewAdded
+                st1 = None
+                st2 = train.timetable[j]
+            elif j == -1:
+                tp = Train.StationDiffType.Deleted
+                st2 = None
+                st1 = self.timetable[i]
+            else:
+                st1 = self.timetable[i]
+                st2 = train.timetable[j]
+                tp = Train.stationCompareType(st1,st2)
+                if tp == Train.StationDiffType.NewAdded:
+                    # 说明两个没有关系，要分别新增。
+                    result.append(
+                        (Train.StationDiffType.Deleted,st1,None)
+                    )
+                    st1 = None
+            result.append(
+                (tp,st1,st2)
+            )
+
+        def generate_result(s1:int,s2:int):
+            """
+            递归地根据结果索引回去。
+            """
+            if s1==-1 or s2==-1:
+                return
+            if s1 >= len(self.timetable) and s2 >= len(train.timetable):
+                return
+            elif s1 >= len(self.timetable):
+                addTuple(-1,s2)
+                generate_result(s1,s2+1)
+                return
+            elif s2 >= len(train.timetable):
+                addTuple(s1,-1)
+                generate_result(s1+1,s2)
+                return
+            nxi = next_i[s1][s2]
+            nxj = next_j[s1][s2]
+            if nxi != s1 and nxj != s2:
+                addTuple(s1,s2)
+            elif nxi != s1:
+                addTuple(s1,-1)
+            else:
+                addTuple(-1,s2)
+            generate_result(nxi,nxj)
+
+        simi_value = solve(0,0)
+        generate_result(0,0)
+        return result,len(result)-simi_value
+
+    @staticmethod
+    def stationCompareType(st1:dict,st2:dict)->StationDiffType:
+        """
+        独立的比较两个车站信息。返回仅限于：
+        Unchanged
+        ArriveModified
+        DepartModified
+        BothModified
+        NameChanged
+        NewAdded  //约定表示其他一切情况。本函数无法判断二者的关系。
+        """
+        if st1['zhanming'] == st2['zhanming']:
+            if st1['ddsj'] == st2['ddsj'] and st1['cfsj'] == st2['cfsj']:
+                return Train.StationDiffType.Unchanged
+            elif st1['ddsj'] == st2['ddsj']:
+                return Train.StationDiffType.DepartModified
+            elif st1['cfsj'] == st2['cfsj']:
+                return Train.StationDiffType.ArriveModified
+            else:
+                return Train.StationDiffType.BothModified
+        else:
+            if st1['ddsj'] == st2['ddsj'] and st1['cfsj'] == st2['cfsj']:
+                return Train.StationDiffType.NameChanged
+        return Train.StationDiffType.NewAdded
+
 
 
     def __str__(self):

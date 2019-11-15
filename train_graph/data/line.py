@@ -448,7 +448,7 @@ class Line():
 
     def lineLength(self)->float:
         try:
-            return self.stations[-1]["licheng"]
+            return self.stations[-1]["licheng"]-self.stations[0]["licheng"]
         except IndexError:
             return 0
 
