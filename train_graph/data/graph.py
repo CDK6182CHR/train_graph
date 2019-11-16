@@ -4,13 +4,15 @@
 """
 from .line import Line
 from .ruler import Ruler
-from .train import Train
+from .train import Train,TrainStation
 from .circuit import Circuit, CircuitNode
 from copy import copy
 from Timetable_new.utility import stationEqual
 import json, re
 from datetime import datetime
 from train_graph.pyETRCExceptions import *
+from typing import List,Union,Tuple,Dict
+from enum import Enum
 
 config_file = 'config.json'
 
@@ -1816,6 +1818,50 @@ class Graph:
         except TypeError:
             return name
 
+    class TrainDiffType(Enum):
+        Unchanged = 0
+        Changed = 1
+        NewAdded = 2
+        Deleted = 3
+
+    def diffWith(self,graph)->List[Tuple[
+        TrainDiffType,
+        Union[List[Tuple[
+            Train.StationDiffType,TrainStation,TrainStation
+        ]],None],
+        Union[int,None],
+        Union[Train,None],
+        Union[Train,None]
+    ]]:
+        """
+        与graph所示运行图进行车次比较。返回：与车次时刻表对比类似：List<Tuple>。但是新增一项，不同的数目。
+        ( 类型，车次比较报告, 不同数目，train1, train2,)
+        如果某个列车不存在则该列车train位置, 车次比较报告位置，和不同的数目位置都是None。
+        不考虑车次的顺序。直接利用对方的fullCheciMap，浅拷贝一次。
+        前置条件：车次是identical的。
+        """
+        graph:Graph
+        result = []
+        anotherFullMap = graph.fullCheciMap.copy()
+        for train in self.trains():
+            checi = train.fullCheci()
+            train2 = anotherFullMap.get(checi,None)
+            if train2 is None:
+                result.append((
+                    Graph.TrainDiffType.Deleted,None,None,train,None
+                ))
+            else:
+                trainDiffData,value = train.globalDiff(train2)
+                tp = Graph.TrainDiffType.Unchanged if value==0 else Graph.TrainDiffType.Changed
+                result.append((
+                    tp,trainDiffData,value,train,train2
+                ))
+                del anotherFullMap[checi]
+        for _,train2 in anotherFullMap.items():
+            result.append((
+                Graph.TrainDiffType.NewAdded,None,None,None,train2
+            ))
+        return result
 
 if __name__ == '__main__':
     graph = Graph()

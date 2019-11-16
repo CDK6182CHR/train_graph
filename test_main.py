@@ -1,1 +1,1 @@
-from train_graph.test import test_train
+from train_graph.test.test_diffDialog import *

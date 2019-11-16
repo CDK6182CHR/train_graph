@@ -17,6 +17,7 @@ from .circuit import Circuit
 from ..pyETRCExceptions import *
 from enum import Enum
 from typing import List,Dict,Union
+from .trainstation import TrainStation
 
 import cgitb
 cgitb.enable(format='text')
@@ -139,12 +140,14 @@ class Train():
         """
         将读取到的时刻中的时间转为datetime.datetime对象
         """
-        for dict in self.timetable:
-            if isinstance(dict["ddsj"],str):
-                ddsj = strToTime(dict['ddsj'])
-                cfsj = strToTime(dict['cfsj'])
-                dict["ddsj"] = ddsj
-                dict["cfsj"] = cfsj
+        for i in range(len(self.timetable)):
+            dct = self.timetable[i]
+            if isinstance(dct["ddsj"],str):
+                ddsj = strToTime(dct['ddsj'])
+                cfsj = strToTime(dct['cfsj'])
+                dct["ddsj"] = ddsj
+                dct["cfsj"] = cfsj
+            self.timetable[i] = TrainStation(dct)
 
     def setType(self,type:str):
         self.type = type
@@ -1598,7 +1601,8 @@ class Train():
 
         result = []  # 约定的返回格式
 
-        def addTuple(i:int,j:int)->None:
+        def addTuple(i:int,j:int)->int:
+            diff = 1
             if i == -1:
                 tp = Train.StationDiffType.NewAdded
                 st1 = None
@@ -1611,45 +1615,47 @@ class Train():
                 st1 = self.timetable[i]
                 st2 = train.timetable[j]
                 tp = Train.stationCompareType(st1,st2)
+                if tp == Train.StationDiffType.Unchanged:
+                    diff = 0
                 if tp == Train.StationDiffType.NewAdded:
                     # 说明两个没有关系，要分别新增。
                     result.append(
                         (Train.StationDiffType.Deleted,st1,None)
                     )
+                    diff = 2
                     st1 = None
             result.append(
                 (tp,st1,st2)
             )
+            return diff
 
-        def generate_result(s1:int,s2:int):
+        def generate_result(s1:int,s2:int)->int:
             """
             递归地根据结果索引回去。
             """
             if s1==-1 or s2==-1:
-                return
+                return 0
             if s1 >= len(self.timetable) and s2 >= len(train.timetable):
-                return
+                return 0
             elif s1 >= len(self.timetable):
                 addTuple(-1,s2)
-                generate_result(s1,s2+1)
-                return
+                return 1+generate_result(s1,s2+1)
             elif s2 >= len(train.timetable):
                 addTuple(s1,-1)
-                generate_result(s1+1,s2)
-                return
+                return 1+generate_result(s1+1,s2)
             nxi = next_i[s1][s2]
             nxj = next_j[s1][s2]
             if nxi != s1 and nxj != s2:
-                addTuple(s1,s2)
+                diff = addTuple(s1,s2)
             elif nxi != s1:
-                addTuple(s1,-1)
+                diff = addTuple(s1,-1)
             else:
-                addTuple(-1,s2)
-            generate_result(nxi,nxj)
+                diff = addTuple(-1,s2)
+            return diff+generate_result(nxi,nxj)
 
         simi_value = solve(0,0)
-        generate_result(0,0)
-        return result,len(result)-simi_value
+        diff_count = generate_result(0,0)
+        return result,diff_count
 
     @staticmethod
     def stationCompareType(st1:dict,st2:dict)->StationDiffType:

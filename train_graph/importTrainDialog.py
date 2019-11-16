@@ -8,6 +8,7 @@ from .data.graph import Graph,Train,Ruler,Circuit,CircuitNode
 from .trainWidget import TrainWidget
 from .trainTimetable import TrainTimetable
 from .trainInfoWidget import TrainInfoWidget
+from .trainDiffDialog import TrainDiffDialog
 from .pyETRCExceptions import *
 
 class ImportTrainDialog(QtWidgets.QDialog):
@@ -35,6 +36,11 @@ class ImportTrainDialog(QtWidgets.QDialog):
         actionInfo.triggered.connect(self._show_info)
         actionInfo.setShortcut('Alt+Q')
         self.trainWidget.trainTable.addAction(actionInfo)
+
+        actionDiff = QtWidgets.QAction('车次对照',self.trainWidget.trainTable)
+        actionDiff.triggered.connect(self._train_diff)
+        self.trainWidget.trainTable.addAction(actionDiff)
+
         self.trainWidget.trainTable.setContextMenuPolicy(Qt.ActionsContextMenu)
 
         vlayout = QtWidgets.QVBoxLayout()
@@ -170,6 +176,19 @@ class ImportTrainDialog(QtWidgets.QDialog):
 
         dialog.setLayout(vlayout)
         dialog.exec_()
+
+    def _train_diff(self):
+        row = self.trainWidget.trainTable.currentRow()
+        train = self.trainWidget.trainByRow(row)
+        if train is None:
+            return
+        train2 = self.graph.trainFromCheci(train.fullCheci(),full_only=True)
+        if train2 is None:
+            QtWidgets.QMessageBox.information(self,'提示','只有本线中存在相同车次的列车才能比较！')
+            return
+        data,value = train2.globalDiff(train)
+        dialog = TrainDiffDialog(train2,train,self.graph,data)
+        dialog.exec()
 
     def _ok_clicked(self):
         """
