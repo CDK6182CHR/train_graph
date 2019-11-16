@@ -13,6 +13,7 @@ from datetime import datetime
 from train_graph.pyETRCExceptions import *
 from typing import List,Union,Tuple,Dict
 from enum import Enum
+import time
 
 config_file = 'config.json'
 
@@ -1122,14 +1123,18 @@ class Graph:
         此函数只能在临时对象中调用。自身的车次表、交路表应当是空的。
         注意，此操作后的circuits是不安全的，执行train()可能会引发TrianNotFoundException。
         """
+        tm1 = time.perf_counter()
         for train in graph.trains():
-            if train.localCount(self) >= 2:
+            # if train.localCount(self) >= 2:
+            if train.isLocalTrain(self):
                 circuit = train.carriageCircuit()
                 if circuit is not None:
                     if circuit not in self._circuits:
                         circuit.setGraph(self)
                         self.addCircuit(circuit)
                 self.addTrain(train)
+        tm2 = time.perf_counter()
+        print("预导入线路历时",tm2-tm1)
 
     def setMarkdown(self, mark: str):
         self._markdown = mark
@@ -1824,7 +1829,7 @@ class Graph:
         NewAdded = 2
         Deleted = 3
 
-    def diffWith(self,graph)->List[Tuple[
+    def diffWith(self,graph,localOnly:bool,callBack=None)->List[Tuple[
         TrainDiffType,
         Union[List[Tuple[
             Train.StationDiffType,TrainStation,TrainStation
@@ -1840,6 +1845,7 @@ class Graph:
         不考虑车次的顺序。直接利用对方的fullCheciMap，浅拷贝一次。
         前置条件：车次是identical的。
         """
+        tm1 = time.perf_counter()
         graph:Graph
         result = []
         anotherFullMap = graph.fullCheciMap.copy()
@@ -1850,17 +1856,27 @@ class Graph:
                 result.append((
                     Graph.TrainDiffType.Deleted,None,None,train,None
                 ))
+                if callBack:
+                    callBack(1)
             else:
-                trainDiffData,value = train.globalDiff(train2)
+                trainDiffData,value = train.globalDiff(train2)  # 最慢
                 tp = Graph.TrainDiffType.Unchanged if value==0 else Graph.TrainDiffType.Changed
                 result.append((
                     tp,trainDiffData,value,train,train2
                 ))
                 del anotherFullMap[checi]
+                if callBack:
+                    callBack(2)
         for _,train2 in anotherFullMap.items():
-            result.append((
-                Graph.TrainDiffType.NewAdded,None,None,None,train2
-            ))
+            train2:Train
+            if not localOnly or train2.isLocalTrain(self):
+                result.append((
+                    Graph.TrainDiffType.NewAdded,None,None,None,train2
+                ))
+            if callBack:
+                callBack(1)
+        tm2 = time.perf_counter()
+        print("Graph::diffWith()历时",tm2-tm1)
         return result
 
 if __name__ == '__main__':

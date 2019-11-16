@@ -51,6 +51,7 @@ from .changeTrainIntervalDialog import ChangeTrainIntervalDialog
 from .exchangeIntervalDialog import ExchangeIntervalDialog
 from .importTrainDialog import ImportTrainDialog
 from .linedb.lineLibDialog import LineLibDialog
+from .graphDiffDialog import GraphDiffDialog
 import time
 from .thread import ThreadDialog
 import traceback
@@ -1171,6 +1172,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action.setShortcut('ctrl+J')
         menu.addAction(action)
 
+        action = QtWidgets.QAction('运行图对照',self)
+        action.setShortcut('ctrl+6')
+        action.triggered.connect(self._graph_diff)
+        menu.addAction(action)
+
         actionZoonIn = QtWidgets.QAction('放大视图', self)
         actionZoonIn.setShortcut('ctrl+=')
         actionZoomOut = QtWidgets.QAction('缩小视图', self)
@@ -1902,6 +1908,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             train.autoStartEnd()
         self.trainWidget.updateAllTrains()
         self._dout('自动设置完成！可手动重新铺画运行图（shift+F5）以查看效果。')
+
+    def _graph_diff(self):
+        dialog = GraphDiffDialog(self.graph,self)
+        dialog.exec_()
 
     def _joint_graph(self):
         dialog = QtWidgets.QDialog(self)

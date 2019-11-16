@@ -476,6 +476,8 @@ class LineLibDialog(QtWidgets.QDialog):
         """
         if event.key() != Qt.Key_Escape:
             super().keyPressEvent(event)
+        else:
+            self.close()
 
 
 

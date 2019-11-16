@@ -700,6 +700,21 @@ class Train():
                 count+=1
         return count
 
+    def isLocalTrain(self,graph)->bool:
+        """
+        2019.11.16新增：
+        在导入车次和车次对比中调用，判断本线在graph中的站数是否大于2.
+        由于localCount()是线性算法，而这一步判断根本不需要具体的站数，如此调用代价太过昂贵。
+        前置条件：graph已经实现了根据站名的近似常数时间查找，但train没实现。遍历本车次站名，依次判断到2直接返回。
+        """
+        cnt = 0
+        for st_dict in self.stationDicts():
+            if graph.stationInLine(st_dict['zhanming']):
+                cnt+=1
+            if cnt >= 2:
+                return True
+        return False
+
     def intervalStopCount(self,graph,start,end):
         count = 0
         started = False
@@ -1576,7 +1591,7 @@ class Train():
                 next_i[s1-1][s2] = s1
                 next_j[s1-1][s2] = s2+1
                 return 0+solve(s1,s2+1)
-            elif s2>=len(self.timetable):
+            elif s2>=len(train.timetable):
                 next_i[s1][s2-1] = s1+1
                 next_j[s1][s2-1] = s2
                 return 0+solve(s1+1,s2)
