@@ -1829,7 +1829,7 @@ class Graph:
         NewAdded = 2
         Deleted = 3
 
-    def diffWith(self,graph,localOnly:bool,callBack=None)->List[Tuple[
+    def diffWith(self,graph,callBack=None)->List[Tuple[
         TrainDiffType,
         Union[List[Tuple[
             Train.StationDiffType,TrainStation,TrainStation
@@ -1844,6 +1844,7 @@ class Graph:
         如果某个列车不存在则该列车train位置, 车次比较报告位置，和不同的数目位置都是None。
         不考虑车次的顺序。直接利用对方的fullCheciMap，浅拷贝一次。
         前置条件：车次是identical的。
+        2019.11.17修改：将判断是否是本线车的逻辑移到Dialog里面。理由是减少反复的比较，而仅在读取的时候比较一次。判断是否本线车的代价要远小于比较交叉车次的代价，故此。
         """
         tm1 = time.perf_counter()
         graph:Graph
@@ -1869,8 +1870,7 @@ class Graph:
                     callBack(2)
         for _,train2 in anotherFullMap.items():
             train2:Train
-            if not localOnly or train2.isLocalTrain(self):
-                result.append((
+            result.append((
                     Graph.TrainDiffType.NewAdded,None,None,None,train2
                 ))
             if callBack:
