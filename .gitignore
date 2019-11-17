@@ -17,13 +17,12 @@ xpinyin
 *.exe
 *.dll
 MANIFEST
+doc
 *.pdf
 *.pyd
 *.pptx
 *.docx
 *.xlsx
-*.pdf
-运行图项目 设计.pdf
 system.json
 config.json
 .pytype

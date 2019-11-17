@@ -39,6 +39,9 @@ class GraphDiffDialog(QtWidgets.QDialog):
         self.tableWidget = tw
         tw.setColumnCount(6)
         tw.setHorizontalHeaderLabels(('车次','始发1','终到1','修改数','始发2','终到2'))
+        header:QtWidgets.QHeaderView = tw.horizontalHeader()
+        header.setSortIndicatorShown(True)
+        header.sectionClicked.connect(tw.sortByColumn)
         for i,s in enumerate((130,100,100,90,100,100)):
             tw.setColumnWidth(i,s)
         tw.setEditTriggers(tw.NoEditTriggers)
@@ -123,7 +126,7 @@ class GraphDiffDialog(QtWidgets.QDialog):
                 self._setItemColor(row, 1, Qt.darkGray)
                 self._setItemColor(row, 2, Qt.darkGray)
             else:
-                item.setText(str(trainDiffCount))
+                item.setData(Qt.DisplayRole,trainDiffCount)
                 if trainDiffCount != 0:
                     for col in (0,1,2,4,5):
                         self._setItemColor(row,col,Qt.red)

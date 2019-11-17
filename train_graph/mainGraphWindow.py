@@ -69,8 +69,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.3.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20191115'
-        self.release = 'R33'  # 发布时再改这个
+        self.date = '20191117'
+        self.release = 'R34'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -2064,6 +2064,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle('调整当前车次时刻')
+        dialog.resize(500,600)
         train = self.currentTrain()
         if train is None:
             self._derr("当前没有选中车次！")
@@ -2104,7 +2105,12 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
         layout.addLayout(flayout)
 
+        label = QtWidgets.QLabel('提示：请在下表中选择要调整时刻的站，到发时刻同时调整。如果不选择，则没有时刻会被调整。')
+        label.setWordWrap(True)
+        layout.addWidget(label)
+
         listWidget = QtWidgets.QListWidget()
+        listWidget.setSelectionMode(listWidget.MultiSelection)
         for name, ddsj, cfsj in train.station_infos():
             ddsj_str = ddsj.strftime('%H:%M:%S')
             cfsj_str = cfsj.strftime('%H:%M:%S')
@@ -2114,7 +2120,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             item = QtWidgets.QListWidgetItem(f"{name}\t{ddsj_str}/{cfsj_str}")
             item.setData(-1, name)
             listWidget.addItem(item)
-        listWidget.setSelectionMode(listWidget.MultiSelection)
+            item.setSelected(True)
         dialog.listWidget = listWidget
 
         layout.addWidget(listWidget)

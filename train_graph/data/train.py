@@ -181,12 +181,12 @@ class Train():
 
             cfsj = strToTime(cfsj)
 
-        dict = {
+        dict = TrainStation({
             "zhanming":name,
             "ddsj":ddsj,
             "cfsj":cfsj,
             "note":note,
-        }
+        })
         if business is None:
             business = self.graph.lineStationBusiness(name,
                     self.isPassenger(detect=True),default=None) and self.stationStoppedOrStartEnd(dict)
@@ -899,7 +899,7 @@ class Train():
         st_dict["ddsj"] += dt
         st_dict["cfsj"] += dt
 
-    def stationDict(self,name,strict=False):
+    def stationDict(self,name,strict=False)->TrainStation:
         """
         线性算法
         """
@@ -908,7 +908,7 @@ class Train():
                 return st
         return None
 
-    def stationBusiness(self,dct:dict)->bool:
+    def stationBusiness(self,dct:TrainStation)->bool:
         """
         2.0.2开始新增函数。返回某个站是否办理业务。注意，此项数据原则上只能从这里获取，不能直接用dict取得。
         若dct中有business字段，直接返回；若没有此项数据，则从graph中查询后返回。这个过程会比较慢。
@@ -1186,11 +1186,11 @@ class Train():
             if st['note'] == '推定':
                 self.timetable.remove(st)
 
-    def stationInTimetable(self,name:str,strict=False):
+    def stationInTimetable(self,name:str,strict=False)->bool:
         return bool(filter(lambda x:stationEqual(name,x,strict),
                            map(lambda x:x['zhanming'],self.timetable)))
 
-    def stationStopped(self,station:dict)->bool:
+    def stationStopped(self,station:TrainStation)->bool:
         """
         注意，输入的是字典。不考虑始发终到。
         """
@@ -1460,7 +1460,7 @@ class Train():
             time_str += f', {add}'
         return time_str
 
-    def departure(self)->dict:
+    def departure(self)->TrainStation:
         """
         如果时刻表第一个站是始发站，返回它。否则返回None。
         适用于严格要求判断始发站的场景，如交路连接。
@@ -1474,7 +1474,7 @@ class Train():
             return dct
         return None
 
-    def destination(self)->dict:
+    def destination(self)->TrainStation:
         """
         如果时刻表最后一个站是终到站，返回。否则返回None。
         """
