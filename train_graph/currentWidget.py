@@ -598,7 +598,10 @@ class CurrentWidget(QtWidgets.QWidget):
 
         radioDown = QtWidgets.QRadioButton('下行')
         radioUp = QtWidgets.QRadioButton("上行")
-        radioDown.setChecked(True)
+        if down:
+            radioDown.setChecked(True)
+        else:
+            radioUp.setChecked(True)
         box = QtWidgets.QButtonGroup(self)
         box.addButton(radioDown)
         box.addButton(radioUp)
@@ -644,10 +647,7 @@ class CurrentWidget(QtWidgets.QWidget):
             0x3: '上下行'
         }
         for st in self.graph.stationDicts(reverse=not down):
-            try:
-                st["direction"]
-            except KeyError:
-                st["direction"] = 0x3
+            st.setdefault('direction',0x3)
 
             text = "%s\t%s" % (st["zhanming"], dir_dict[st["direction"]])
             item = QtWidgets.QListWidgetItem(text)

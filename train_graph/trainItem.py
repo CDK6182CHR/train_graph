@@ -364,8 +364,17 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.spanItemHeight = endLabelText.boundingRect().height()
         return endLabelText
 
-    def _setEndItem(self,end_point:QtCore.QPointF,brush:QtGui.QBrush,
-                    checi:str,down:bool,endAtThis:bool)->QtGui.QPainterPath:
+    def addEndItem(self):
+        pathItem:QtWidgets.QGraphicsPathItem = self.pathItem
+        path:QtGui.QPainterPath = pathItem.path()
+        end_point:QtCore.QPointF = path.currentPosition()
+        brush:QtGui.QBrush = QtGui.QBrush(self._trainColor())
+        checi = self.train.fullCheci() if self.showFullCheci else self.train.getCheci(self.down)
+        endAtThis = self.endAtThis
+        self._setEndItem(end_point,brush,checi,self.down,endAtThis)
+
+    def _setEndItem(self, end_point:QtCore.QPointF, brush:QtGui.QBrush,
+                    checi:str, down:bool, endAtThis:bool)->QtGui.QPainterPath:
         """
         绘制终点标签。
         同时设定spanItemHeight和~width两个attribute。

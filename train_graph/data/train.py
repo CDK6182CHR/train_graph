@@ -344,16 +344,25 @@ class Train():
         if self.item is None:
             self.resetYValueMap()
 
-    def firstItem(self):
-        if self._items:
-            return self._items[0]
-        return None
-
     def items(self):
         return self._items
 
     def firstItem(self):
         for item in self._items:
+            return item
+        return None
+
+    def lastItem(self):
+        for item in reversed(self._items):
+            return item
+        return None
+
+    def takeLastItem(self):
+        if self._items:
+            return self._items.pop()
+
+    def lastItemInfo(self)->dict:
+        for item in reversed(self._itemInfo):
             return item
         return None
 

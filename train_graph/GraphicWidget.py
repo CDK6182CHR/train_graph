@@ -762,22 +762,47 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 else:
                     showStart = False
                 end, status = item.setLine(start, showStartLabel=showStart)
-                if status != TrainItem.Invalid and item.station_count >= 2:
-                    # 暂不确定是否要完全封杀station_count<2的车次
-                    train.addItem(item)
-                    # 铺画完毕后，item.start/endStation参数被补齐。
-                    if item.down is not None:
-                        # 只要铺画了有效的运行线，down就不可能是None
-                        dct = {
-                            "start":item.startStation,
-                            "end":item.endStation,
-                            "down":item.down,
-                            "show_start_label":showStart,
-                            "show_end_label":False if status == TrainItem.Reversed else True,
-                        }
-                        train.addItemInfoDict(dct)
-                        self.scene.addItem(item)
-                        item.setZValue(5)
+                if status != TrainItem.Invalid:
+                    if item.station_count >= 2:
+                        # 暂不确定是否要完全封杀station_count<2的车次
+                        train.addItem(item)
+                        # 铺画完毕后，item.start/endStation参数被补齐。
+                        if item.down is not None:
+                            # 只要铺画了有效的运行线，down就不可能是None
+                            dct = {
+                                "start":item.startStation,
+                                "end":item.endStation,
+                                "down":item.down,
+                                "show_start_label":showStart,
+                                "show_end_label":False if status == TrainItem.Reversed else True,
+                            }
+                            train.addItemInfoDict(dct)
+                            self.scene.addItem(item)
+                            item.setZValue(5)
+                    else:
+                        # 如果下一段的运行线不存在，而上一段的被以Reversed方向终止，则需要补上终止标签。
+                        # 2019.11.18添加，解决杭深线D6315问题。
+                        lastItemDict = train.lastItemInfo()
+                        if train.fullCheci() == 'D6318/5':
+                            print(f"D6318/5 {status} ")
+                        if status == TrainItem.Pass and lastItemDict is not None\
+                                and not lastItemDict['show_end_label']:
+                            print(f"返回添加上一级标签：车次{train.fullCheci()}")
+                            lastItemDict['show_end_label'] = True
+                            newItem = TrainItem(train,self.graph,self,lastItemDict['start'],lastItemDict['end'],
+                                        lastItemDict['down'],
+                                        validWidth=self.graph.UIConfigData().setdefault('valid_width', 3),
+                                        showFullCheci=self.graph.UIConfigData()['showFullCheci'],
+                                        markMode=self.graph.UIConfigData()['show_time_mark']
+                                    )
+                            newItem.setLine(showStartLabel=lastItemDict['show_start_label'],
+                                            showEndLabel=True)
+                            oldItem = train.takeLastItem()
+                            self.scene.removeItem(oldItem)
+                            self.scene.addItem(newItem)
+                            train.addItem(newItem)
+                            newItem.setZValue(5)
+
                 start = end
 
         else:  # 手动模式，按照要求铺画
