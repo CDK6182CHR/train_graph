@@ -53,7 +53,6 @@ from .importTrainDialog import ImportTrainDialog
 from .linedb.lineLibDialog import LineLibDialog
 from .graphDiffDialog import GraphDiffDialog
 import time
-from .thread import ThreadDialog
 import traceback
 import cgitb
 
@@ -643,34 +642,41 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         if train is None:
             self._derr("当前车次事件时刻表：当前没有选中车次！")
             return
-        thread = ThreadDialog(self, self.GraphWidget)
-        dialog = QtWidgets.QProgressDialog(self)
-        dialog.setRange(0, 100)
-        dialog.setWindowTitle('正在处理')
-        dialog.setValue(1)
 
-        thread.eventsOK.connect(lambda events: self._train_event_out_ok(events, dialog))
+        dialog = QtWidgets.QProgressDialog(self)
+        dialog.setRange(0, 0)
+        dialog.setMinimumDuration(100)
+        dialog.setCancelButtonText('取消')
+        dialog.setWindowTitle('正在处理')
+        dialog.setLabelText('正在计算事件表，请稍候...')
+        dialog.setValue(0)
+        dialog.setAutoReset(True)
+
+        # inner class
+        class GetTrainEventThread(QtCore.QThread):
+            eventOK = QtCore.pyqtSignal(list)
+            def __init__(self,graphWidget:GraphicsWidget,parent=None):
+                super(GetTrainEventThread, self).__init__(parent)
+                self.graphWidget = graphWidget
+
+            def run(self):
+                events = self.graphWidget.listTrainEvent()
+                self.eventOK.emit(events)
+
+
+        thread = GetTrainEventThread(self.GraphWidget)
+        thread.eventOK.connect(lambda events:self._train_event_out_ok(events,dialog))
         thread.start()
-        # print('start ok')
-        i = 1
-        while i <= 99:
-            if i <= 90:
-                time.sleep(0.05)
-            else:
-                time.sleep(1)
-            dialog.setValue(i)
-            i += 1
+        while True:
             QtCore.QCoreApplication.processEvents()
             if dialog.wasCanceled():
                 thread.terminate()
                 return
-        return
 
         # events = self.GraphWidget.listTrainEvent()
 
     def _train_event_out_ok(self, events: list, dialog):
         print('list ok')
-        dialog.setValue(100)
         dialog.close()
         train: Train = self.GraphWidget.selectedTrain
         if not events:

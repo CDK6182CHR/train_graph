@@ -46,6 +46,7 @@ class Line():
         self.parent = None  # lineDB中使用
         if origin is not None:
             self.loadLine(origin)
+        self.verifyNotes()
 
     def setItem(self,item):
         self.item = item
@@ -469,6 +470,39 @@ class Line():
         if not self.stations:
             return ''
         return self.stations[-1]['zhanming']
+
+    def splitStationDirection(self,old_name:str,down_name:str,up_name:str):
+        """
+        2019.11.28新增
+        将线路中一站拆分为两个站。拆分后的站具有相同的里程，并分别为下行单向和上行单向站。
+        同时修改站名映射表，修改天窗信息表，标尺信息表。
+        """
+        old_idx = self.stationIndex(old_name)
+        old_dict:dict = self.stations[old_idx]
+        if old_dict['direction'] != Line.BothVia:
+            print("Line::splitStationDirection: 必须是双向通过站，才可以拆分")
+            return
+        elif down_name!=old_name and self.stationExisted(down_name):
+            print("Line::splitStationDirection: 下行站名重复")
+            return
+        elif up_name!=old_name and self.stationExisted(up_name) or up_name==down_name:
+            print("Line::splitStationDirection: 上行站名重复")
+            return
+        for ruler in self.rulers:
+            ruler.onStationDirectionSplited(old_name,down_name,up_name)
+        old_dict['zhanming'] = down_name
+        old_dict['direction'] = Line.DownVia
+        del self.nameMap[old_name]
+        self.delFieldMap(old_name)
+        # 添加新的车站信息
+        up_dict = old_dict.copy()
+        up_dict['zhanming'] = up_name
+        up_dict['direction'] = Line.UpVia
+        self.stations.insert(old_idx+1,up_dict)
+        self.nameMap[up_name] = up_dict
+        self.addFieldMap(up_name)
+
+
 
     @staticmethod
     def bool2CheckState(t):

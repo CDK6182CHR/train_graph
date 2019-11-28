@@ -162,3 +162,22 @@ class Forbid:
                 node['fazhan']=new
             if node['daozhan'] == old:
                 node['daozhan'] = new
+
+    def onStationDirectionSplited(self,old_name:str,down_name:str,up_name:str):
+        """
+        2019.11.28新增。
+        在将一个站拆成上下行两个站且没有动Line数据时调用。
+        """
+        if not self.different():
+            self.setDifferent(True)
+        for node in self._nodes:
+            if stationEqual(node['fazhan'],old_name,strict=True):
+                if self._line.isDownGap(node['fazhan'],node['daozhan']):
+                    node['fazhan'] = down_name
+                else:
+                    node['fazhan'] = up_name
+            elif stationEqual(node['daozhan'],old_name,strict=True):
+                if self._line.isDownGap(node['fazhan'],node['daozhan']):
+                    node['daozhan'] = down_name
+                else:
+                    node['daozhan'] = up_name

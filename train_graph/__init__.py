@@ -1,32 +1,23 @@
 __all__ = [
     'batchChangeStationDialog',  # batchChangeStationDialog.py
 'changeStationDialog',  # changeStationDialog.py
-'checi3',  # checi3.py
 'colorWidget',  # colorWidget.py
 'configWidget',  # configWidget.py
 'currentWidget',  # currentWidget.py
 'detectWidget',  # detectWidget.py
-'direction',  # direction.py
-'forbid',  # forbid.py
 'forbidWidget',  # forbidWidget.py
-'graph',  # graph.py
 'GraphicWidget',  # GraphicWidget.py
 'intervalWidget',  # intervalWidget.py
-'line',  # line.py
 'lineDB',  # lineDB.py
 'lineWidget',  # lineWidget.py
 'mainGraphWindow',  # mainGraphWindow.py
-'main_window',  # main_window.py
-'ruler',  # ruler.py
 'rulerPaint',  # rulerPaint.py
 'rulerWidget',  # rulerWidget.py
 'stationvisualize',  # stationvisualize.py
-'thread',  # thread.py
-'train',  # train.py
 'trainComparator',  # trainComparator.py
 'trainFilter',  # trainFilter.py
 'trainItem',  # trainItem.py
 'trainWidget',  # trainWidget.py
 'typeWidget',  # typeWidget.py
-'utility',  # utility.py
+'data',  #data
 ]

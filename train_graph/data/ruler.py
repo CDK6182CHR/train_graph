@@ -426,3 +426,28 @@ class Ruler():
     def line(self):
         return self._line
 
+    def onStationDirectionSplited(self,old_name:str,down_name:str,up_name:str):
+        """
+        2019.11.28添加。
+        当站名被按上下行拆分时调用。
+        precondition: Line中站名没有修改。
+        只需要改名字，不需要插入新的结点。
+        """
+        self.resetAllPassed()
+        if not self.different():
+            self.setDifferent(True,True)
+            print("Ruler::onStationDirectionSplited: 自动设为上下行分设标尺。")
+        for node in self._nodes:
+            if stationEqual(node['fazhan'],old_name,strict=True):
+                if self._line.isDownGap(node['fazhan'],node['daozhan']):
+                    node['fazhan'] = down_name
+                else:
+                    node['fazhan'] = up_name
+            elif stationEqual(node['daozhan'],old_name,strict=True):
+                if self._line.isDownGap(node['fazhan'],node['daozhan']):
+                    node['daozhan'] = down_name
+                else:
+                    node['daozhan'] = up_name
+
+    def count(self)->int:
+        return len(self._nodes)

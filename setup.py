@@ -4,7 +4,7 @@ from setuptools import find_packages
 # 定义发布的包文件的信息
 setup(
 name = "train_graph_tools",  # 发布的包文件名称
-version = "2.3.1",   # 发布的包的版本序号
+version = "2.3.3",   # 发布的包的版本序号
 description = "train_graph_tools",  # 发布包的描述信息
 author = "xep",   # 发布包的作者信息
 author_email = "mxy0268@qq.com",  # 作者联系邮箱信息
