@@ -31,11 +31,12 @@ class CircuitNode:
     dict outInfo();
     Graph& graph;
     """
-    def __init__(self,graph,*,origin=None,checi=None,train=None,start=None,end=None,link=True):
+    def __init__(self,graph,*,origin=None,checi=None,train=None,start=None,end=None,link=True,virtual=False):
         self._checi = checi
         self._train = train
         self._start=start
         self._end=end
+        self._virtual = virtual
         self.link=link
         self.graph=graph
         if origin is not None:
@@ -48,6 +49,7 @@ class CircuitNode:
         self.link = origin['link']
         self._start = origin['start']
         self._end = origin['end']
+        self._virtual = origin.get('virtual',False)
 
     def outInfo(self)->dict:
         return {
@@ -55,12 +57,16 @@ class CircuitNode:
             "start":self._start,
             "end":self._end,
             "link":self.link,
+            "virtual":self._virtual,
         }
 
     def train(self):
         """
         保证checi是有效的。否则直接raise.
+        如果是virtual，直接返回None
         """
+        if self._virtual:
+            return None
         if self._train is not None:
             return self._train
         self._train = self.graph.trainFromCheci(self._checi)
@@ -72,15 +78,28 @@ class CircuitNode:
         """
         导入车次时调用。仅按照车次，在运行图中查找Train对象。如果找不到，返回None。
         """
+        if self._virtual:
+            return None
         return self.graph.trainFromCheci(self._checi,full_only=True)
 
     def checi(self)->str:
         """
         若有train对象，则以train对象为准。
         """
+        if self._virtual:
+            return self._checi
         if self._train is not None:
             self._checi = self._train.fullCheci()
         return self._checi
+
+    def checiWithMark(self)->str:
+        """
+        2019.11.28新增：在虚拟车次后添加“(虚拟)备注”
+        """
+        if self._virtual:
+            return self.checi()+"(虚拟)"
+        else:
+            return self.checi()
 
     def setCheci(self,checi:str):
         self._checi=checi
@@ -93,13 +112,13 @@ class CircuitNode:
         if self.train() is not None:
             return self.train().localFirst(self.graph)
         else:
-            return None
+            return self._start
 
     def endStation(self)->str:
         if self.train() is not None:
             return self.train().localLast(self.graph)
         else:
-            return None
+            return self._end
 
     def setGraph(self,graph):
         """
@@ -108,11 +127,16 @@ class CircuitNode:
         self.graph=graph
         self._train=None
 
+    def isVirtual(self)->bool:
+        return self._virtual
+
+
 class Circuit:
     """
     str _name;//交路名称，保证不重复
     list<CircuitNode> _order;//套用顺序
     static const int CARRIAGE=0x0,MOTER=0x1; // 机车交路和车底交路的枚举常量。目前只支持车底交路。
+    bool _virtual; //是否是虚拟车次。虚拟车次指在本线没有对应Train实体。
     int _type; // CARRIAGE or MOTER
     str _note; //交路说明，任意字符串
     str _model; //车底，任何字符串
@@ -213,11 +237,15 @@ class Circuit:
         return f"Circuit<{self.name()}>"
 
     def orderStr(self)->str:
-        try:
-            return '-'.join(map(lambda x:x.train().fullCheci(),self._order))
-        except TrainNotFoundException as e:
-            print("Circuit::orderStr",e)
-            return 'NA'
+        """
+        2019.11.28兼容虚拟车次：使用node.checi()方法。
+        """
+        # try:
+        #     return '-'.join(map(lambda x:x.train().fullCheci(),self._order))
+        # except TrainNotFoundException as e:
+        #     print("Circuit::orderStr",e)
+        #     return 'NA'
+        return '-'.join(map(lambda x:x.checiWithMark(),self._order))
 
     def checiList(self):
         """
