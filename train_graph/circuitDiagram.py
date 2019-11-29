@@ -60,6 +60,8 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
         last_time = "00:00:00"
         for node in self.circuit.nodes():
             train = node.train()
+            if train is None:
+                raise VirtualTrainError(node.checi())
             dep = train.departure()  # 这里已经保证时刻表非空
             des = train.destination()
             if dep is None:

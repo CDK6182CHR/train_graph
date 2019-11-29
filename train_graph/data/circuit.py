@@ -130,6 +130,9 @@ class CircuitNode:
     def isVirtual(self)->bool:
         return self._virtual
 
+    def setVirtual(self,v:bool):
+        self._virtual = v
+
 
 class Circuit:
     """
@@ -145,6 +148,7 @@ class Circuit:
     """
     CARRIAGE = 0x0
     MOTER = 0x1
+    Spliters = ('-','~','—','～')
     def __init__(self,graph,name=None,origin=None):
         self.graph=graph
         self._name = name
@@ -371,3 +375,83 @@ class Circuit:
         self._note = circuit._note
         self._model = circuit._model
         self._owner = circuit._owner
+
+    def parseText(self,text:str,spliter:str,full_only:bool=False)->list:
+        """
+        解析车次序列字符串。如果不提供分隔符，则按系统自带来找。
+        样例：G2189/92—C6263—乐山过夜—C6256—G2191/0—上海虹桥动车所检修—G2189/92
+        如果分隔出来的有“过夜”“检修”这样的字，则删除。
+        :returns 报告信息的列表。
+        """
+        reports = [f'[info]在交路{self.name()}中解析车次信息字符串']
+        if not spliter:
+            for sp in Circuit.Spliters:
+                if sp in text:
+                    spliter=sp
+                    break
+        if not spliter:
+            return ['[error]解析失败：没有找到合适的分隔符']
+        checis = text.split(spliter)
+        for checi in checis:
+            checi = checi.strip()
+            if '检修' in checi or '过夜' in checi:
+                reports.append(f'[warning]不符合车次格式，不添加：{checi}')
+                continue
+            train = self.graph.trainFromCheci(checi,full_only=full_only)
+            if checi in list(self.checiList()):
+                reports.append(f"[warning]本交路中已经存在的车次，不添加：{checi}")
+                continue
+            virtual = False
+            if train is None:
+                reports.append(f"[warning]车次{checi}不存在，设为虚拟车次")
+                virtual=True
+            else:
+                cir = train.carriageCircuit()
+                if cir is not None:
+                    reports.append(f'[warning]车次{checi}存在，但已经添加到交路{cir.name()}，设为虚拟车次')
+                    virtual=True
+                else:  # 添加实体车次
+                    reports.append(f'[info]添加实体车次{train}')
+                    virtual = False
+            if virtual:
+                node = CircuitNode(self.graph,checi=checi,start='',end='',virtual=True)
+                self.addNode(node)
+            else:
+                node = CircuitNode(self.graph,checi=train.fullCheci(),train=train,start=train.localFirst(),
+                                   end=train.localLast(),link=True,virtual=False)
+                self.addTrain(train)
+        return reports
+
+    def identifyTrain(self,full_only=False)->list:
+        """
+        尝试从虚拟车次中识别存在的车次，变成实体车次。
+        :returns 解析报告
+        """
+        reports = [f'在{self}中进行车次识别']
+        for node in self._order:
+            if node.isVirtual():
+                checi = node.checi()
+                train = self.graph.trainFromCheci(checi,full_only=full_only)
+                if train is None:
+                    reports.append(f"[warning]车次不存在: {checi}")
+                else:
+                    cir = train.carriageCircuit()
+                    if cir is not None:
+                        reports.append(f"[warning]车次{train}已经属于交路: {cir}")
+                    else:
+                        reports.append(f'[info]将车次{train}识别为实体车次')
+                        node.setVirtual(False)
+                        node.setTrain(train)
+                        train.setCarriageCircuit(self)
+        return reports
+
+    def firstCheci(self)->str:
+        if self._order:
+            return self._order[0].checi()
+        return ''
+
+    def realCount(self)->int:
+        return len(list(filter(lambda x:not x.isVirtual(),self._order)))
+
+    def virtualCount(self)->int:
+        return len(list(filter(lambda x: x.isVirtual(), self._order)))

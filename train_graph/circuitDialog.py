@@ -51,17 +51,23 @@ class CircuitDialog(QtWidgets.QDialog):
         btnDel = QtWidgets.QPushButton('删除')
         btnUp = QtWidgets.QPushButton('上移')
         btnDown = QtWidgets.QPushButton('下移')
+        btnParse = QtWidgets.QPushButton('解析文本')
+        btnId = QtWidgets.QPushButton('识别车次')
         hlayout.addWidget(btnAdd)
         hlayout.addWidget(btnAddAfter)
         hlayout.addWidget(btnDel)
         hlayout.addWidget(btnUp)
         hlayout.addWidget(btnDown)
+        hlayout.addWidget(btnParse)
+        hlayout.addWidget(btnId)
 
         btnAdd.clicked.connect(self._add_train_before)
         btnAddAfter.clicked.connect(self._add_train_after)
         btnDel.clicked.connect(self._del_train)
         btnUp.clicked.connect(self._move_up)
         btnDown.clicked.connect(self._move_down)
+        btnParse.clicked.connect(self._parse_text)
+        btnId.clicked.connect(self._identify_train)
 
         vlayout.addLayout(hlayout)
 
@@ -234,9 +240,9 @@ class CircuitDialog(QtWidgets.QDialog):
     def _show_diagram(self):
         try:
             dialog = CircuitDiagramWidget(self.graph,self.circuit,self)
-        except StartOrEndNotMatchedError as e:
+        except (StartOrEndNotMatchedError,VirtualTrainError) as e:
             QtWidgets.QMessageBox.warning(self,'错误','交路不符合绘图要求。'
-                                '铺画交路图要求交路中每个车次的始发终到站与时刻表首末站一致。\n'+
+                                '铺画交路图要求交路中每个车次的始发终到站与时刻表首末站一致，且目前暂不支持虚拟车次铺画。\n'+
                                           str(e))
             return
         dialog.exec_()
@@ -281,6 +287,37 @@ class CircuitDialog(QtWidgets.QDialog):
         else:
             self.CircuitChangeApplied.emit(self.circuit)
         self.close()
+
+    def _parse_text(self):
+        # self._apply()
+        dialog = ParseTextDialog(self.graph,self.circuit,self,self)
+        dialog.resize(600,600)
+        dialog.exec()
+
+    def _identify_train(self):
+        if not self.question('此操作将尝试识别交路中所有虚拟车次，将本线实际存在的车次识别成实体车次。是否继续？'):
+            return
+        full_only = self.question('是否仅识别完整车次？')
+        # self._apply()
+        results = self.circuit.identifyTrain(full_only)
+        results.insert(0,f'新的交路序列为：{self.circuit.orderStr()}')
+        self.setData(self.circuit)
+        tb = QtWidgets.QTextBrowser()
+        tb.setWindowTitle('识别结果')
+        tb.setText('\n'.join(results))
+        dialog = DialogAdapter(tb,self)
+        dialog.resize(400,400)
+        dialog.exec_()
+
+    def question(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self, '交路编辑', note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default
 
 
 

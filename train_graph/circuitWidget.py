@@ -7,6 +7,8 @@ from .pyETRCExceptions import *
 from .data.circuit import Circuit
 from .data.graph import Graph,Train
 from .circuitDialog import CircuitDialog
+from .circuitwidgets import *
+from .dialogAdapter import DialogAdapter
 
 class CircuitWidget(QtWidgets.QWidget):
     def __init__(self,graph:Graph,parent=None):
@@ -37,6 +39,17 @@ class CircuitWidget(QtWidgets.QWidget):
             tableWidget.setColumnWidth(i,s)
 
         vlayout.addWidget(tableWidget)
+
+        hlayout = QtWidgets.QHBoxLayout()
+        btnParse = QtWidgets.QPushButton('批量解析')
+        hlayout.addWidget(btnParse)
+        btnParse.clicked.connect(self._parse)
+
+        btnIdentify = QtWidgets.QPushButton('批量识别')
+        hlayout.addWidget(btnIdentify)
+        btnIdentify.clicked.connect(self._identify)
+        vlayout.addLayout(hlayout)
+
 
         hlayout = QtWidgets.QHBoxLayout()
         btnEdit = QtWidgets.QPushButton('编辑(&E)')
@@ -163,3 +176,36 @@ class CircuitWidget(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Qt.Unchecked)
         tw.setItem(row,0,item)
+
+    def _parse(self):
+        dialog = BatchParseCircuit(self.graph,self,self.parent())
+        dialog.resize(1400,800)
+        dialog.exec_()
+
+    def _identify(self):
+        if not self.question('此操作将尝试识别交路中所有虚拟车次，将本线实际存在的车次识别成实体车次。是否继续？'):
+            return
+        full_only = self.question('是否仅识别完整车次？')
+        # self._apply()
+        totalResults = []
+        for circuit in self.graph.circuits():
+            results = circuit.identifyTrain(full_only)
+            results.insert(0,f'交路{circuit}新的序列为：{circuit.orderStr()}')
+            totalResults.extend(results)
+        self.setData()
+        tb = QtWidgets.QTextBrowser()
+        tb.setWindowTitle('识别结果')
+        tb.setText('\n'.join(totalResults))
+        dialog = DialogAdapter(tb,self)
+        dialog.resize(400,400)
+        dialog.exec_()
+
+    def question(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self, '批量识别', note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default
