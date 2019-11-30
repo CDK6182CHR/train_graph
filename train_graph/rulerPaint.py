@@ -271,7 +271,7 @@ class rulerPainter(QtWidgets.QWidget):
     def _reset_widget2_info(self):
         label = self.step2Label
         text = f"现在使用*{self.ruler.name()}*标尺从*{self.start_station}*起始，" \
-               f"按*{'下行'if self.down else '上行'}*方向排图。双击排图到指定行，按Alt+C进行冲突检查。"
+               f"按*{'下行'if self.down else '上行'}*方向排图。双击排图到指定行，按Alt+X进行冲突检查。"
         label.setText(text)
         self._setTable()
 

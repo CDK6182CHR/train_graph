@@ -755,8 +755,7 @@ class CurrentWidget(QtWidgets.QWidget):
         circuit = self.train.carriageCircuit()
         if circuit is None:
             return
-        if self.main:
-            self.editCurrentTrainCircuit.emit(circuit)
+        self.editCurrentTrainCircuit.emit(circuit)
 
     def _derr(self, note: str):
         # print("_derr")

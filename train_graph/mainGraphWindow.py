@@ -68,8 +68,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.3.3"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20191117'
-        self.release = 'R34'  # 发布时再改这个
+        self.date = '20191130'
+        self.release = 'R35'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -1210,11 +1210,20 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         actionDeleteAll.triggered.connect(self._delete_all)
         menu.addAction(actionDeleteAll)
 
+        menu.addSeparator()
+        action = QtWidgets.QAction('批量解析交路',self)
+        action.setShortcut('ctrl+P')
+        menu.addAction(action)
+        action.triggered.connect(self._batch_parse_circuits)
+
+        action = QtWidgets.QAction("识别所有虚拟车次",self)
+        action.triggered.connect(self._identify_virtual_trains)
+        menu.addAction(action)
+
         # 查看
         menu = menubar.addMenu("查看(&I)")
 
         action = QtWidgets.QAction("运行图信息", self)
-        action.setShortcut('ctrl+P')
         action.triggered.connect(self._line_info_out)
         menu.addAction(action)
 
@@ -2041,6 +2050,12 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.graph.clearTrains()
         self.GraphWidget.paintGraph()
         self._refreshDockWidgets()
+
+    def _batch_parse_circuits(self):
+        self.circuitWidget.batch_parse()
+
+    def _identify_virtual_trains(self):
+        self.circuitWidget.identify()
 
     def _view_line_data(self):
         dialog = LineLibDialog(self.graph.sysConfigData()['default_db_file'],fromPyetrc=True,parent=self)

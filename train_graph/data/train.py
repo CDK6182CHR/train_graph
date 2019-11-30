@@ -318,7 +318,8 @@ class Train():
             "autoItem":self._autoItem,
             "itemInfo":self._itemInfo,
             "passenger":self._passenger,
-            "carriageCircuit":self._carriageCircuitName,
+            "carriageCircuit":self._carriageCircuit.name() if self._carriageCircuit is not None else \
+                    self._carriageCircuitName,
         }
         for dict in self.timetable:
             ddsj:datetime = dict["ddsj"]

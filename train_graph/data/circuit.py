@@ -106,7 +106,8 @@ class CircuitNode:
 
     def setTrain(self,train):
         self._train = train
-        self._checi = train.fullCheci()
+        if train is not None:
+            self._checi = train.fullCheci()
 
     def startStation(self)->str:
         if self.train() is not None:
@@ -222,6 +223,17 @@ class Circuit:
         for node in self._order:
             if node._checi == train.fullCheci():
                 self._order.remove(node)
+                train.setCarriageCircuit(None)
+                return
+
+    def changeTrainToVirtual(self,train):
+        """
+        当删除车次时，将该车次结点设为虚拟车次。
+        """
+        for node in self._order:
+            if node.train() is train:
+                node.setTrain(None)
+                node.setVirtual(True)
                 train.setCarriageCircuit(None)
                 return
 
@@ -417,9 +429,10 @@ class Circuit:
                 node = CircuitNode(self.graph,checi=checi,start='',end='',virtual=True)
                 self.addNode(node)
             else:
-                node = CircuitNode(self.graph,checi=train.fullCheci(),train=train,start=train.localFirst(),
-                                   end=train.localLast(),link=True,virtual=False)
+                # node = CircuitNode(self.graph,checi=train.fullCheci(),train=train,start=train.localFirst(),
+                #                    end=train.localLast(),link=True,virtual=False)
                 self.addTrain(train)
+                train.setCarriageCircuit(self)
         return reports
 
     def identifyTrain(self,full_only=False)->list:

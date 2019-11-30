@@ -294,7 +294,7 @@ class Graph:
         # import traceback
         try:
             if train.carriageCircuit() is not None:
-                train.carriageCircuit().removeTrain(train)
+                train.carriageCircuit().changeTrainToVirtual(train)
             self._trains.remove(train)
             del self.fullCheciMap[train.fullCheci()]
             self.delSingleCheciMap(train)
@@ -1736,13 +1736,14 @@ class Graph:
         except ValueError:
             raise CircuitNotFoundError(circuit.name())
         for node in circuit.nodes():
-            try:
-                node.train().setCarriageCircuit(None)
-            except AttributeError:
-                print("Graph::delCircuit: Unexcpeted node.train", node)
-            except TrainNotFoundException as e:
-                print("Graph::delCircuit: TrainNotFoundException",e)
-                pass
+            if not node.isVirtual():
+                try:
+                    node.train().setCarriageCircuit(None)
+                except AttributeError:
+                    print("Graph::delCircuit: Unexcpeted node.train", node)
+                except TrainNotFoundException as e:
+                    print("Graph::delCircuit: TrainNotFoundException",e)
+                    pass
 
     def checkGraph(self)->str:
         """

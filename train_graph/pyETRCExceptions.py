@@ -68,7 +68,7 @@ class VirtualTrainError(Exception):
     def __init__(self,checi):
         self.checi = checi
     def __str__(self):
-        return f"{checi}是虚拟车次! "
+        return f"{self.checi}是虚拟车次! "
 
 class StationNotInLineException(Exception):
     def __init__(self,st):

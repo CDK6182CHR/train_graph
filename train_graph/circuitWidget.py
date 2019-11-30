@@ -43,11 +43,11 @@ class CircuitWidget(QtWidgets.QWidget):
         hlayout = QtWidgets.QHBoxLayout()
         btnParse = QtWidgets.QPushButton('批量解析')
         hlayout.addWidget(btnParse)
-        btnParse.clicked.connect(self._parse)
+        btnParse.clicked.connect(self.batch_parse)
 
         btnIdentify = QtWidgets.QPushButton('批量识别')
         hlayout.addWidget(btnIdentify)
-        btnIdentify.clicked.connect(self._identify)
+        btnIdentify.clicked.connect(self.identify)
         vlayout.addLayout(hlayout)
 
 
@@ -97,6 +97,15 @@ class CircuitWidget(QtWidgets.QWidget):
         self.dialog.setData(circuit)
         self.dialog.show()
 
+    def currentCircuit(self)->Circuit:
+        """
+        返回当前行的Circuit对象，当前行无效则为None。
+        """
+        item = self.tableWidget.item(self.tableWidget.currentRow(),1)
+        if isinstance(item,QtWidgets.QTableWidgetItem):
+            return item.data(Qt.UserRole)
+        return None
+
     # slots
     def _table_item_changed(self,item:QtWidgets.QTableWidgetItem):
         if item.column() == 0:
@@ -132,8 +141,9 @@ class CircuitWidget(QtWidgets.QWidget):
 
     def _del_circuit(self):
         row = self.tableWidget.currentRow()
-        circuit = self.tableWidget.item(row,1).data(Qt.UserRole)
-        if isinstance(circuit,Circuit):
+        item = self.tableWidget.item(row,1)
+        if isinstance(item,QtWidgets.QTableWidgetItem):
+            circuit = item.data(Qt.UserRole)
             self.graph.delCircuit(circuit)
             self.tableWidget.removeRow(row)
         else:
@@ -177,12 +187,12 @@ class CircuitWidget(QtWidgets.QWidget):
         item.setCheckState(Qt.Unchecked)
         tw.setItem(row,0,item)
 
-    def _parse(self):
+    def batch_parse(self):
         dialog = BatchParseCircuit(self.graph,self,self.parent())
         dialog.resize(1400,800)
         dialog.exec_()
 
-    def _identify(self):
+    def identify(self):
         if not self.question('此操作将尝试识别交路中所有虚拟车次，将本线实际存在的车次识别成实体车次。是否继续？'):
             return
         full_only = self.question('是否仅识别完整车次？')

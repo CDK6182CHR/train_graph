@@ -74,6 +74,9 @@ class BatchParseCircuit(QtWidgets.QDialog):
 
         cache_circuits = []
         for line in text.split('\n'):
+            line = line.strip()
+            if not line:
+                continue  # 拒绝空行
             circuit = Circuit(self.graph)
             res = circuit.parseText(line,spliter)
 
