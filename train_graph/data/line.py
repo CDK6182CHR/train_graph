@@ -4,6 +4,7 @@
 from .ruler import Ruler
 from .forbid import Forbid
 from .route import Route
+from .linestation import LineStation
 from typing import Union
 from Timetable_new.utility import stationEqual
 from train_graph.pyETRCExceptions import *
@@ -17,7 +18,8 @@ class Line():
     车站结点信息结构：
     {
         "zhanming": "罗岗线路所",
-        "licheng": 1,
+        "licheng": 1.093,
+        "counter":1.551,  //对里程，或反向里程，仍按下行递增
          "dengji": 4,
         "y_value":1244,
         "direction":0x3,
@@ -33,8 +35,8 @@ class Line():
 
     def __init__(self,name='',origin=None):
         #默认情况下构造空对象。从文件读取时，用dict构造。
-        self.nameMap = {} # 站名查找表
-        self.fieldMap = {} # 站名-站名::场名映射表
+        self.nameMap = {}  # 站名查找表
+        self.fieldMap = {}  # 站名-站名::场名映射表
         self.numberMap = None  # 站名->序号映射表。用于初始化时临时使用。使用期间保证站表是不变的。
         self.name = name
         self.stations = []
@@ -169,6 +171,8 @@ class Line():
         self.verifyNotes()
 
     def addStation_by_origin(self,origin,index=-1):
+        if not isinstance(origin,LineStation):
+            origin=LineStation(origin)
         if index==-1:
             self.stations.append(origin)
         else:
@@ -176,15 +180,17 @@ class Line():
         self.nameMap[origin["zhanming"]] = origin
         self.addFieldMap(origin['zhanming'])
 
-    def addStation_by_info(self,zhanming,licheng,dengji=4,index=-1):
-        info = {
+    def addStation_by_info(self,zhanming,licheng,dengji=4,index=-1,counter=None):
+        info = LineStation({
             "zhanming":zhanming,
             "licheng":licheng,
             "dengji":dengji,
             "y_value":-1,
             "show":True,
             "direction":0x3,
-        }
+        })
+        if counter is not None:
+            info['counter']=counter
         self.addStation_by_origin(info,index)
 
     def show(self):
@@ -288,6 +294,8 @@ class Line():
         return bool(self.nameMap.get(name,False))
 
     def addStationDict(self,info):
+        if not isinstance(info,LineStation):
+            info=LineStation(info)
         self.stations.append(info)
         self.addFieldMap(info['zhanming'])
         self.nameMap[info['zhanming']] = info
@@ -441,7 +449,7 @@ class Line():
         self.delFieldMap(old)
         self.addFieldMap(new)
 
-    def stationDictByIndex(self,idx):
+    def stationDictByIndex(self,idx)->LineStation:
         try:
             return self.stations[idx]
         except IndexError:
@@ -513,16 +521,5 @@ class Line():
             return 0x2
         return 0x0
 
-
-if __name__ == '__main__':
-    line = Line("宁芜线")
-    line.addStation_by_info("南京",0,0)
-    line.addStation_by_info("光华门",12,3)
-    line.addStation_by_info("南京东",8,3,index=1)
-    line.show()
-    dict = line.outInfo()
-
-    newline = Line(origin=dict)
-    newline.show()
 
 

@@ -5,7 +5,7 @@
 """
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
-from .data.line import Line
+from .data.line import Line,LineStation
 
 class LineWidget(QtWidgets.QWidget):
     showStatus = QtCore.pyqtSignal(str)
@@ -47,17 +47,12 @@ class LineWidget(QtWidgets.QWidget):
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
         self.tableWidget = tableWidget
 
-        tableWidget.setColumnCount(7)
-        tableWidget.setHorizontalHeaderLabels(["站名", "里程", "等级", "显示", "单向站","办客","办货"])
+        tableWidget.setColumnCount(8)
+        tableWidget.setHorizontalHeaderLabels(["站名", "里程", "对里程", "等级", "显示", "单向站","办客","办货"])
         tableWidget.itemChanged.connect(self.changed)
 
-        tableWidget.setColumnWidth(0, 100)
-        tableWidget.setColumnWidth(1, 100)
-        tableWidget.setColumnWidth(2, 40)
-        tableWidget.setColumnWidth(3, 40)
-        tableWidget.setColumnWidth(4, 80)
-        tableWidget.setColumnWidth(5, 50)
-        tableWidget.setColumnWidth(6, 50)
+        for i,s in enumerate((100,100,80,40,40,80,50,50)):
+            tableWidget.setColumnWidth(i,s)
 
         tableWidget.setRowCount(line.stationCount())
 
@@ -135,14 +130,17 @@ class LineWidget(QtWidgets.QWidget):
         """
         已知当前行的item, cellWidget存在
         """
+        if not isinstance(dct,LineStation):
+            dct=LineStation(dct)
         self.tableWidget.item(row,0).setText(dct["zhanming"])
         self.tableWidget.cellWidget(row, 1).setValue(dct["licheng"])
-        self.tableWidget.cellWidget(row, 2).setValue(dct["dengji"])
-        self.tableWidget.cellWidget(row, 3).setChecked(dct.get('show', True))
-        self.tableWidget.cellWidget(row, 4).setCurrentIndex(dct.get('direction', 0x3))
-        self.tableWidget.item(row,5).setCheckState(Qt.Checked if dct.setdefault("passenger",True)
+        self.tableWidget.item(row,2).setText(dct.counterStr())
+        self.tableWidget.cellWidget(row, 3).setValue(dct["dengji"])
+        self.tableWidget.cellWidget(row, 4).setChecked(dct.get('show', True))
+        self.tableWidget.cellWidget(row, 5).setCurrentIndex(dct.get('direction', 0x3))
+        self.tableWidget.item(row,6).setCheckState(Qt.Checked if dct.setdefault("passenger",True)
                                                    else Qt.Unchecked)
-        self.tableWidget.item(row,6).setCheckState(Qt.Checked if dct.setdefault("freight", True)
+        self.tableWidget.item(row,7).setCheckState(Qt.Checked if dct.setdefault("freight", True)
                                                     else Qt.Unchecked)
 
     def _setLineTable(self,start_index=0):
@@ -151,6 +149,8 @@ class LineWidget(QtWidgets.QWidget):
 
         now_line = start_index
         for stationDict in line.stationDicts(start_index):
+            if not isinstance(stationDict,LineStation):
+                stationDict=LineStation(stationDict)
 
             item = QtWidgets.QTableWidgetItem(stationDict["zhanming"])
             tableWidget.setItem(now_line, 0, item)
@@ -163,10 +163,12 @@ class LineWidget(QtWidgets.QWidget):
             spin1.setMinimumSize(10, 10)
             spin1.valueChanged.connect(self.changed)
 
+            tableWidget.setItem(now_line,2,QtWidgets.QTableWidgetItem(stationDict.counterStr()))
+
             spin2 = QtWidgets.QSpinBox()
             spin2.setValue(stationDict["dengji"])
             spin2.setRange(0, 20)
-            tableWidget.setCellWidget(now_line, 2, spin2)
+            tableWidget.setCellWidget(now_line, 3, spin2)
             spin2.setMinimumSize(10, 10)
             spin2.valueChanged.connect(self.changed)
 
@@ -179,7 +181,7 @@ class LineWidget(QtWidgets.QWidget):
                 stationDict["show"] = True
             check.setChecked(stationDict["show"])
             check.setStyleSheet("QCheckBox{margin:3px}")
-            tableWidget.setCellWidget(now_line, 3, check)
+            tableWidget.setCellWidget(now_line, 4, check)
             check.toggled.connect(self.changed)
 
             combo = QtWidgets.QComboBox()
@@ -191,16 +193,16 @@ class LineWidget(QtWidgets.QWidget):
                 stationDict["direction"] = 0x3
             combo.setCurrentIndex(stationDict["direction"])
             combo.setStyleSheet("QComboBox{margin:3px}")
-            tableWidget.setCellWidget(now_line, 4, combo)
+            tableWidget.setCellWidget(now_line, 5, combo)
             combo.currentTextChanged.connect(self.changed)
 
             item = QtWidgets.QTableWidgetItem()
             item.setCheckState(Line.bool2CheckState(stationDict.setdefault("passenger",True)))
-            tableWidget.setItem(now_line,5,item)
+            tableWidget.setItem(now_line,6,item)
 
             item = QtWidgets.QTableWidgetItem()
             item.setCheckState(Line.bool2CheckState(stationDict.setdefault("freight", True)))
-            tableWidget.setItem(now_line, 6, item)
+            tableWidget.setItem(now_line, 7, item)
 
             tableWidget.setRowHeight(now_line, 30)  # cannot infer to graph
             now_line += 1
@@ -221,32 +223,36 @@ class LineWidget(QtWidgets.QWidget):
         tableWidget.setCellWidget(num, 1, spin1)
         spin1.valueChanged.connect(self.changed)
 
+        item = QtWidgets.QTableWidgetItem()
+        # item.setData()
+        tableWidget.setItem(num,2,item)
+
         spin2 = QtWidgets.QSpinBox()
         spin2.setRange(0, 20)
-        tableWidget.setCellWidget(num, 2, spin2)
+        tableWidget.setCellWidget(num, 3, spin2)
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
         spin2.valueChanged.connect(self.changed)
 
         check = QtWidgets.QCheckBox()
         check.setChecked(True)
         check.setStyleSheet("QCheckBox{margin:3px}")
-        tableWidget.setCellWidget(num, 3, check)
+        tableWidget.setCellWidget(num, 4, check)
         check.toggled.connect(self.changed)
 
         combo = QtWidgets.QComboBox()
         combo.addItems(["不通过", "下行", "上行", "上下行"])
         combo.setCurrentIndex(3)
         combo.setStyleSheet("QComboBox{margin:3px}")
-        tableWidget.setCellWidget(num, 4, combo)
+        tableWidget.setCellWidget(num, 5, combo)
         combo.currentIndexChanged.connect(self.changed)
 
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Line.bool2CheckState(True))
-        tableWidget.setItem(num, 5, item)
+        tableWidget.setItem(num, 6, item)
 
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(True)
-        tableWidget.setItem(num, 6, item)
+        tableWidget.setItem(num, 7, item)
 
         tableWidget.setRowHeight(num, 30)  # cannot infer to graph
 
@@ -329,9 +335,13 @@ class LineWidget(QtWidgets.QWidget):
         for i in range(tableWidget.rowCount()):
             zhanming = tableWidget.item(i, 0).text()
             licheng = tableWidget.cellWidget(i, 1).value()
-            dengji = tableWidget.cellWidget(i, 2).value()
-            show = True if tableWidget.cellWidget(i, 3).isChecked() else False
-            direction = tableWidget.cellWidget(i, 4).currentIndex()
+            dengji = tableWidget.cellWidget(i, 3).value()
+            show = True if tableWidget.cellWidget(i, 4).isChecked() else False
+            direction = tableWidget.cellWidget(i, 5).currentIndex()
+            try:
+                counter = float(tableWidget.item(i,2).text())
+            except:
+                counter = None
 
             if i == 0 and licheng != 0.0:
                 if self.qustion("本线起始里程不为0，是否调整所有车站里程以使起始站里程归零？", False):
@@ -352,8 +362,9 @@ class LineWidget(QtWidgets.QWidget):
                 "dengji": dengji,
                 "show": show,
                 "direction": direction,
-                "passenger":bool(tableWidget.item(i,5).checkState()),
-                "freight":bool(tableWidget.item(i,6).checkState())
+                "passenger":bool(tableWidget.item(i,6).checkState()),
+                "freight":bool(tableWidget.item(i,7).checkState()),
+                "counter":counter,
             }
             new_line.addStationDict(info)
 

@@ -4,9 +4,10 @@
 """
 from datetime import datetime
 
+
 class TrainStation(dict):
     def __init__(self,an=None):
-        if an==None:
+        if an is None:
             super(TrainStation, self).__init__()
         else:
             super(TrainStation, self).__init__(an)

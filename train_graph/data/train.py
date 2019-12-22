@@ -41,7 +41,8 @@ class Train():
             "zhanming":name,
             "ddsj":ddsj,
             "cfsj":cfsj,
-            "business":bool  //是否办理业务。新增
+            "business":bool,  //是否办理业务。新增
+            "track":str,  //股道。任何非空表示有数据。
         }
     items 中数据结构：
     dict{
@@ -174,39 +175,39 @@ class Train():
         else:
             return self.checi[2]
 
-    def addStation(self,name:str,ddsj,cfsj,*,business=None,auto_cover=False,to_end=True,note=''):
+    def addStation(self,name:str,ddsj,cfsj,*,business=None,auto_cover=False,to_end=True,note='',track=''):
         # 增加站。暂定到达时间、出发时间用datetime类。
         if isinstance(ddsj,str):
             ddsj = strToTime(ddsj)
-
             cfsj = strToTime(cfsj)
 
-        dict = TrainStation({
+        dct = TrainStation({
             "zhanming":name,
             "ddsj":ddsj,
             "cfsj":cfsj,
             "note":note,
+            "track":track,
         })
         if business is None:
             business = self.graph.lineStationBusiness(name,
-                    self.isPassenger(detect=True),default=None) and self.stationStoppedOrStartEnd(dict)
+                    self.isPassenger(detect=True),default=None) and self.stationStoppedOrStartEnd(dct)
         if business is not None:
-            dict['business']=business
+            dct['business']=business
         if auto_cover:
             former_dict = self.stationDict(name)
             if former_dict is not None:
                 index = self.timetable.index(former_dict)
-                self.timetable[index] = dict
+                self.timetable[index] = dct
             else:
                 if to_end:
-                    self.timetable.append(dict)
+                    self.timetable.append(dct)
                 else:
-                    self.timetable.insert(0,dict)
+                    self.timetable.insert(0,dct)
         else:
             if to_end:
-                self.timetable.append(dict)
+                self.timetable.append(dct)
             else:
-                self.timetable.insert(0, dict)
+                self.timetable.insert(0, dct)
 
     def setStartEnd(self,sfz='',zdz=''):
         if sfz:
@@ -321,17 +322,18 @@ class Train():
             "carriageCircuit":self._carriageCircuit.name() if self._carriageCircuit is not None else \
                     self._carriageCircuitName,
         }
-        for dict in self.timetable:
-            ddsj:datetime = dict["ddsj"]
-            cfsj:datetime = dict["cfsj"]
+        for dct in self.timetable:
+            ddsj:datetime = dct["ddsj"]
+            cfsj:datetime = dct["cfsj"]
             outDict = {
-                "zhanming":dict["zhanming"],
+                "zhanming":dct["zhanming"],
                 "ddsj":ddsj.strftime("%H:%M:%S"),
                 "cfsj":cfsj.strftime("%H:%M:%S"),
-                "note":dict.setdefault('note',''),
+                "note":dct.setdefault('note',''),
+                "track":dct.setdefault('track','')
             }
             try:
-                outDict['business'] = dict['business']
+                outDict['business'] = dct['business']
             except KeyError:
                 pass
             info["timetable"].append(outDict)

@@ -133,14 +133,15 @@ class CurrentWidget(QtWidgets.QWidget):
 
         timeTable = QtWidgets.QTableWidget()
         timeTable.setToolTip("按Alt+D将当前行到达时间复制为出发时间。")
-        timeTable.setColumnCount(6)
-        timeTable.setHorizontalHeaderLabels(["站名", "到点", "开点", '营业','备注', "停时"])
+        timeTable.setColumnCount(7)
+        timeTable.setHorizontalHeaderLabels(["站名", "到点", "开点", '营业','股道','备注', "停时"])
         timeTable.setColumnWidth(0, 80)
         timeTable.setColumnWidth(1, 100)
         timeTable.setColumnWidth(2, 100)
-        timeTable.setColumnWidth(3, 50)
-        timeTable.setColumnWidth(4, 100)
-        timeTable.setColumnWidth(5, 80)
+        timeTable.setColumnWidth(3, 30)
+        timeTable.setColumnWidth(4, 50)
+        timeTable.setColumnWidth(5, 100)
+        timeTable.setColumnWidth(6, 80)
         timeTable.setEditTriggers(timeTable.CurrentChanged)
         timeTable.itemChanged.connect(self._table_item_changed)
         timeTable.setContextMenuPolicy(Qt.ActionsContextMenu)
@@ -451,9 +452,11 @@ class CurrentWidget(QtWidgets.QWidget):
             cfsjEdit.setTime(cfsjQ)
             # cfsjEdit.setMinimumSize(1,1)
 
+            timeTable.setItem(num,4,QtWidgets.QTableWidgetItem(st_dict.setdefault('track','')))
+
             note=st_dict.setdefault('note','')
             item=QtWidgets.QTableWidgetItem(note)
-            timeTable.setItem(num,4,item)
+            timeTable.setItem(num,5,item)
 
             if train.stationBusiness(st_dict):
                 itemStation.setForeground(QtGui.QBrush(Qt.red))
@@ -571,9 +574,11 @@ class CurrentWidget(QtWidgets.QWidget):
         cfsjEdit.row = row
         cfsjEdit.timeChanged.connect(self._time_changed)
 
+        timeTable.setItem(row,5,QtWidgets.QTableWidgetItem(''))
+
         item = QtWidgets.QTableWidgetItem()
         item.setFlags(Qt.ItemIsEnabled)
-        timeTable.setItem(row, 5, item)
+        timeTable.setItem(row, 6, item)
 
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Line.bool2CheckState(business))
@@ -721,12 +726,13 @@ class CurrentWidget(QtWidgets.QWidget):
             cfsj = strToTime(cfsjSpin.time().toString("hh:mm:ss"))
 
             try:
-                note = timeTable.item(row,4).text()
+                note = timeTable.item(row,5).text()
             except AttributeError:
                 # item is None
                 note = ''
+            track = timeTable.item(row,4).text()
 
-            train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()),note=note)
+            train.addStation(name, ddsj, cfsj,business=bool(timeTable.item(row,3).checkState()),note=note,track=track)
 
         # 2019.07.05将setData移动到main中完成。
         # self.setData(train)
