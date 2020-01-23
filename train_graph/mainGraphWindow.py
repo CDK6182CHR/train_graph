@@ -20,7 +20,7 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt
 from .data.graph import Graph,Ruler,Line,Train
 from datetime import datetime, timedelta
-from .forbidWidget import ForbidWidget
+from .forbidWidget import ForbidTabWidget
 from .rulerWidget import RulerWidget
 from .currentWidget import CurrentWidget
 from .lineWidget import LineWidget
@@ -68,7 +68,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.3.4"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20191222'
+        self.date = '20200123'
         self.release = 'R35'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -271,6 +271,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '批量复制(Ctrl+Shift+A)':self._batch_copy_train,
             '区间换线(Ctrl+5)':self._interval_exchange,
             '推定时刻(Ctrl+2)':self._detect_pass_time,
+            '添加车次(Ctrl+Shift+C)':self._add_train_from_list,
         }
         try:
             action_map[action.text()]()
@@ -329,7 +330,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         widget.trainTimetableChanged.connect(self._interactive_timetable_changed)
 
     def _initForbidWidget(self):
-        widget = ForbidWidget(self.graph.line.forbid)
+        widget = ForbidTabWidget(self.graph.line)
         self.forbidWidget = widget
         self.forbidDockWidget.setWidget(widget)
         widget.showForbidChanged.connect(self.GraphWidget.on_show_forbid_changed)
@@ -1316,6 +1317,11 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         action = QtWidgets.QAction('当前车次时刻表重排', self)
         action.setShortcut('ctrl+V')
         action.triggered.connect(self._correction_timetable)
+        menu.addAction(action)
+
+        action = QtWidgets.QAction('添加车次',self)
+        action.setShortcut('ctrl+shift+C')
+        action.triggered.connect(self._add_train_from_list)
         menu.addAction(action)
 
         # 数据

@@ -574,6 +574,7 @@ class CurrentWidget(QtWidgets.QWidget):
         cfsjEdit.row = row
         cfsjEdit.timeChanged.connect(self._time_changed)
 
+        timeTable.setItem(row,4,QtWidgets.QTableWidgetItem(''))
         timeTable.setItem(row,5,QtWidgets.QTableWidgetItem(''))
 
         item = QtWidgets.QTableWidgetItem()

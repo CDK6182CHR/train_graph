@@ -7,10 +7,43 @@ from PyQt5.QtCore import Qt
 from datetime import datetime
 from .data.line import Line
 
+
+class ForbidTabWidget(QtWidgets.QTabWidget):
+    """
+    2020.01.23新增，由mainWindow直接调用的天窗编辑窗口，聚合两类天窗。
+    转发下层的信号，添加forbid对象。接受Line对象（注意：不可接受Graph，因LineDB中的调用）
+    信号处理只需要关注mainWindow。
+    """
+    # okClicked = QtCore.pyqtSignal(Forbid)
+    showForbidChanged = QtCore.pyqtSignal(Forbid,bool, bool)
+    currentShowedChanged = QtCore.pyqtSignal(Forbid,bool)  # 当前显示的天窗变化发射
+    def __init__(self,line:Line,parent=None):
+        super(ForbidTabWidget, self).__init__(parent)
+        self.setWindowTitle("天窗编辑")
+        self.line = line  # type:Line
+        self.widget1 = ...  # type: ForbidWidget
+        self.widget2 = ...  # type: ForbidWidget
+        self.initUI()
+
+    def initUI(self):
+        self.widget1 = ForbidWidget(self.line.forbid,self)
+        self.widget2 = ForbidWidget(self.line.forbid2,self)
+        # 转发信号
+        for w in (self.widget1,self.widget2):
+            w.currentShowedChanged.connect(self.currentShowedChanged.emit)
+            w.showForbidChanged.connect(self.showForbidChanged.emit)
+        self.addTab(self.widget1,"综合维修")
+        self.addTab(self.widget2,"综合施工")
+
+    def setData(self):
+        self.widget1.setData()
+        self.widget2.setData()
+
+
 class ForbidWidget(QtWidgets.QWidget):
     okClicked = QtCore.pyqtSignal()
-    showForbidChanged = QtCore.pyqtSignal(bool,bool)
-    currentShowedChanged = QtCore.pyqtSignal(bool) #当前显示的天窗变化发射
+    showForbidChanged = QtCore.pyqtSignal(Forbid,bool,bool)
+    currentShowedChanged = QtCore.pyqtSignal(Forbid,bool)  # 当前显示的天窗变化发射
     def __init__(self,data:Forbid,parent=None):
         super().__init__(parent)
         self.setWindowTitle('天窗编辑')
@@ -172,7 +205,7 @@ class ForbidWidget(QtWidgets.QWidget):
 
     def _show_changed(self,checked:bool,down:bool):
         self.data.setShow(checked,down)
-        self.showForbidChanged.emit(checked,down)
+        self.showForbidChanged.emit(self.data,checked,down)
 
     def _time_changed(self,tableWidget:QtWidgets.QTableWidget,row:int):
         self.tableWidget.setCurrentCell(row,self.tableWidget.currentColumn())
@@ -235,9 +268,9 @@ class ForbidWidget(QtWidgets.QWidget):
             end = datetime(1900, 1, 1, endQ.hour(), endQ.minute())
             self.data.addForbid(gap[0],gap[1],begin,end)
         if self.data.downShow():
-            self.currentShowedChanged.emit(True)
+            self.currentShowedChanged.emit(self.data,True)
         if self.data.upShow():
-            self.currentShowedChanged.emit(False)
+            self.currentShowedChanged.emit(self.data,False)
 
     def _cancel_clicked(self):
         if not self.question('将本线标尺信息恢复为保存的信息，当前未保存的改动将会丢失。是否继续？'):

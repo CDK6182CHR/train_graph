@@ -2,7 +2,7 @@
 线路类
 """
 from .ruler import Ruler
-from .forbid import Forbid
+from .forbid import Forbid,ServiceForbid,ConstructionForbid
 from .route import Route
 from .linestation import LineStation
 from typing import Union
@@ -43,7 +43,8 @@ class Line():
         self.rulers = []
         self.routes = []
         self.notes = {}
-        self.forbid = Forbid(self)
+        self.forbid = ServiceForbid(self)
+        self.forbid2 = ConstructionForbid(self)
         self.item = None  # lineDB中使用。
         self.parent = None  # lineDB中使用
         if origin is not None:
@@ -156,16 +157,8 @@ class Line():
             r.parseData(route_dict)
             self.routes.append(r)
 
-        try:
-            self.forbid
-        except AttributeError:
-            self.forbid = Forbid(self)
-        try:
-            origin["forbid"]
-        except KeyError:
-            pass
-        else:
-            self.forbid.loadForbid(origin["forbid"])
+        self.forbid.loadForbid(origin.get("forbid",None))
+        self.forbid2.loadForbid(origin.get("forbid2",None))
         self.setNameMap()
         self.setFieldMap()
         self.verifyNotes()
@@ -211,6 +204,7 @@ class Line():
             "routes":[],
             "stations":self.stations,
             "forbid":self.forbid.outInfo(),
+            "forbid2":self.forbid2.outInfo(),
             "notes":self.notes,
         }
         try:
@@ -310,6 +304,7 @@ class Line():
     def isDownGap(self,st1:str,st2:str):
         """
         判断给定的区间是否为下行区间
+        线性算法。
         """
         s1 = None
         s2 = None
@@ -326,6 +321,12 @@ class Line():
         except:
             pass
         return True
+
+    def isDownGapByDict(self,st1:LineStation,st2:LineStation)->bool:
+        """
+        判定是否是下行区间，常量级别算法，按里程计算。
+        """
+        return st1['licheng'] <= st2['licheng']
 
     def stationViaDirection(self,name:str):
         """
@@ -468,6 +469,7 @@ class Line():
         self.stations.clear()
         self.rulers.clear()
         self.forbid.clear()
+        self.forbid2.clear()
 
     def firstStationName(self)->str:
         if not self.stations:

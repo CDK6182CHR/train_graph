@@ -19,7 +19,7 @@ import sys
 from PyQt5 import QtWidgets, QtGui, QtCore, QtPrintSupport
 from PyQt5.QtCore import Qt
 from .data.graph import Graph,Train,Ruler,Line
-from .data.forbid import Forbid
+from .data.forbid import Forbid,ServiceForbid,ConstructionForbid
 from datetime import timedelta, datetime
 import time
 from enum import Enum
@@ -94,6 +94,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         menu.addAction(QtWidgets.QAction('批量复制(Ctrl+Shift+A)',self))
         menu.addAction(QtWidgets.QAction('区间换线(Ctrl+5)',self))
         menu.addAction(QtWidgets.QAction('推定时刻(Ctrl+2)',self))
+        menu.addSeparator()
+        menu.addAction(QtWidgets.QAction('添加车次(Ctrl+Shift+C)',self))
 
     def setMargin(self):
         """
@@ -213,15 +215,19 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 if progressDialog.wasCanceled():
                     break
 
-        forbid = self.graph.line.forbid
-        if forbid.downShow():
-            self.show_forbid(True)
-        if forbid.upShow():
-            self.show_forbid(False)
+        self._resetForbidShow(self.graph.line.forbid)
+        self._resetForbidShow(self.graph.line.forbid2)
 
         self.verticalScrollBar().valueChanged.connect(self._resetTimeAxis)
         self.horizontalScrollBar().valueChanged.connect(self._resetDistanceAxis)
         self.graph.line.disableNumberMap()
+
+    def _resetForbidShow(self,forbid:Forbid):
+        if forbid.downShow():
+            self.show_forbid(forbid,True)
+        if forbid.upShow():
+            self.show_forbid(forbid,False)
+
 
     def _setHLines(self, UIDict: dict, gridColor: QtGui.QColor, width: int, height: int):
         """
@@ -1372,20 +1378,22 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 return TrainEventType.avoid
         return TrainEventType.unknown
 
-    def on_show_forbid_changed(self, checked, down):
+    def on_show_forbid_changed(self, forbid:Forbid,checked, down):
         if checked:
-            self.show_forbid(down)
+            self.show_forbid(forbid,down)
         else:
-            self._remove_forbid(down)
+            self._remove_forbid(forbid,down)
 
-    def show_forbid(self, down, remove=True):
-        print("show forbid")
+    def show_forbid(self, forbid_data:Forbid, down, remove=True):
+        print("show forbid",forbid_data)
         if remove:
-            self._remove_forbid(down)
-        print("remove ok")
-        forbid_data: Forbid = self.graph.line.forbid
+            self._remove_forbid(forbid_data,down)
         pen = QtGui.QPen(Qt.transparent)
-        color = QtGui.QColor('#222222')
+        isService = isinstance(forbid_data,ServiceForbid)
+        if isService:
+            color = QtGui.QColor('#555555')
+        else:
+            color = QtGui.QColor('#5555FF')
         color.setAlpha(200)
         brush = QtGui.QBrush(color)
         if not forbid_data.different():
@@ -1394,8 +1402,15 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             brush.setStyle(Qt.FDiagPattern)
         else:
             brush.setStyle(Qt.BDiagPattern)
+        brush2=None
+        if not isService:
+            color=QtGui.QColor('#AAAAAA')
+            color.setAlpha(80)
+            brush2=QtGui.QBrush(color)
         for node in forbid_data.nodes(down):
             items = self._add_forbid_rect(node, pen, brush)
+            if not isService:
+                items.extend(self._add_forbid_rect(node,pen,brush2))
             for item in items:
                 forbid_data.addItem(down, item)
 
@@ -1439,8 +1454,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             rectItem2.setZValue(1)
             return [rectItem1, rectItem2,]
 
-    def _remove_forbid(self, down):
-        forbid = self.graph.line.forbid
+    def _remove_forbid(self,forbid, down):
         for item in forbid.items(down):
             if item in self.scene.items():  # 临时使用这种方法避免出错
                 self.scene.removeItem(item)

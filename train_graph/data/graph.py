@@ -2,16 +2,16 @@
 运行图类.
 同时管理self._config和self._sysConfig两套设置系统，两套系统完全分离。
 """
-from .line import Line
+from .line import Line,LineStation
 from .ruler import Ruler
-from .train import Train,TrainStation
+from .train import Train, TrainStation
 from .circuit import Circuit, CircuitNode
 from copy import copy
 from Timetable_new.utility import stationEqual
 import json, re
 from datetime import datetime
 from train_graph.pyETRCExceptions import *
-from typing import List,Union,Tuple,Dict
+from typing import List, Union, Tuple, Dict
 from enum import Enum
 import time
 
@@ -75,7 +75,7 @@ class Graph:
             "text_color": "#0000FF",
             "default_keche_width": 1.5,
             "default_huoche_width": 0.75,
-            "default_db_file":"linesNew.pyetlib",
+            "default_db_file": "linesNew.pyetlib",
             "start_hour": 0,
             "end_hour": 24,
             "minutes_per_vertical_line": 10.0,
@@ -84,23 +84,28 @@ class Graph:
             "start_label_height": 30,
             "end_label_height": 15,
             "table_row_height": 30,
-            "link_line_height":10,
+            "link_line_height": 10,
             "show_time_mark": 1,  # 显示详细停点。0-不显示，1-仅显示选中车次，2-显示所有车次
             "max_passed_stations": 3,  # 至多跨越站数。超过这个数将被分成两段运行图。
-            "default_colors": {"快速": "#FF0000", "特快": "#0000FF",
-                               "直达特快": "#FF00FF", "动车组": "#804000", "动车": "#804000",
-                               "高速": "#FF00BE", "城际": "#FF33CC", "default": "#008000"
+            "default_colors": {"快速": "#FF0000",
+                               "特快": "#0000FF",
+                               "直达特快": "#FF00FF",
+                               "动车组": "#804000",
+                               "动车": "#804000",
+                               "高速": "#FF00BE",
+                               "城际": "#FF33CC",
+                               "default": "#008000"
                                },
             "margins": {
                 "left_white": 15,  # 左侧白边，不能有任何占用的区域
                 "right_white": 10,
-                "left": 325,
+                "left": 275,
                 "up": 90,
                 "down": 90,
-                "right": 170,
-                "label_width": 100,
-                "mile_label_width": 50,
-                "ruler_label_width": 100,
+                "right": 150,
+                "label_width": 80,
+                "mile_label_width": 40,
+                "ruler_label_width": 80,
             },
             "type_regex": [
                 ('高速', r'G\d+', True),
@@ -276,12 +281,12 @@ class Graph:
     def setVersion(self, v: str):
         self._version = v
 
-    def sysVersion(self)->str:
+    def sysVersion(self) -> str:
         if self._sysVersion:
             return self._sysVersion
         return self._version
 
-    def setSysVersion(self,v:str):
+    def setSysVersion(self, v: str):
         self._sysVersion = v
 
     def addTrain(self, train: Train):
@@ -339,7 +344,7 @@ class Graph:
                     ((not freight_only) or st.get("freight", True)):
                 yield st['zhanming']
 
-    def verifyStationBusiness(self,st:dict,passenger_only:bool,freight_only:bool)->bool:
+    def verifyStationBusiness(self, st: dict, passenger_only: bool, freight_only: bool) -> bool:
         """
         2019.07.12新增。
         检查所给的车站dict是否符合办客和办货的要求。
@@ -478,7 +483,7 @@ class Graph:
         #     print("Graph::trainFromCheci error! Existed train not found: ",t)
         # return t
 
-    def trainFromCheciLinear(self,checi:str,full_only:bool)->Train:
+    def trainFromCheciLinear(self, checi: str, full_only: bool) -> Train:
         """
         仅调试用，线性查找车次。
         """
@@ -580,14 +585,22 @@ class Graph:
 
     def gapBetween(self, st1: str, st2: str):
         """
-        计算两个站间距离
+        计算两个站间距离.
+        2020.01.23新增：如果是上行方向，则尝试使用对里程。
+        对里程按照点对点原则使用，只考虑两端点的对里程数据，不考虑中间的。
         """
         station1 = self.stationByDict(st1)
         station2 = self.stationByDict(st2)
 
-        if station1 is None or station2 is None:
-            raise Exception("No such station", st1, st2)
+        if station1 is None:
+            raise StationNotInLineException(st1)
+        if station2 is None:
+            raise StationNotInLineException(st2)
 
+        if not self.line.isDownGapByDict(station1, station2):
+            if station1.get('counter') is not None and \
+                    station2.get('counter') is not None:
+                return abs(station1['counter'] - station2['counter'])
         return abs(station1["licheng"] - station2["licheng"])
 
     def lineSplited(self):
@@ -604,7 +617,7 @@ class Graph:
                 return True
         return False
 
-    def circuitNameExisted(self,name,ignore:Circuit=None):
+    def circuitNameExisted(self, name, ignore: Circuit = None):
         for c in self.circuits():
             if c is not ignore and c.name() == name:
                 return True
@@ -717,7 +730,7 @@ class Graph:
             try:
                 rgx = re.compile(rg)
             except:
-                print("Invalid Regex! ",rg)
+                print("Invalid Regex! ", rg)
                 continue
             if re.match(rgx, checi):
                 return nm
@@ -1033,10 +1046,10 @@ class Graph:
             try:
                 return self.line.numberMap[self.nameMapToLine(name)]
             except KeyError:
-                print("Graph::stationIndex: Unexpected station name:",name)
+                print("Graph::stationIndex: Unexpected station name:", name)
                 return self.stationIndex_bf(name)
 
-    def stationIndex_bf(self,name:str):
+    def stationIndex_bf(self, name: str):
         """
         原来的暴力方法查找序号。分离此函数是为了尝试统计有多少次使用暴力方法。
         """
@@ -1045,7 +1058,7 @@ class Graph:
                 return i
         raise StationNotInLineException(name)
 
-    def stationByDict(self, name: str, strict=False):
+    def stationByDict(self, name: str, strict=False)->LineStation:
         """
         根据站名返回dict对象，函数名写错了。支持域解析符。
         2019.02.02删除线性算法。
@@ -1091,9 +1104,9 @@ class Graph:
             if st_dict is not None:
                 st_dict["zhanming"] = new
         # 更新天窗中站名
-        self.line.forbid.changeStationName(old,new)
+        self.line.forbid.changeStationName(old, new)
+        self.line.forbid2.changeStationName(old, new)
         self.line.changeStationNameUpdateMap(old, new)
-
 
     def addTrainByGraph(self, graph, cover=False):
         """
@@ -1111,13 +1124,13 @@ class Graph:
                     # 临时处理：移交交路数据
                     circuit = t.carriageCircuit()
                     if circuit is not None:
-                        circuit.replaceTrain(t,train)
+                        circuit.replaceTrain(t, train)
                         train.setCarriageCircuit(circuit)
                     self.delTrain(t)
                     self.addTrain(train)
         return num
 
-    def preAddTrainByGraph(self,graph):
+    def preAddTrainByGraph(self, graph):
         """
         2019.07.19新增。预导入所有与本线有关涉的车次和交路。
         此函数只能在临时对象中调用。自身的车次表、交路表应当是空的。
@@ -1134,7 +1147,7 @@ class Graph:
                         self.addCircuit(circuit)
                 self.addTrain(train)
         tm2 = time.perf_counter()
-        print("预导入线路历时",tm2-tm1)
+        print("预导入线路历时", tm2 - tm1)
 
     def setMarkdown(self, mark: str):
         self._markdown = mark
@@ -1418,7 +1431,7 @@ class Graph:
             tgsj_str += '  '
         return tgsj_str
 
-    def getIntervalTrains(self, start, end, trainFilter,*,businessOnly=False,stoppedOnly=False):
+    def getIntervalTrains(self, start, end, trainFilter, *, businessOnly=False, stoppedOnly=False):
         """
         返回某个区间办客车次列表。数据结构为list<dict>。
         //2.1版本修改逻辑为：两站皆办理业务才被选入。
@@ -1434,15 +1447,15 @@ class Graph:
         for train in self.trains():
             if not trainFilter.check(train):
                 continue
-            start_idx,end_idx = train.stationIndexByName(start),train.stationIndexByName(end)
-            if start_idx==-1 or end_idx==-1:
+            start_idx, end_idx = train.stationIndexByName(start), train.stationIndexByName(end)
+            if start_idx == -1 or end_idx == -1:
                 continue
-            if start_idx>end_idx:
+            if start_idx > end_idx:
                 continue
-            start_dict,end_dict = train.timetable[start_idx],train.timetable[end_idx]
+            start_dict, end_dict = train.timetable[start_idx], train.timetable[end_idx]
 
-            if not (self.judgeStopAndBusiness(train,start_dict,businessOnly,stoppedOnly) and
-                    self.judgeStopAndBusiness(train,end_dict,businessOnly,stoppedOnly)):
+            if not (self.judgeStopAndBusiness(train, start_dict, businessOnly, stoppedOnly) and
+                    self.judgeStopAndBusiness(train, end_dict, businessOnly, stoppedOnly)):
                 continue
             isSfz = train.isSfz(start)
             isZdz = train.isZdz(end)
@@ -1456,17 +1469,17 @@ class Graph:
             interval_list.append(train_dict)
         return interval_list
 
-    def judgeStopAndBusiness(self,train:Train,dct:dict,bOnly:bool,sOnly:bool):
+    def judgeStopAndBusiness(self, train: Train, dct: dict, bOnly: bool, sOnly: bool):
         """
         为上一个函数服务的工具性函数。判断时刻表中某车站是否符合对营业和停车的要求。
         表达式写的丑是为了利用短路性提高效率。
         """
         zm = dct['zhanming']
-        return (not sOnly or train.stationStopped(dct) or train.isSfz(zm) or train.isZdz(zm)) and\
+        return (not sOnly or train.stationStopped(dct) or train.isSfz(zm) or train.isZdz(zm)) and \
                (not bOnly or train.stationBusiness(dct))
 
     def getIntervalCount(self, fromOrTo, isStart, trainFilter, passenger_only=False, freight_only=False,
-                        business_train_only=False,stopped_train_only=False):
+                         business_train_only=False, stopped_train_only=False):
         """
         获取区间对数表。
         :param fromOrTo:发站或到站
@@ -1481,14 +1494,14 @@ class Graph:
             for st in self.businessStationNames(passenger_only, freight_only):
                 if not stationEqual(fromOrTo, st):
                     infoList.append({'from': fromOrTo, 'to': st, 'info':
-                        self.getIntervalTrains(fromOrTo, st,trainFilter,businessOnly=business_train_only,
+                        self.getIntervalTrains(fromOrTo, st, trainFilter, businessOnly=business_train_only,
                                                stoppedOnly=stopped_train_only
                                                )})
         else:
             for st in self.businessStationNames(passenger_only, freight_only):
                 if not stationEqual(fromOrTo, st):
                     infoList.append({'to': fromOrTo, 'from': st, 'info':
-                        self.getIntervalTrains(st, fromOrTo,trainFilter,businessOnly=business_train_only,
+                        self.getIntervalTrains(st, fromOrTo, trainFilter, businessOnly=business_train_only,
                                                stoppedOnly=stopped_train_only
                                                )})
 
@@ -1512,7 +1525,7 @@ class Graph:
 
     def getIntervalCount_faster(self, fromOrTo, isStart, trainFilter,
                                 passenger_only=False, freight_only=False,
-                                business_train_only=False, stopped_train_only=False)->list:
+                                business_train_only=False, stopped_train_only=False) -> list:
         """
         2019.07.12新增，破坏封装性提高效率。
         原理是避免车次的时刻表被多次遍历。由于Line对象的name->dict有映射表而可以以近常量的效率完成，
@@ -1534,43 +1547,43 @@ class Graph:
                     st_dict_line = self.stationByDict(st_dict_train['zhanming'])
                     if st_dict_line is None:
                         continue
-                    if stationEqual(st_dict_line['zhanming'],fromOrTo,strict=True):
+                    if stationEqual(st_dict_line['zhanming'], fromOrTo, strict=True):
                         if not self.judgeStopAndBusiness(train,
-                        st_dict_train,business_train_only,stopped_train_only):
+                                                         st_dict_train, business_train_only, stopped_train_only):
                             break
                         elif train.isSfz(st_dict_train['zhanming']):
-                            started=2
+                            started = 2
                         else:
-                            started=1
+                            started = 1
                         continue
                     if not started:
                         continue
                     # 到这里为止，保证站名存在，且已经越过了始发站。
                     zm = st_dict_line['zhanming']
                     # 排除不符合线路站点要求的项目
-                    if not self.verifyStationBusiness(st_dict_line,passenger_only,freight_only):
+                    if not self.verifyStationBusiness(st_dict_line, passenger_only, freight_only):
                         continue
                     # 排除不符合车次营业及停车要求的项目
-                    if not self.judgeStopAndBusiness(train,st_dict_train,
-                                                     business_train_only,stopped_train_only):
+                    if not self.judgeStopAndBusiness(train, st_dict_train,
+                                                     business_train_only, stopped_train_only):
                         continue
-                    allCount[zm]=allCount.get(zm,0)+1
+                    allCount[zm] = allCount.get(zm, 0) + 1
                     if train.isZdz(st_dict_train['zhanming']):
-                        endCount[zm]=endCount.get(zm,0)+1
-                    if started==2:
-                        startCount[zm]=startCount.get(zm,0)+1
+                        endCount[zm] = endCount.get(zm, 0) + 1
+                    if started == 2:
+                        startCount[zm] = startCount.get(zm, 0) + 1
                         if train.isZdz(zm):
-                            startEndCount[zm]=startEndCount.get(zm,0)+1
+                            startEndCount[zm] = startEndCount.get(zm, 0) + 1
             count_list = []
-            for st_name in self.businessStationNames(passenger_only,freight_only):
+            for st_name in self.businessStationNames(passenger_only, freight_only):
                 count_list.append(
                     {
-                        'from':fromOrTo,
-                        'to':st_name,
-                        'count':allCount.get(st_name,0),
-                        'countSfz':startCount.get(st_name,0),
-                        'countZdz':endCount.get(st_name,0),
-                        'countSfZd':startEndCount.get(st_name,0),
+                        'from': fromOrTo,
+                        'to': st_name,
+                        'count': allCount.get(st_name, 0),
+                        'countSfz': startCount.get(st_name, 0),
+                        'countZdz': endCount.get(st_name, 0),
+                        'countSfZd': startEndCount.get(st_name, 0),
                     }
                 )
             return count_list
@@ -1583,43 +1596,43 @@ class Graph:
                     st_dict_line = self.stationByDict(st_dict_train['zhanming'])
                     if st_dict_line is None:
                         continue
-                    if stationEqual(st_dict_line['zhanming'],fromOrTo,strict=True):
-                        if not self.judgeStopAndBusiness(train,st_dict_train,business_train_only,
+                    if stationEqual(st_dict_line['zhanming'], fromOrTo, strict=True):
+                        if not self.judgeStopAndBusiness(train, st_dict_train, business_train_only,
                                                          stopped_train_only):
                             break
                         elif train.isZdz(st_dict_train['zhanming']):
-                            started=2
+                            started = 2
                         else:
-                            started=1
+                            started = 1
                         continue
                     if not started:
                         continue
                     # 到这里为止，保证站名存在，且已经越过了终到站。
                     zm = st_dict_line['zhanming']
                     # 排除不符合线路站点要求的项目
-                    if not self.verifyStationBusiness(st_dict_line,passenger_only,freight_only):
+                    if not self.verifyStationBusiness(st_dict_line, passenger_only, freight_only):
                         continue
                     # 排除不符合车次营业及停车要求的项目
-                    if not self.judgeStopAndBusiness(train,st_dict_train,
-                                                     business_train_only,stopped_train_only):
+                    if not self.judgeStopAndBusiness(train, st_dict_train,
+                                                     business_train_only, stopped_train_only):
                         continue
-                    allCount[zm]=allCount.get(zm,0)+1
+                    allCount[zm] = allCount.get(zm, 0) + 1
                     if train.isSfz(st_dict_train['zhanming']):
-                        startCount[zm]=startCount.get(zm,0)+1
-                    if started==2:
-                        endCount[zm]=endCount.get(zm,0)+1
+                        startCount[zm] = startCount.get(zm, 0) + 1
+                    if started == 2:
+                        endCount[zm] = endCount.get(zm, 0) + 1
                         if train.isSfz(zm):
-                            startEndCount[zm]=startEndCount.get(zm,0)+1
+                            startEndCount[zm] = startEndCount.get(zm, 0) + 1
             count_list = []
-            for st_name in self.businessStationNames(passenger_only,freight_only):
+            for st_name in self.businessStationNames(passenger_only, freight_only):
                 count_list.append(
                     {
-                        'from':st_name,
-                        'to':fromOrTo,
-                        'count':allCount.get(st_name,0),
-                        'countSfz':startCount.get(st_name,0),
-                        'countZdz':endCount.get(st_name,0),
-                        'countSfZd':startEndCount.get(st_name,0),
+                        'from': st_name,
+                        'to': fromOrTo,
+                        'count': allCount.get(st_name, 0),
+                        'countSfz': startCount.get(st_name, 0),
+                        'countZdz': endCount.get(st_name, 0),
+                        'countSfZd': startEndCount.get(st_name, 0),
                     }
                 )
             return count_list
@@ -1742,10 +1755,10 @@ class Graph:
                 except AttributeError:
                     print("Graph::delCircuit: Unexcpeted node.train", node)
                 except TrainNotFoundException as e:
-                    print("Graph::delCircuit: TrainNotFoundException",e)
+                    print("Graph::delCircuit: TrainNotFoundException", e)
                     pass
 
-    def checkGraph(self)->str:
+    def checkGraph(self) -> str:
         """
         对运行图文件可能出现的问题做启动时的检查。返回是报错的字符串。没有其他影响。
         如果没有问题，返回空串。
@@ -1754,18 +1767,18 @@ class Graph:
         # 检查正则表达式的问题
         i = 0
         found = False
-        for name,rg,_ in self.UIConfigData()['type_regex']:
+        for name, rg, _ in self.UIConfigData()['type_regex']:
             try:
                 re.compile(rg)
             except:
                 if rg == r'7\d+{3}':
-                    self.UIConfigData()['type_regex'][i] = (name,r'7\d{3}',_)
+                    self.UIConfigData()['type_regex'][i] = (name, r'7\d{3}', _)
                 else:
-                    found=True
+                    found = True
                     report += f"列车类型[{name}]的正则表达式[{rg}]错误！\n"
             else:
                 pass
-            i+=1
+            i += 1
         if found:
             report += "请至“运行图设置”（ctrl+G）面板中“类型管理”中修正错误的正则表达式。\n"
 
@@ -1774,7 +1787,7 @@ class Graph:
                       "程序运行异常。下次打开本文件时，如果仍未解决，此消息仍会显示。\n"
         return report
 
-    def modelList(self)->list:
+    def modelList(self) -> list:
         """
         2019.06.25新增。返回所有不同的车底类型列表。
         目前只由trainFilter中筛选的有关功能调用，简化起见，不作为属性保存，每次都遍历得到。
@@ -1784,7 +1797,7 @@ class Graph:
             lst.append(circuit.model())
         return list(set(lst))
 
-    def ownerList(self)->list:
+    def ownerList(self) -> list:
         """
         返回所有不同的担当局段表。
         """
@@ -1805,7 +1818,7 @@ class Graph:
         self.fullCheciMap = {}
         self.singleCheciMap = {}
         self._markdown = ''
-        self.filename=''
+        self.filename = ''
 
     def clearTrains(self):
         self._trains = []
@@ -1814,7 +1827,7 @@ class Graph:
         self.fullCheciMap = {}
         self.singleCheciMap = {}
 
-    def nameMapToLine(self,name:str):
+    def nameMapToLine(self, name: str):
         """
         支持域解析符的情况下，将车次中的站名映射到本线站名。
         """
@@ -1830,14 +1843,14 @@ class Graph:
         NewAdded = 2
         Deleted = 3
 
-    def diffWith(self,graph,callBack=None)->List[Tuple[
+    def diffWith(self, graph, callBack=None) -> List[Tuple[
         TrainDiffType,
         Union[List[Tuple[
-            Train.StationDiffType,TrainStation,TrainStation
-        ]],None],
-        Union[int,None],
-        Union[Train,None],
-        Union[Train,None]
+            Train.StationDiffType, TrainStation, TrainStation
+        ]], None],
+        Union[int, None],
+        Union[Train, None],
+        Union[Train, None]
     ]]:
         """
         与graph所示运行图进行车次比较。返回：与车次时刻表对比类似：List<Tuple>。但是新增一项，不同的数目。
@@ -1848,37 +1861,38 @@ class Graph:
         2019.11.17修改：将判断是否是本线车的逻辑移到Dialog里面。理由是减少反复的比较，而仅在读取的时候比较一次。判断是否本线车的代价要远小于比较交叉车次的代价，故此。
         """
         tm1 = time.perf_counter()
-        graph:Graph
+        graph: Graph
         result = []
         anotherFullMap = graph.fullCheciMap.copy()
         for train in self.trains():
             checi = train.fullCheci()
-            train2 = anotherFullMap.get(checi,None)
+            train2 = anotherFullMap.get(checi, None)
             if train2 is None:
                 result.append((
-                    Graph.TrainDiffType.Deleted,None,None,train,None
+                    Graph.TrainDiffType.Deleted, None, None, train, None
                 ))
                 if callBack:
                     callBack(1)
             else:
-                trainDiffData,value = train.globalDiff(train2)  # 最慢
-                tp = Graph.TrainDiffType.Unchanged if value==0 else Graph.TrainDiffType.Changed
+                trainDiffData, value = train.globalDiff(train2)  # 最慢
+                tp = Graph.TrainDiffType.Unchanged if value == 0 else Graph.TrainDiffType.Changed
                 result.append((
-                    tp,trainDiffData,value,train,train2
+                    tp, trainDiffData, value, train, train2
                 ))
                 del anotherFullMap[checi]
                 if callBack:
                     callBack(2)
-        for _,train2 in anotherFullMap.items():
-            train2:Train
+        for _, train2 in anotherFullMap.items():
+            train2: Train
             result.append((
-                    Graph.TrainDiffType.NewAdded,None,None,None,train2
-                ))
+                Graph.TrainDiffType.NewAdded, None, None, None, train2
+            ))
             if callBack:
                 callBack(1)
         tm2 = time.perf_counter()
-        print("Graph::diffWith()历时",tm2-tm1)
+        print("Graph::diffWith()历时", tm2 - tm1)
         return result
+
 
 if __name__ == '__main__':
     graph = Graph()

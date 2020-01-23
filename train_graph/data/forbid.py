@@ -1,11 +1,16 @@
 """
 天窗或禁行时段数据结构。此数据集成在line内。
+2020年1月23日注记：
+每个运行图中存在两个实例对象，即【综合维修天窗】和【综合施工天窗】，在line中用forbid和forbid2表示。
+其基础数据没有区别，都调用本类。
 """
 from datetime import datetime,timedelta
 from Timetable_new.utility import stationEqual
+from typing import Union
 
 class Forbid:
     """
+    分为综合维修天窗和综合施工天窗，属于哪一类由RTTI给出。
     数据结构：
     Line& _line; //线路数据的引用
     bool _different;//上下行分设
@@ -26,7 +31,9 @@ class Forbid:
         self._upShow = False
         self._downShow = False
 
-    def loadForbid(self,origin:dict):
+    def loadForbid(self,origin:Union[dict,None]):
+        if origin is None:
+            return
         self._different=origin["different"]
         self._nodes=origin["nodes"]
         self._upShow = origin["upShow"]
@@ -181,3 +188,13 @@ class Forbid:
                     node['daozhan'] = down_name
                 else:
                     node['daozhan'] = up_name
+
+
+class ServiceForbid(Forbid):
+    def __init__(self,line,different=True):
+        super(ServiceForbid, self).__init__(line,different)
+
+
+class ConstructionForbid(Forbid):
+    def __init__(self,line,different=True):
+        super(ConstructionForbid, self).__init__(line,different)
