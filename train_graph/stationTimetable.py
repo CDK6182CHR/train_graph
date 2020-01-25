@@ -7,13 +7,13 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 from .data.graph import Graph,Train,Circuit
 from .stationvisualize import StationGraphWidget
+from .stationVisualizeDialog import StationVisualizeDialog
 from .trainFilter import TrainFilter
 import sys
 
 
 class StationTimetable(QtWidgets.QDialog):
     showStatusInfo = QtCore.pyqtSignal(str)
-    stationVisualizeChanged = QtCore.pyqtSignal(int)  # emit to stationVisualize
 
     def __init__(self, graph: Graph, station: str, parent=None):
         super(StationTimetable, self).__init__(parent)
@@ -45,9 +45,9 @@ class StationTimetable(QtWidgets.QDialog):
 
         tableWidget = QtWidgets.QTableWidget()
         self.tableWidget = tableWidget
-        tableWidget.setColumnCount(12)
+        tableWidget.setColumnCount(13)
         tableWidget.setHorizontalHeaderLabels(['车次', '站名', '到点', '开点',
-                                               '类型', '停站', '方向', '始发', '终到',
+                                               '类型', '停站', '方向', '始发', '终到','股道',
                                                '车底','担当','备注',])
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
 
@@ -57,7 +57,7 @@ class StationTimetable(QtWidgets.QDialog):
         header.setSectionsClickable(True)
         header.sectionClicked.connect(tableWidget.sortByColumn)
 
-        column_width = (80, 100, 100, 100, 80, 80, 80, 90, 90, 90, 90, 90)
+        column_width = (80, 100, 100, 100, 80, 80, 80, 90, 90, 90, 90, 90, 90)
         for i, s in enumerate(column_width):
             tableWidget.setColumnWidth(i, s)
 
@@ -132,125 +132,23 @@ class StationTimetable(QtWidgets.QDialog):
             item = QtWidgets.QTableWidgetItem(text)
             tableWidget.setItem(row, 8, item)
 
+            tableWidget.setItem(row,9,QtWidgets.QTableWidgetItem(node['track']))
+
             text = node['note']
             item = QtWidgets.QTableWidgetItem(text)
-            tableWidget.setItem(row, 11, item)
+            tableWidget.setItem(row, 12, item)
 
             circuit:Circuit = train.carriageCircuit()
             if circuit is not None:
-                tableWidget.setItem(row,9,QtWidgets.QTableWidgetItem(circuit.model()))
-                tableWidget.setItem(row,10,QtWidgets.QTableWidgetItem(circuit.owner()))
+                tableWidget.setItem(row,10,QtWidgets.QTableWidgetItem(circuit.model()))
+                tableWidget.setItem(row,11,QtWidgets.QTableWidgetItem(circuit.owner()))
             else:
-                tableWidget.setItem(row, 9, QtWidgets.QTableWidgetItem('-'))
                 tableWidget.setItem(row, 10, QtWidgets.QTableWidgetItem('-'))
+                tableWidget.setItem(row, 11, QtWidgets.QTableWidgetItem('-'))
 
     def _station_visualize(self):
-        station_dicts = self.timetable_dicts
-        station_name = self.station
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle(f"车站停车示意图*{station_name}")
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel("说明：此功能将各个车次在本线到开时间可视化，绘出股道占用时间图。"
-                                 "本图只是提供一种可能的情况，并不代表实际情况，如有雷同，纯属巧合；"
-                                 "本图默认采用双线股道铺排模式，Ⅰ、Ⅱ为上下行正线，其他为侧线；"
-                                 "所有下行车安排在下行股道；且通过车优先安排在正线，停车列车只安排在侧线。")
-        label.setWordWrap(True)
-        layout.addWidget(label)
-
-        slider = QtWidgets.QSlider(Qt.Horizontal)
-        slider.setRange(1, 120)
-        slider.setMaximumWidth(600)
-        # slider.valueChanged.connect(lambda x:print(x))
-        slider.setMaximumWidth(800)
-        slider.setValue(20)
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(QtWidgets.QLabel("水平缩放"))
-        hlayout.addStretch(10)
-        hlayout.addWidget(QtWidgets.QLabel("大"))
-        hlayout.addStretch(2)
-        hlayout.addWidget(slider)
-        hlayout.addStretch(2)
-        hlayout.addWidget(QtWidgets.QLabel("小"))
-        hlayout.addStretch(20)
-        btnAdvance = QtWidgets.QPushButton("高级")
-        hlayout.addWidget(btnAdvance)
-
-        slider.valueChanged.connect(lambda x: self.stationVisualizeChanged.emit(x))
-        layout.addLayout(hlayout)
-
-        widget = StationGraphWidget(station_dicts, self.graph, station_name, self)
-        btnAdvance.clicked.connect(lambda: self._station_visualize_advance(widget))
-        layout.addWidget(widget)
-        dialog.setLayout(layout)
-        dialog.exec_()
-
-    def _station_visualize_advance(self, visualWidget: StationGraphWidget):
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle('高级')
-        flayout = QtWidgets.QFormLayout()
-
-        group = QtWidgets.QButtonGroup()
-        radioDouble = QtWidgets.QRadioButton("双线铺画")
-        dialog.radioDouble = radioDouble
-        radioSingle = QtWidgets.QRadioButton("单线铺画")
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(radioDouble)
-        group.addButton(radioDouble)
-        hlayout.addWidget(radioSingle)
-        group.addButton(radioSingle)
-        flayout.addRow("铺画模式", hlayout)
-        if visualWidget.doubleLine():
-            radioDouble.setChecked(True)
-        else:
-            radioSingle.setChecked(True)
-        radioDouble.toggled.connect(visualWidget.setDoubleLine)
-
-        group = QtWidgets.QButtonGroup()
-        hlayout = QtWidgets.QHBoxLayout()
-        radioMainStay = QtWidgets.QRadioButton("允许")
-        radioMainStayNo = QtWidgets.QRadioButton("不允许")
-        hlayout.addWidget(radioMainStay)
-        hlayout.addWidget(radioMainStayNo)
-        dialog.radioMainStay = radioMainStay
-        group.addButton(radioMainStay)
-        group.addButton(radioMainStayNo)
-        flayout.addRow("正线停车", hlayout)
-        if visualWidget.allowMainStay():
-            radioMainStay.setChecked(True)
-        else:
-            radioMainStayNo.setChecked(True)
-        radioMainStay.toggled.connect(visualWidget.setAllowMainStay)
-
-        spinSame = QtWidgets.QSpinBox()
-        spinSame.setValue(visualWidget.sameSplitTime())
-        spinSame.setRange(0, 999)
-        spinSame.valueChanged.connect(visualWidget.setSameSplitTime)
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(spinSame)
-        hlayout.addWidget(QtWidgets.QLabel("分钟"))
-        flayout.addRow("同向接车间隔", hlayout)
-
-        spinOpposite = QtWidgets.QSpinBox()
-        spinOpposite.setValue(visualWidget.oppositeSplitTime())
-        spinOpposite.setRange(0, 999)
-        spinOpposite.valueChanged.connect(visualWidget.setOppositeSplitTime)
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(spinOpposite)
-        hlayout.addWidget(QtWidgets.QLabel("分钟"))
-        flayout.addRow("对向接车间隔", hlayout)
-
-        hlayout = QtWidgets.QHBoxLayout()
-        btnOk = QtWidgets.QPushButton("确定")
-        btnCancel = QtWidgets.QPushButton("取消")
-        hlayout.addWidget(btnOk)
-        hlayout.addWidget(btnCancel)
-        flayout.addRow(hlayout)
-
-        btnOk.clicked.connect(visualWidget.rePaintGraphAdvanced)
-        btnCancel.clicked.connect(dialog.close)
-        btnOk.clicked.connect(dialog.close)
-
-        dialog.setLayout(flayout)
+        dialog = StationVisualizeDialog(self.graph,
+                                        self.timetable_dicts,self.station,self)
         dialog.exec_()
 
     def _station_timetable_out(self):
@@ -270,7 +168,8 @@ class StationTimetable(QtWidgets.QDialog):
         wb = xlwt.Workbook(encoding='utf-8')
         ws = wb.add_sheet('车站时刻表')
 
-        for i, s in enumerate(['车次', '站名', '到点', '开点', '类型', '停站', '方向', '始发', '终到',
+        for i, s in enumerate(['车次', '站名', '到点', '开点', '类型',
+                               '停站', '方向', '始发', '终到', '股道',
                                '车底','担当','备注']):
             ws.write(0, i, s)
 

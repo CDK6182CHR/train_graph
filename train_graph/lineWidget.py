@@ -99,6 +99,12 @@ class LineWidget(QtWidgets.QWidget):
 
         self.setLayout(vlayout)
 
+        action = QtWidgets.QAction("复制[里程]到[对里程]",self.tableWidget)
+        action.triggered.connect(self._copy_counter)
+        action.setShortcut('alt+Z')
+        self.tableWidget.addAction(action)
+        self.tableWidget.setContextMenuPolicy(Qt.ActionsContextMenu)
+
     def setData(self):
         """
         更新所有数据，不重新创建对象。
@@ -343,8 +349,8 @@ class LineWidget(QtWidgets.QWidget):
             except:
                 counter = None
 
-            if i == 0 and licheng != 0.0:
-                if self.qustion("本线起始里程不为0，是否调整所有车站里程以使起始站里程归零？", False):
+            if i == 0 and (licheng != 0.0 or (counter is not None and counter != 0.0)):
+                if self.qustion("本线起始里程（或起始对里程）不为0，是否调整所有车站里程（或对里程）以使起始站里程（或对里程）归零？", False):
                     adjust_miles = True
 
             if (i == 0 or i == tableWidget.rowCount() - 1) and direction != 0x3:
@@ -381,6 +387,17 @@ class LineWidget(QtWidgets.QWidget):
         self.showStatus.emit("线路信息更新完毕")
         self.toSave=False
 
+    def _copy_counter(self):
+        """
+        Alt+Z。
+        2020.01.23新增，将当前行里程复制到对里程。
+        """
+        row = self.tableWidget.currentRow()
+        if not 0<=row<self.tableWidget.rowCount():
+            return
+        tw = self.tableWidget
+        tw.item(row,2).setText(f"{tw.cellWidget(row,1).value():.3f}")
+
     def _derr(self, note: str):
         # print("_derr")
         QtWidgets.QMessageBox.warning(self, "错误", note)
@@ -397,3 +414,5 @@ class LineWidget(QtWidgets.QWidget):
             return False
         else:
             return default
+
+

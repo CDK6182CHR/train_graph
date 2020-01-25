@@ -455,6 +455,10 @@ class Train():
             return dct["down"]
         return None
 
+    def stationTrack(self,station:str)->str:
+        dct = self.stationDict(station)
+        return dct['track']
+
     def lastDown(self)->bool:
         """
         本线最后一个区间的上下行情况。2.0新增，主要为了满足jointGraph的需要。

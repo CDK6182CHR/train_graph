@@ -18,11 +18,13 @@ packages = find_packages(where='.',
                                   'train_graph.linedb',
                                   'train_graph.data',
                                   'train_graph.circuitwidgets',
+                                  'train_graph.utility',
                                   )),  # 必填
       package_dir = {'':'.',
                      'linedb':'./train_graph',
                      'data':'./train_graph',
                      'circuitwidgets':'./train_graph',
+                     'utility':'./train_graph',
                      },         # 必填
       requires = ['PyQt5','xlwt','xlrd','xpinyin']
 

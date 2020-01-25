@@ -5,6 +5,7 @@ usage:
 >>> from .pyETRCExceptions import *
 >>> raise TrainNotFoundException("K101")
 """
+from pprint import pprint as printf
 
 class TrainNotFoundException(Exception):
     """

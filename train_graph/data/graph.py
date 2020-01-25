@@ -320,11 +320,15 @@ class Graph:
     def setLine(self, line: Line):
         self.line = line
 
-    def lineLength(self):
-        try:
-            return self.line.stations[-1]["licheng"]
-        except IndexError:
-            return 0
+    def lineLength(self)->float:
+        return self.line.lineLength()
+
+    def counterLength(self)->float:
+        """
+        [对里程]意义下的线路长度，或者说是上行线的长度。仅考虑最后一个站。
+        如果最后一个站的对里程数据不存在，则使用正里程长度数据。
+        """
+        return self.line.counterLength()
 
     def stations(self, reverse=False):
         if not reverse:
@@ -771,6 +775,7 @@ class Graph:
             "cfsj":datetime,
             "down":bool,
             "train":Train,
+            "track": !str,  //2020.01.24新增股道
         }
         """
         timeTable = []
@@ -786,6 +791,7 @@ class Graph:
                     "down": train.stationDown(st_dict['zhanming'], self),
                     "note": st_dict.get("note", ''),
                     "train": train,
+                    "track":st_dict.get("track",None),
                 }
                 timeTable.append(node)
 
@@ -795,21 +801,17 @@ class Graph:
             for j in range(i + 1, len(timeTable)):
                 if timeTable[j]["ddsj"] < timeTable[t]["ddsj"]:
                     t = j
-            temp = timeTable[t];
-            timeTable[t] = timeTable[i];
+            temp = timeTable[t]
+            timeTable[t] = timeTable[i]
             timeTable[i] = temp
         return timeTable
 
     def reverse(self):
         """
-        反排运行图
+        反排运行图。
+        2020年1月24日将线路部分逻辑封装到line里。
         """
-        length = self.lineLength()
-
-        # 里程调整
-        for st_dict in self.line.stations:
-            st_dict["licheng"] = length - st_dict["licheng"]
-        self.line.stations.reverse()
+        self.line.reverse()
 
         # 列车上下行调整、上下行车次交换
         for train in self._trains:

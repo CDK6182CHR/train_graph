@@ -66,10 +66,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self, filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.3.4"
+        self.version = "V2.4.0-2020新春版"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200123'
-        self.release = 'R35'  # 发布时再改这个
+        self.date = '20200125'
+        self.release = 'R36'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -1564,8 +1564,10 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         """
         另存为
         """
-        filename = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.pyetgr',
-                                                         filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')[0]
+        filename,ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.pyetgr',
+                                                         filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')
+        if not ok:
+            return
         self.statusOut("正在保存")
         self.graph.setVersion(self.version)
         self.graph.save(filename)
@@ -1776,12 +1778,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
     def _reverse_graph(self):
         flag = self.qustion("将本线上下行交换，所有里程交换。是否继续？\n"
-                            "此功能容易导致上下行逻辑混乱，除非当前运行图上下行错误，否则不建议使用此功能。")
+                            "此功能容易导致上下行逻辑混乱，除非当前运行图上下行错误，否则不建议使用此功能。\n"
+                            "车站原里程和对里程也将同时交换。如果原来缺少对里程数据，则默认用原里程覆盖。")
         if not flag:
             return
         self.graph.reverse()
         self.GraphWidget.paintGraph()
         self._refreshDockWidgets()
+        self.lineWidget.apply_line_info_change()  # 临时增加。解决标尺窗口似乎没有及时更新的问题。
 
     def _line_info_out(self):
         dialog = QtWidgets.QDialog(self)

@@ -295,11 +295,20 @@ class Line():
         self.nameMap[info['zhanming']] = info
 
     def adjustLichengTo0(self):
+        """
+        将起始站里程归零，同时平移所有站里程。
+        2020.01.23新增调整对里程的逻辑。
+        """
         if not self.stations:
             return
         start_mile = self.stations[0]["licheng"]
+        start_counter = self.stations[0].get("counter",None)
         for st in self.stations:
             st["licheng"] = st["licheng"]-start_mile
+        if start_counter is not None:
+            for st in self.stations:
+                if st.get('counter') is not None:
+                    st['counter']-=start_counter
 
     def isDownGap(self,st1:str,st2:str):
         """
@@ -457,10 +466,22 @@ class Line():
             return None
 
     def lineLength(self)->float:
-        try:
-            return self.stations[-1]["licheng"]-self.stations[0]["licheng"]
-        except IndexError:
+        if self.stations:
+            return self.stations[-1]["licheng"]
+        else:
             return 0
+
+    def counterLength(self)->float:
+        """
+        [对里程]意义下的线路长度，或者说是上行线的长度。仅考虑最后一个站。
+        如果最后一个站的对里程数据不存在，则使用正里程长度数据。
+        """
+        if not self.stations:
+            return 0
+        ctlen = self.stations[-1].get("counter")
+        if ctlen is not None:
+            return ctlen
+        return self.lineLength()
 
     def clear(self):
         """
@@ -511,6 +532,35 @@ class Line():
         self.stations.insert(old_idx+1,up_dict)
         self.nameMap[up_name] = up_dict
         self.addFieldMap(up_name)
+
+    def reverse(self):
+        """
+        2020年1月24日增加，
+        反排线路数据。
+        1. 反排站表数据。
+        2. 重新计算里程，交换正里程和对里程。
+        3. 交换单向站性质。
+        """
+        length = self.lineLength()
+        ctlen = self.counterLength()
+
+        viaMap = {
+            Line.DownVia:Line.UpVia,
+            Line.UpVia:Line.DownVia,
+            Line.NoVia:Line.NoVia,
+            Line.BothVia:Line.BothVia,
+        }
+
+        for st_dict in self.stations:
+            st_dict["licheng"] = length - st_dict["licheng"]
+            if st_dict.get("counter") is not None:
+                st_dict["counter"] = ctlen-st_dict["counter"]
+            else:
+                st_dict["counter"] = st_dict["licheng"]
+            # 交换正里程和对里程
+            st_dict['counter'],st_dict['licheng'] = st_dict['licheng'],st_dict['counter']
+            st_dict['direction'] = viaMap[st_dict.get("direction",Line.BothVia)]
+        self.stations.reverse()
 
 
 
