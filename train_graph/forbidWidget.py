@@ -2,10 +2,11 @@
 天窗编辑的窗口，可仿照标尺编辑。
 """
 from .data.forbid import Forbid
-from PyQt5 import QtWidgets,QtCore
+from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import Qt
 from datetime import datetime
 from .data.line import Line
+from .utility import PECellWidget,PECelledTable,PETableWidget,CellWidgetFactory
 
 
 class ForbidTabWidget(QtWidgets.QTabWidget):
@@ -15,9 +16,10 @@ class ForbidTabWidget(QtWidgets.QTabWidget):
     信号处理只需要关注mainWindow。
     """
     # okClicked = QtCore.pyqtSignal(Forbid)
-    showForbidChanged = QtCore.pyqtSignal(Forbid,bool, bool)
-    currentShowedChanged = QtCore.pyqtSignal(Forbid,bool)  # 当前显示的天窗变化发射
-    def __init__(self,line:Line,parent=None):
+    showForbidChanged = QtCore.pyqtSignal(Forbid, bool, bool)
+    currentShowedChanged = QtCore.pyqtSignal(Forbid, bool)  # 当前显示的天窗变化发射
+
+    def __init__(self, line: Line, parent=None):
         super(ForbidTabWidget, self).__init__(parent)
         self.setWindowTitle("天窗编辑")
         self.line = line  # type:Line
@@ -26,14 +28,14 @@ class ForbidTabWidget(QtWidgets.QTabWidget):
         self.initUI()
 
     def initUI(self):
-        self.widget1 = ForbidWidget(self.line.forbid,self)
-        self.widget2 = ForbidWidget(self.line.forbid2,self)
+        self.widget1 = ForbidWidget(self.line.forbid, self)
+        self.widget2 = ForbidWidget(self.line.forbid2, self)
         # 转发信号
-        for w in (self.widget1,self.widget2):
+        for w in (self.widget1, self.widget2):
             w.currentShowedChanged.connect(self.currentShowedChanged.emit)
             w.showForbidChanged.connect(self.showForbidChanged.emit)
-        self.addTab(self.widget1,"综合维修")
-        self.addTab(self.widget2,"综合施工")
+        self.addTab(self.widget1, "综合维修")
+        self.addTab(self.widget2, "综合施工")
 
     def setData(self):
         self.widget1.setData()
@@ -42,9 +44,10 @@ class ForbidTabWidget(QtWidgets.QTabWidget):
 
 class ForbidWidget(QtWidgets.QWidget):
     okClicked = QtCore.pyqtSignal()
-    showForbidChanged = QtCore.pyqtSignal(Forbid,bool,bool)
-    currentShowedChanged = QtCore.pyqtSignal(Forbid,bool)  # 当前显示的天窗变化发射
-    def __init__(self,data:Forbid,parent=None):
+    showForbidChanged = QtCore.pyqtSignal(Forbid, bool, bool)
+    currentShowedChanged = QtCore.pyqtSignal(Forbid, bool)  # 当前显示的天窗变化发射
+
+    def __init__(self, data: Forbid, parent=None):
         super().__init__(parent)
         self.setWindowTitle('天窗编辑')
         self.data = data
@@ -59,7 +62,7 @@ class ForbidWidget(QtWidgets.QWidget):
         checkDifferent = QtWidgets.QCheckBox()
         checkDifferent.setChecked(self.data.different())
         self.checkDifferent = checkDifferent
-        flayout.addRow('上下行分设',checkDifferent)
+        flayout.addRow('上下行分设', checkDifferent)
         checkDifferent.toggled.connect(self._different_changed)
 
         checkDown = QtWidgets.QCheckBox('下行')
@@ -69,7 +72,7 @@ class ForbidWidget(QtWidgets.QWidget):
         hlayout.addWidget(checkUp)
         checkUp.setChecked(self.data.upShow())
         checkDown.setChecked(self.data.downShow())
-        flayout.addRow('显示天窗',hlayout)
+        flayout.addRow('显示天窗', hlayout)
         self.checkUpShow = checkUp
         self.checkDownShow = checkDown
 
@@ -83,21 +86,24 @@ class ForbidWidget(QtWidgets.QWidget):
         label.setWordWrap(True)
         vlayout.addWidget(label)
 
-        tableWidget = QtWidgets.QTableWidget()
+        class T(QtWidgets.QTableWidget):
+            pass
+        # T = QtWidgets.QTableWidget
+        tableWidget = T()
+        tableWidget.setStyle(self.style())
         tableWidget.setContextMenuPolicy(Qt.ActionsContextMenu)
-        actionCp1 = QtWidgets.QAction('复制数据到下一行(Alt+C)',tableWidget)
+        actionCp1 = QtWidgets.QAction('复制数据到下一行(Alt+C)', tableWidget)
         actionCp1.setShortcut('Alt+C')
         tableWidget.addAction(actionCp1)
         actionCp1.triggered.connect(self._copy_1)
 
-        actionCpAll = QtWidgets.QAction('复制数据到本方向所有行(Alt+Shift+C)',tableWidget)
+        actionCpAll = QtWidgets.QAction('复制数据到本方向所有行(Alt+Shift+C)', tableWidget)
         actionCpAll.setShortcut('Alt+Shift+C')
         tableWidget.addAction(actionCpAll)
         actionCpAll.triggered.connect(self._copy_all)
 
         self.tableWidget = tableWidget
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
-        self.tableWidget = tableWidget
         tableWidget.setColumnCount(4)
         for i, s in enumerate((120, 100, 100, 60)):
             tableWidget.setColumnWidth(i, s)
@@ -117,16 +123,16 @@ class ForbidWidget(QtWidgets.QWidget):
         self.setLayout(vlayout)
 
     def setData(self):
-        self.updating=True
+        self.updating = True
         self.checkDifferent.setChecked(self.data.different())
         self.checkDownShow.setChecked(self.data.downShow())
         self.checkUpShow.setChecked(self.data.upShow())
         self._setTableWidget()  # 此处效率问题较明显
-        self.updating=False
+        self.updating = False
 
     def _setTableWidget(self):
         tableWidget = self.tableWidget
-        tableWidget.setRowCount(2*self.line.stationCount())
+        tableWidget.setRowCount(2 * self.line.stationCount())
 
         line = self.data.line()
         station_dicts = line.stations
@@ -138,8 +144,8 @@ class ForbidWidget(QtWidgets.QWidget):
             if st_dict["direction"] & line.DownVia:
                 if former_dict is not None:
                     self._addTableRow(former_dict["zhanming"], st_dict["zhanming"],
-                                      self.data.getInfo(former_dict["zhanming"], st_dict["zhanming"]), blocker,row)
-                    row+=1
+                                      self.data.getInfo(former_dict["zhanming"], st_dict["zhanming"]), blocker, row)
+                    row += 1
                 former_dict = st_dict
 
         former_dict = None
@@ -149,91 +155,91 @@ class ForbidWidget(QtWidgets.QWidget):
                 if st_dict["direction"] & line.UpVia:
                     if former_dict is not None:
                         self._addTableRow(former_dict["zhanming"], st_dict["zhanming"],
-                                          self.data.getInfo(former_dict["zhanming"], st_dict["zhanming"]), blocker,row)
-                        row+=1
+                                          self.data.getInfo(former_dict["zhanming"], st_dict["zhanming"]), blocker, row)
+                        row += 1
                     former_dict = st_dict
         tableWidget.setRowCount(row)
 
-    def _addTableRow(self,fazhan,daozhan,node,blocker,row):
-        tableWidget:QtWidgets.QTableWidget = self.tableWidget
-        tableWidget.setRowHeight(row,30)  # cannot infer to graph
+    def _addTableRow(self, fazhan, daozhan, node, blocker, row):
+        tableWidget: PECelledTable = self.tableWidget
+        tableWidget.setRowHeight(row, 30)  # cannot infer to graph
 
         item = QtWidgets.QTableWidgetItem(f'{fazhan}{blocker}{daozhan}')
-        item.setData(-1,[fazhan,daozhan])
-        tableWidget.setItem(row,0,item)
+        item.setData(-1, [fazhan, daozhan])
+        tableWidget.setItem(row, 0, item)
 
-        spinBegin = QtWidgets.QTimeEdit()
+        spinBegin:QtWidgets.QTimeEdit = CellWidgetFactory.new(QtWidgets.QTimeEdit)
         spinBegin.setDisplayFormat('hh:mm')
-        spinBegin.setMinimumSize(1,1)
-        spinEnd = QtWidgets.QTimeEdit()
+        spinBegin.setMinimumSize(1, 1)
+        spinEnd:QtWidgets.QTimeEdit = CellWidgetFactory.new(QtWidgets.QTimeEdit)
         spinEnd.setDisplayFormat('hh:mm')
-        spinEnd.setMinimumSize(1,1)
+        spinEnd.setMinimumSize(1, 1)
 
         if node is not None:
-            begin:datetime = node["begin"]
-            beginQ = QtCore.QTime(begin.hour,begin.minute,begin.second)
+            begin: datetime = node["begin"]
+            beginQ = QtCore.QTime(begin.hour, begin.minute, begin.second)
             end = node["end"]
-            endQ = QtCore.QTime(end.hour,end.minute,end.second)
+            endQ = QtCore.QTime(end.hour, end.minute, end.second)
             spinBegin.setTime(beginQ)
             spinEnd.setTime(endQ)
-            dt = (end-begin).seconds
+            dt = (end - begin).seconds
             if dt < 0:
-                dt += 3600*24
+                dt += 3600 * 24
         else:
             dt = 0
 
         spinBegin.timeChanged.connect(lambda: self._time_changed(tableWidget, row))
         spinEnd.timeChanged.connect(lambda: self._time_changed(tableWidget, row))
 
-        tableWidget.setCellWidget(row,1,spinBegin)
-        tableWidget.setCellWidget(row,2,spinEnd)
+        tableWidget.setCellWidget(row, 1, spinBegin)
+        tableWidget.setCellWidget(row, 2, spinEnd)
 
-        item = QtWidgets.QTableWidgetItem('%2d:%02d'%(int(dt/3600),int((dt%3600)/60)))
-        tableWidget.setItem(row,3,item)
+        item = QtWidgets.QTableWidgetItem('%2d:%02d' % (int(dt / 3600), int((dt % 3600) / 60)))
+        tableWidget.setItem(row, 3, item)
 
-    def _different_changed(self,checked:bool):
+    def _different_changed(self, checked: bool):
         if self.updating:
             return
         if checked is False:
             flag = self.question("删除所有上行区间数据，用下行区间天窗数据代表双向（单线）数据。"
-                                      "是否继续？")
+                                 "是否继续？")
             if not flag:
                 self.sender().setChecked(True)
                 return
-        self.data.setDifferent(checked,del_up=True)
+        self.data.setDifferent(checked, del_up=True)
         self.setData()
 
-    def _show_changed(self,checked:bool,down:bool):
-        self.data.setShow(checked,down)
-        self.showForbidChanged.emit(self.data,checked,down)
+    def _show_changed(self, checked: bool, down: bool):
+        self.data.setShow(checked, down)
+        self.showForbidChanged.emit(self.data, checked, down)
 
-    def _time_changed(self,tableWidget:QtWidgets.QTableWidget,row:int):
-        self.tableWidget.setCurrentCell(row,self.tableWidget.currentColumn())
-        spinBegin = tableWidget.cellWidget(row,1)
-        spinEnd = tableWidget.cellWidget(row,2)
-        beginQ:QtCore.QTime = spinBegin.time()
+    def _time_changed(self, tableWidget: QtWidgets.QTableWidget, row: int):
+        self.tableWidget.setCurrentCell(row, self.tableWidget.currentColumn())
+        spinBegin = tableWidget.cellWidget(row, 1)
+        spinEnd = tableWidget.cellWidget(row, 2)
+        beginQ: QtCore.QTime = spinBegin.time()
         endQ = spinEnd.time()
 
-        begin = datetime(1900,1,1,beginQ.hour(),beginQ.minute())
-        end = datetime(1900,1,1,endQ.hour(),endQ.minute())
-        dt = (end-begin).seconds
-        if dt<0:
-            dt+=24*3600
+        begin = datetime(1900, 1, 1, beginQ.hour(), beginQ.minute())
+        end = datetime(1900, 1, 1, endQ.hour(), endQ.minute())
+        dt = (end - begin).seconds
+        if dt < 0:
+            dt += 24 * 3600
         dt /= 60
 
-        tableWidget.item(row,3).setText('%2d:%02d'%(int(dt/60),dt%60))
+        tableWidget.item(row, 3).setText('%2d:%02d' % (int(dt / 60), dt % 60))
 
     def _copy_1(self):
-        tableWidget:QtWidgets.QTableWidget = self.tableWidget
+        tableWidget: QtWidgets.QTableWidget = self.tableWidget
         row = tableWidget.currentRow()
-        if row == tableWidget.rowCount()-1:
+        if not 0 <= row < tableWidget.rowCount() - 1:
             return
-        beginQ = tableWidget.cellWidget(row,1).time()
-        endQ = tableWidget.cellWidget(row,2).time()
+        beginQ:QtWidgets.QSpinBox = tableWidget.cellWidget(row, 1).time()
+        endQ = tableWidget.cellWidget(row, 2).time()
         row += 1
-        tableWidget.setCurrentCell(row,0)
-        tableWidget.cellWidget(row,1).setTime(beginQ)
-        tableWidget.cellWidget(row,2).setTime(endQ)
+        tableWidget.setCurrentCell(row, 0)
+        tableWidget.cellWidget(row, 1).setTime(beginQ)
+        tableWidget.cellWidget(row, 2).setTime(endQ)
 
     def _copy_all(self):
         tableWidget: QtWidgets.QTableWidget = self.tableWidget
@@ -242,17 +248,17 @@ class ForbidWidget(QtWidgets.QWidget):
             return
 
         if not self.data.different():
-            #上下行不分设，从当前行复制到所有行
+            # 上下行不分设，从当前行复制到所有行
             while row < tableWidget.rowCount():
                 self._copy_1()
                 row += 1
         else:
-            #上下行分设，考虑区间上下行问题
-            gap = tableWidget.item(row,0).data(-1)
+            # 上下行分设，考虑区间上下行问题
+            gap = tableWidget.item(row, 0).data(-1)
             down = self.line.isDownGap(*gap)
-            while row < tableWidget.rowCount()-1:
+            while row < tableWidget.rowCount() - 1:
                 row += 1
-                row_down = self.line.isDownGap(*tableWidget.item(row,0).data(-1))
+                row_down = self.line.isDownGap(*tableWidget.item(row, 0).data(-1))
                 if down != row_down:
                     break
                 self._copy_1()
@@ -261,16 +267,16 @@ class ForbidWidget(QtWidgets.QWidget):
         tableWidget = self.tableWidget
         self.data.clear()
         for row in range(tableWidget.rowCount()):
-            gap = tableWidget.item(row,0).data(-1)
-            beginQ = tableWidget.cellWidget(row,1).time()
-            endQ = tableWidget.cellWidget(row,2).time()
+            gap = tableWidget.item(row, 0).data(-1)
+            beginQ = tableWidget.cellWidget(row, 1).time()
+            endQ = tableWidget.cellWidget(row, 2).time()
             begin = datetime(1900, 1, 1, beginQ.hour(), beginQ.minute())
             end = datetime(1900, 1, 1, endQ.hour(), endQ.minute())
-            self.data.addForbid(gap[0],gap[1],begin,end)
+            self.data.addForbid(gap[0], gap[1], begin, end)
         if self.data.downShow():
-            self.currentShowedChanged.emit(self.data,True)
+            self.currentShowedChanged.emit(self.data, True)
         if self.data.upShow():
-            self.currentShowedChanged.emit(self.data,False)
+            self.currentShowedChanged.emit(self.data, False)
 
     def _cancel_clicked(self):
         if not self.question('将本线标尺信息恢复为保存的信息，当前未保存的改动将会丢失。是否继续？'):
@@ -286,6 +292,3 @@ class ForbidWidget(QtWidgets.QWidget):
             return False
         else:
             return default
-
-
-
