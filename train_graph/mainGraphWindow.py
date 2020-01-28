@@ -66,9 +66,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self, filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.4.0-2020新春版"
+        self.version = "V2.4.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200125'
+        self.date = '20200128'
         self.release = 'R36'  # 发布时再改这个
         self._system = None
         self.updating = True

@@ -2,11 +2,11 @@
 天窗编辑的窗口，可仿照标尺编辑。
 """
 from .data.forbid import Forbid
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 from datetime import datetime
 from .data.line import Line
-from .utility import PECellWidget,PECelledTable,PETableWidget,CellWidgetFactory
+from .utility import PECellWidget,PECelledTable,PEControlledTable,CellWidgetFactory
 
 
 class ForbidTabWidget(QtWidgets.QTabWidget):
@@ -86,12 +86,7 @@ class ForbidWidget(QtWidgets.QWidget):
         label.setWordWrap(True)
         vlayout.addWidget(label)
 
-        class T(QtWidgets.QTableWidget):
-            pass
-        # T = QtWidgets.QTableWidget
-        tableWidget = T()
-        tableWidget.setStyle(self.style())
-        tableWidget.setContextMenuPolicy(Qt.ActionsContextMenu)
+        tableWidget = PECelledTable()
         actionCp1 = QtWidgets.QAction('复制数据到下一行(Alt+C)', tableWidget)
         actionCp1.setShortcut('Alt+C')
         tableWidget.addAction(actionCp1)
@@ -105,7 +100,7 @@ class ForbidWidget(QtWidgets.QWidget):
         self.tableWidget = tableWidget
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
         tableWidget.setColumnCount(4)
-        for i, s in enumerate((120, 100, 100, 60)):
+        for i, s in enumerate((120, 80, 80, 60)):
             tableWidget.setColumnWidth(i, s)
         tableWidget.setHorizontalHeaderLabels(('区间', '开始时间', '结束时间', '时长'))
         self._setTableWidget()

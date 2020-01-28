@@ -7,6 +7,7 @@ from .data.graph import Ruler,Line,Graph,Circuit,Train
 from datetime import datetime,timedelta
 from Timetable_new.checi3 import Checi
 from Timetable_new.utility import strToTime
+from .utility import PECelledTable,CellWidgetFactory,PECellWidget
 
 class CurrentWidget(QtWidgets.QWidget):
     checkCurrentTrainRuler=QtCore.pyqtSignal(Train)
@@ -131,7 +132,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
         layout.addLayout(flayout)
 
-        timeTable = QtWidgets.QTableWidget()
+        timeTable = PECelledTable()
         timeTable.setToolTip("按Alt+D将当前行到达时间复制为出发时间。")
         timeTable.setColumnCount(7)
         timeTable.setHorizontalHeaderLabels(["站名", "到点", "开点", '营业','股道','备注', "停时"])
@@ -245,7 +246,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
         vlayout.addLayout(sublayout)
 
-        tableWidget = QtWidgets.QTableWidget()
+        tableWidget = PECelledTable()
         tableWidget.setColumnCount(5)
         tableWidget.setHorizontalHeaderLabels(('起始站','结束站','下行','起始标签','结束标签'))
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
@@ -321,15 +322,15 @@ class CurrentWidget(QtWidgets.QWidget):
         tableWidget.setItem(row, 1, item)
         item.setData(-1, lastIndex)
 
-        checkDown = QtWidgets.QCheckBox()
+        checkDown = CellWidgetFactory.new(QtWidgets.QCheckBox)  # type:QtWidgets.QCheckBox
         checkDown.setChecked(down)
         tableWidget.setCellWidget(row, 2, checkDown)
 
-        checkStart = QtWidgets.QCheckBox()
+        checkStart = CellWidgetFactory.new(QtWidgets.QCheckBox)  # type:QtWidgets.QCheckBox
         checkStart.setChecked(showstart)
         tableWidget.setCellWidget(row, 3, checkStart)
 
-        checkEnd = QtWidgets.QCheckBox()
+        checkEnd = CellWidgetFactory.new(QtWidgets.QCheckBox)  # type:QtWidgets.QCheckBox
         checkEnd.setChecked(showend)
         tableWidget.setCellWidget(row, 4, checkEnd)
 
@@ -430,7 +431,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
             ddsjEdit = timeTable.cellWidget(num,1)
             if ddsjEdit is None:
-                ddsjEdit = QtWidgets.QTimeEdit()
+                ddsjEdit = CellWidgetFactory.new(QtWidgets.QTimeEdit)
                 ddsjEdit.setWrapping(True)
                 ddsjEdit.setDisplayFormat("hh:mm:ss")
                 ddsjEdit.timeChanged.connect(self._time_changed)
@@ -442,7 +443,7 @@ class CurrentWidget(QtWidgets.QWidget):
 
             cfsjEdit = timeTable.cellWidget(num,2)
             if cfsjEdit is None:
-                cfsjEdit = QtWidgets.QTimeEdit()
+                cfsjEdit = CellWidgetFactory.new(QtWidgets.QTimeEdit)
                 cfsjEdit.setDisplayFormat("hh:mm:ss")
                 cfsjEdit.setWrapping(True)
                 cfsjEdit.timeChanged.connect(self._time_changed)
@@ -562,13 +563,13 @@ class CurrentWidget(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem(name)
         timeTable.setItem(row, 0, item)
 
-        ddsjEdit = QtWidgets.QTimeEdit()
+        ddsjEdit = CellWidgetFactory.new(QtWidgets.QTimeEdit)
         ddsjEdit.setDisplayFormat('hh:mm:ss')
         timeTable.setCellWidget(row, 1, ddsjEdit)
         ddsjEdit.row = row
         ddsjEdit.timeChanged.connect(self._time_changed)
 
-        cfsjEdit = QtWidgets.QTimeEdit()
+        cfsjEdit = CellWidgetFactory.new(QtWidgets.QTimeEdit)
         cfsjEdit.setDisplayFormat('hh:mm:ss')
         timeTable.setCellWidget(row, 2, cfsjEdit)
         cfsjEdit.row = row

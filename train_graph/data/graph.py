@@ -10,7 +10,7 @@ from copy import copy
 from Timetable_new.utility import stationEqual
 import json, re
 from datetime import datetime
-from train_graph.pyETRCExceptions import *
+from ..pyETRCExceptions import *
 from typing import List, Union, Tuple, Dict
 from enum import Enum
 import time

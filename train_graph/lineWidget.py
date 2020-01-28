@@ -6,6 +6,7 @@
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 from .data.line import Line,LineStation
+from .utility import PECelledTable,PECellWidget,CellWidgetFactory
 
 class LineWidget(QtWidgets.QWidget):
     showStatus = QtCore.pyqtSignal(str)
@@ -42,7 +43,7 @@ class LineWidget(QtWidgets.QWidget):
         self.nameEdit = lineEdit
         flayout.addRow(label, lineEdit)
 
-        tableWidget = QtWidgets.QTableWidget()
+        tableWidget = PECelledTable()
 
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
         self.tableWidget = tableWidget
@@ -142,7 +143,7 @@ class LineWidget(QtWidgets.QWidget):
         self.tableWidget.cellWidget(row, 1).setValue(dct["licheng"])
         self.tableWidget.item(row,2).setText(dct.counterStr())
         self.tableWidget.cellWidget(row, 3).setValue(dct["dengji"])
-        self.tableWidget.cellWidget(row, 4).setChecked(dct.get('show', True))
+        self.tableWidget.item(row,4).setCheckState(Line.bool2CheckState(dct.get('show',True)))
         self.tableWidget.cellWidget(row, 5).setCurrentIndex(dct.get('direction', 0x3))
         self.tableWidget.item(row,6).setCheckState(Qt.Checked if dct.setdefault("passenger",True)
                                                    else Qt.Unchecked)
@@ -161,7 +162,7 @@ class LineWidget(QtWidgets.QWidget):
             item = QtWidgets.QTableWidgetItem(stationDict["zhanming"])
             tableWidget.setItem(now_line, 0, item)
 
-            spin1 = QtWidgets.QDoubleSpinBox()
+            spin1 = CellWidgetFactory.new(QtWidgets.QDoubleSpinBox)
             spin1.setRange(-9999.000, 9999.000)
             spin1.setDecimals(3)
             spin1.setValue(stationDict["licheng"])
@@ -171,26 +172,18 @@ class LineWidget(QtWidgets.QWidget):
 
             tableWidget.setItem(now_line,2,QtWidgets.QTableWidgetItem(stationDict.counterStr()))
 
-            spin2 = QtWidgets.QSpinBox()
+            spin2 = CellWidgetFactory.new(QtWidgets.QSpinBox)
             spin2.setValue(stationDict["dengji"])
             spin2.setRange(0, 20)
             tableWidget.setCellWidget(now_line, 3, spin2)
             spin2.setMinimumSize(10, 10)
             spin2.valueChanged.connect(self.changed)
 
-            check = QtWidgets.QCheckBox()
-            check.setMinimumSize(1,1)
-            check.setMinimumHeight(10)
-            try:
-                stationDict["show"]
-            except KeyError:
-                stationDict["show"] = True
-            check.setChecked(stationDict["show"])
-            check.setStyleSheet("QCheckBox{margin:3px}")
-            tableWidget.setCellWidget(now_line, 4, check)
-            check.toggled.connect(self.changed)
+            item = QtWidgets.QTableWidgetItem()
+            item.setCheckState(Line.bool2CheckState(stationDict.setdefault("show",True)))
+            tableWidget.setItem(now_line,4,item)
 
-            combo = QtWidgets.QComboBox()
+            combo:QtWidgets.QComboBox = CellWidgetFactory.new(QtWidgets.QComboBox)
             combo.setMinimumSize(1,1)
             combo.addItems(["不通过", "下行", "上行", "上下行"])
             try:
@@ -223,7 +216,7 @@ class LineWidget(QtWidgets.QWidget):
         tableWidget.insertRow(num)
         tableWidget.setItem(num,0,QtWidgets.QTableWidgetItem(''))
 
-        spin1 = QtWidgets.QDoubleSpinBox()
+        spin1 = CellWidgetFactory.new(QtWidgets.QDoubleSpinBox)
         spin1.setRange(-9999.0, 9999.0)
         spin1.setDecimals(3)
         tableWidget.setCellWidget(num, 1, spin1)
@@ -233,19 +226,17 @@ class LineWidget(QtWidgets.QWidget):
         # item.setData()
         tableWidget.setItem(num,2,item)
 
-        spin2 = QtWidgets.QSpinBox()
+        spin2 = CellWidgetFactory.new(QtWidgets.QSpinBox)
         spin2.setRange(0, 20)
         tableWidget.setCellWidget(num, 3, spin2)
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
         spin2.valueChanged.connect(self.changed)
 
-        check = QtWidgets.QCheckBox()
-        check.setChecked(True)
-        check.setStyleSheet("QCheckBox{margin:3px}")
-        tableWidget.setCellWidget(num, 4, check)
-        check.toggled.connect(self.changed)
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Qt.Checked)
+        tableWidget.setItem(num,4,item)
 
-        combo = QtWidgets.QComboBox()
+        combo = CellWidgetFactory.new(QtWidgets.QComboBox)  # type:QtWidgets.QComboBox
         combo.addItems(["不通过", "下行", "上行", "上下行"])
         combo.setCurrentIndex(3)
         combo.setStyleSheet("QComboBox{margin:3px}")
@@ -342,7 +333,7 @@ class LineWidget(QtWidgets.QWidget):
             zhanming = tableWidget.item(i, 0).text()
             licheng = tableWidget.cellWidget(i, 1).value()
             dengji = tableWidget.cellWidget(i, 3).value()
-            show = True if tableWidget.cellWidget(i, 4).isChecked() else False
+            show = bool(tableWidget.item(i,4).checkState())
             direction = tableWidget.cellWidget(i, 5).currentIndex()
             try:
                 counter = float(tableWidget.item(i,2).text())

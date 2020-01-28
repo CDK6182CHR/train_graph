@@ -7,7 +7,7 @@ from .route import Route
 from .linestation import LineStation
 from typing import Union
 from Timetable_new.utility import stationEqual
-from train_graph.pyETRCExceptions import *
+from ..pyETRCExceptions import *
 
 class Line():
     """

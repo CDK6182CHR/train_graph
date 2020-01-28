@@ -10,6 +10,8 @@ from .data.graph import Graph,Train,Ruler
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from datetime import datetime,timedelta
+from .utility import PECelledTable,PECellWidget,CellWidgetFactory
+
 import cgitb
 cgitb.enable(format='text')
 
@@ -238,7 +240,7 @@ class rulerPainter(QtWidgets.QWidget):
         checkCurrentChanged.setChecked(True)
         self.checkCurrentChanged = checkCurrentChanged
 
-        timeTable = QtWidgets.QTableWidget()
+        timeTable = PECelledTable()
         timeTable.setEditTriggers(timeTable.NoEditTriggers)
         timeTable.setColumnCount(8)
         timeTable.setToolTip("按Alt+X检测所在行时刻冲突情况")
@@ -311,13 +313,13 @@ class rulerPainter(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem(name)
         timeTable.setItem(num,0,item)
 
-        spinMin = QtWidgets.QSpinBox()
+        spinMin = CellWidgetFactory.new(QtWidgets.QSpinBox)  # type:QtWidgets.QSpinBox
         spinMin.setRange(0,99999)
         spinMin.setMinimumSize(1,1)
         timeTable.setCellWidget(num,1,spinMin)
         spinMin.valueChanged.connect(lambda :self._stop_changed(num))
 
-        spinSec = QtWidgets.QSpinBox()
+        spinSec = CellWidgetFactory.new(QtWidgets.QSpinBox)  # type:QtWidgets.QSpinBox
         timeTable.setCellWidget(num,2,spinSec)
         spinSec.setRange(0,59)
         spinSec.setSingleStep(10)
@@ -350,7 +352,7 @@ class rulerPainter(QtWidgets.QWidget):
         item.setText(text)
         timeTable.setItem(num,5,item)
 
-        spinAdjust = QtWidgets.QSpinBox()
+        spinAdjust = CellWidgetFactory.new(QtWidgets.QSpinBox)  # type:QtWidgets.QSpinBox
         spinAdjust.setSingleStep(10)
         spinAdjust.setRange(-1000,1000)
         spinAdjust.setValue(0)

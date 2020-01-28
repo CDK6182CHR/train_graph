@@ -4,7 +4,7 @@
 from datetime import datetime,timedelta
 from copy import copy
 from Timetable_new.utility import stationEqual
-from train_graph.pyETRCExceptions import *
+from ..pyETRCExceptions import *
 
 class Ruler():
     """

@@ -4,9 +4,9 @@
 """
 from PyQt5 import QtWidgets,QtGui,QtCore,QtPrintSupport
 from PyQt5.QtCore import Qt
-from .data.graph import Graph,Train,Circuit,CircuitNode
+from ..data.graph import Graph,Train,Circuit,CircuitNode
 from datetime import datetime,timedelta
-from .pyETRCExceptions import *
+from ..pyETRCExceptions import *
 from Timetable_new.utility import stationEqual
 
 class CircuitDiagram(QtWidgets.QGraphicsView):
@@ -23,6 +23,7 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
         "重庆北":300,
     }
     """
+    DiagramRepainted = QtCore.pyqtSignal()
     def __init__(self,graph,circuit,parent=None):
         super(CircuitDiagram, self).__init__(parent)
         self.graph = graph  # type:Graph
@@ -31,6 +32,7 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
         self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.userDefinedYValues = {}
         self.maxDay = 1  # 最大天数。注意天数从0开始。
         self.sizes = {
             "dayWidth":700,  # 每日宽度
@@ -136,6 +138,7 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
             textItem.setX(endPoint.x()-w)
             textItem.setY(endPoint.y() - (1-scale) * h)
             self._adjustTimeItem(textItem,-1+2*scale)
+        self.DiagramRepainted.emit()
 
     def _adjustCheciItem(self,textItem:QtWidgets.QGraphicsSimpleTextItem,
                          startPoint:QtCore.QPointF,endPoint:QtCore.QPointF):
@@ -212,6 +215,7 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
     def _setHLines(self):
         fromTop=True
         self.stationYValues.clear()
+        self.stationYValues.update(self.userDefinedYValues)
         self.topNext = self.sizes["top"]
         self.bottomNext = self.sizes["height"] - self.sizes["bottom"]
         for data in self.datas:
@@ -227,7 +231,7 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
             except KeyError:
                 self.stationYValues[topStation] = self.topNext
                 self.topNext += self.sizes["stationDistance"]
-                self._addStationLine(topStation, self.stationYValues[topStation])
+                # self._addStationLine(topStation, self.stationYValues[topStation])
             try:
                 self.stationYValues[bottomStation]
             except KeyError:
@@ -235,13 +239,15 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
                 if train.totalMinTime() >= 1800:
                     self.stationYValues[bottomStation] = self.bottomNext
                     self.bottomNext -= self.sizes["stationDistance"]
-                    self._addStationLine(bottomStation,self.stationYValues[bottomStation])
+                    # self._addStationLine(bottomStation,self.stationYValues[bottomStation])
                 else:
                     self.stationYValues[bottomStation] = self.topNext
                     self.topNext += self.sizes["stationDistance"]
-                    self._addStationLine(bottomStation, self.stationYValues[bottomStation])
+                    # self._addStationLine(bottomStation, self.stationYValues[bottomStation])
                     fromTop = not fromTop
             fromTop = not fromTop
+        for name,y in self.stationYValues.items():
+            self._addStationLine(name,y)
 
     def _addStationLine(self,station,y):
         maxX = self.sizes["totalWidth"] - self.sizes["right"]

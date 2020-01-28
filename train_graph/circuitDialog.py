@@ -2,12 +2,12 @@
 具体的一个交路的编辑界面。
 由circuitWidget管理其实例，只在程序初始化时构建一个实例，其他时候只setData。模式类似currentWidget，但用对话框形式。
 """
-from PyQt5 import QtWidgets,QtGui,QtCore
+from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import Qt
 from .data.circuit import Circuit,CircuitNode
 from .pyETRCExceptions import *
 from .data.graph import Graph,Train
-from .circuitDiagramWidget import CircuitDiagramWidget
+from .circuitwidgets.circuitDiagramWidget import CircuitDiagramWidget
 from .circuitwidgets import *
 from .dialogAdapter import DialogAdapter
 
@@ -173,6 +173,7 @@ class CircuitDialog(QtWidgets.QDialog):
         addWidget.Canceled.connect(lambda:self._add_train_cancel(row))
         addWidget.Applied.connect(lambda node:self._add_train_ok(row,node))
 
+        addWidget.realWidget.checiEdit.setFocus(Qt.TabFocusReason)
         dialog.exec_()
 
     def checkTrainAdded(self,train:Train)->bool:

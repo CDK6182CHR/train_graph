@@ -2,16 +2,17 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 
 
-class PETableWidget(QtWidgets.QWidget):
+class PEControlledTable(QtWidgets.QWidget):
     """
     adapter设计模式。
     pyETRC使用的TableWidget的封装，包括增删、上下移动的按钮。
     使用反射把有关的信息转发到QTableWidget中去。
     内置的东西都使用下划线开头。
+    注意 暂时不支持cellWidget交换操作。
     """
 
     def __init__(self, parent=None):
-        super(PETableWidget, self).__init__(parent)
+        super(PEControlledTable, self).__init__(parent)
         self._tw = QtWidgets.QTableWidget(self)
         self._defaultRowHeight = 30
         self._initUI()
@@ -56,7 +57,7 @@ class PETableWidget(QtWidgets.QWidget):
 
     def __getattribute__(self, item):
         try:
-            return super(PETableWidget, self).__getattribute__(item)
+            return super(PEControlledTable, self).__getattribute__(item)
         except AttributeError:
             return getattr(self._tw, item)
 
@@ -93,9 +94,9 @@ class PETableWidget(QtWidgets.QWidget):
             i = TWI(self._tw.item(row - 1, c))
             self._tw.setItem(row - 1, c, TWI(self._tw.item(row, c)))
             self._tw.setItem(row, c, i)
-            w = self._tw.cellWidget(row - 1, c)
-            self._tw.setCellWidget(row - 1, c, self._tw.cellWidget(row, c))
-            self._tw.setCellWidget(row, c, w)
+            # w = self._tw.cellWidget(row - 1, c)
+            # self._tw.setCellWidget(row - 1, c, self._tw.cellWidget(row, c))
+            # self._tw.setCellWidget(row, c, w)
         self._tw.setCurrentCell(row - 1, self._tw.currentColumn())
 
     def down(self):
@@ -107,7 +108,7 @@ class PETableWidget(QtWidgets.QWidget):
             i = TWI(self._tw.item(row + 1, c))
             self._tw.setItem(row + 1, c, TWI(self._tw.item(row, c)))
             self._tw.setItem(row, c, i)
-            w = self._tw.cellWidget(row + 1, c)
-            self._tw.setCellWidget(row + 1, c, self._tw.cellWidget(row, c))
-            self._tw.setCellWidget(row, c, w)
+            # w = self._tw.cellWidget(row + 1, c)
+            # self._tw.setCellWidget(row + 1, c, self._tw.cellWidget(row, c))
+            # self._tw.setCellWidget(row, c, w)
         self._tw.setCurrentCell(row + 1, self._tw.currentColumn())

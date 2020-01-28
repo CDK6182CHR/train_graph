@@ -4,7 +4,7 @@
 from .pyETRCExceptions import *
 from .data import *
 from .stationvisualize import StationGraphWidget
-from .utility import PETableWidget
+from .utility import PEControlledTable
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 
@@ -84,7 +84,7 @@ class StationVisualizeDialog(QtWidgets.QDialog):
         vlayout.addLayout(flayout)
         vlayout.addWidget(QtWidgets.QLabel("股道次序表"))
 
-        tw:QtWidgets.QTableWidget = PETableWidget()
+        tw:QtWidgets.QTableWidget = PEControlledTable()
         tw.setDefaultRowHeight(self.graph.UIConfigData()['table_row_height'])
         tw.setEditTriggers(QtWidgets.QTableWidget.CurrentChanged)
         self.trackTable = tw  # type: QtWidgets.QTableWidget
