@@ -79,15 +79,27 @@ class ForbidWidget(QtWidgets.QWidget):
         checkDown.toggled.connect(lambda checked: self._show_changed(checked, True))
         checkUp.toggled.connect(lambda checked: self._show_changed(checked, False))
 
+        spinDefault = QtWidgets.QSpinBox()
+        spinDefault.setSingleStep(10)
+        spinDefault.setRange(0,1000)
+        spinDefault.setValue(120)
+        self.spinDefault = spinDefault
+        spinDefault.setToolTip("用于从天窗开始时间计算结束时间（Alt+E），或者从结束时间计算开始时间。（Alt+R）")
+        hlayout = QtWidgets.QHBoxLayout()
+        hlayout.addWidget(spinDefault)
+        hlayout.addWidget(QtWidgets.QLabel("分钟"))
+        flayout.addRow("默认时长",hlayout)
+
         vlayout.addLayout(flayout)
 
-        label = QtWidgets.QLabel("按Alt+C将本行数据复制到下一行，\n"
-                                 "按Alt+Shift+C将本行数据复制到同方向所有行。")
-        label.setWordWrap(True)
-        vlayout.addWidget(label)
+        # label = QtWidgets.QLabel("按Alt+C将本行数据复制到下一行，\n"
+        #                          "按Alt+Shift+C将本行数据复制到同方向所有行。")
+        # label.setWordWrap(True)
+        # vlayout.addWidget(label)
 
         tableWidget = PECelledTable()
         actionCp1 = QtWidgets.QAction('复制数据到下一行(Alt+C)', tableWidget)
+        tableWidget.setContextMenuPolicy(Qt.ActionsContextMenu)
         actionCp1.setShortcut('Alt+C')
         tableWidget.addAction(actionCp1)
         actionCp1.triggered.connect(self._copy_1)
@@ -96,6 +108,26 @@ class ForbidWidget(QtWidgets.QWidget):
         actionCpAll.setShortcut('Alt+Shift+C')
         tableWidget.addAction(actionCpAll)
         actionCpAll.triggered.connect(self._copy_all)
+
+        action = QtWidgets.QAction("计算结束时间(Alt+E)",tableWidget)
+        action.setShortcut('Alt+E')
+        tableWidget.addAction(action)
+        action.triggered.connect(self._calculate_forward)
+
+        action = QtWidgets.QAction("计算开始时间(Alt+R)",tableWidget)
+        action.setShortcut("Alt+R")
+        tableWidget.addAction(action)
+        action.triggered.connect(self._calculate_reverse)
+
+        action = QtWidgets.QAction("计算所有结束时间(Alt+Shift+E)", tableWidget)
+        action.setShortcut('Alt+Shift+E')
+        tableWidget.addAction(action)
+        action.triggered.connect(self._calculate_forward_all)
+
+        action = QtWidgets.QAction("计算开始时间(Alt+Shift+R)", tableWidget)
+        action.setShortcut("Alt+Shift+R")
+        tableWidget.addAction(action)
+        action.triggered.connect(self._calculate_reverse_all)
 
         self.tableWidget = tableWidget
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
@@ -257,6 +289,58 @@ class ForbidWidget(QtWidgets.QWidget):
                 if down != row_down:
                     break
                 self._copy_1()
+
+    def _calculate_forward(self):
+        """
+        正向计算天窗时长，即结束时间。Alt+E
+        """
+        row = self.tableWidget.currentRow()
+        if 0<=row<self.tableWidget.rowCount():
+            self._calculateForward(row)
+
+    def _calculateForward(self,row):
+        """
+        保证row有效。
+        """
+        length = self.spinDefault.value()
+        start:QtCore.QTime = self.tableWidget.cellWidget(row,1).time()
+        h = start.hour()
+        m = start.minute() + length
+        h = (h+m//60)%24
+        m %= 60
+        self.tableWidget.cellWidget(row,2).setTime(QtCore.QTime(h,m))
+
+    def _calculate_reverse(self):
+        """
+        反向计算，由结束时间和默认时长计算开始时间。Alt+R
+        """
+        row = self.tableWidget.currentRow()
+        if 0 <= row < self.tableWidget.rowCount():
+            self._calculateReverse(row)
+
+    def _calculateReverse(self,row):
+        """
+        保证row有效。
+        """
+        length = self.spinDefault.value()
+        end: QtCore.QTime = self.tableWidget.cellWidget(row, 2).time()
+        h = end.hour()
+        m = end.minute() - length
+        h = (h + m // 60) % 24
+        m %= 60
+        self.tableWidget.cellWidget(row, 1).setTime(QtCore.QTime(h, m))
+
+    def _calculate_forward_all(self):
+        if not self.question("此操作根据设置的默认时间和各行的开始时间，自动设置[所有区间]的天窗结束时间，将覆盖此前手工设定的天窗结束时间。是否继续？"):
+            return
+        for row in range(self.tableWidget.rowCount()):
+            self._calculateForward(row)
+
+    def _calculate_reverse_all(self):
+        if not self.question("此操作根据设置的默认时间和各行的结束时间，自动设置[所有区间]的天窗开始时间，将覆盖此前手工设定的天窗开始时间。是否继续？"):
+            return
+        for row in range(self.tableWidget.rowCount()):
+            self._calculateReverse(row)
 
     def _ok_clicked(self):
         tableWidget = self.tableWidget

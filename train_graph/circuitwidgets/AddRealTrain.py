@@ -14,6 +14,7 @@ class AddRealTrain(QtWidgets.QWidget):
         super(AddRealTrain, self).__init__(parent)
         self.graph=graph
         self.circuitDialog = circuitDialog
+        self.toAddTrain = None
         self.initUI()
 
     def initUI(self):
@@ -104,7 +105,8 @@ class AddRealTrain(QtWidgets.QWidget):
             self.endEdit.setText('')
             self.toAddTrain = None
             return
-        elif train.carriageCircuit() is not None and train.carriageCircuit() is not self.circuit:
+        elif train.carriageCircuit() is not None:
+            # and train.carriageCircuit() is not self.circuit:
             QtWidgets.QMessageBox.warning(self,'警告',f'车次{train.fullCheci()}已有交路信息:{train.carriageCircuit()}。')
             return
         # 检查车次是否在本交路表中已经出现过

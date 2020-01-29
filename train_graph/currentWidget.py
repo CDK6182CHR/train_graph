@@ -124,10 +124,15 @@ class CurrentWidget(QtWidgets.QWidget):
         hlayout.addWidget(circuitEdit)
 
         btnEditCircuit = QtWidgets.QPushButton('编辑')
+        btnClearCircuit = QtWidgets.QPushButton('清除')
         self.btnEditCircuit = btnEditCircuit
+        self.btnClearCircuit = btnClearCircuit
         btnEditCircuit.setEnabled(False)
+        btnClearCircuit.setEnabled(False)
         hlayout.addWidget(btnEditCircuit)
+        hlayout.addWidget(btnClearCircuit)
         btnEditCircuit.clicked.connect(self._edit_circuit)
+        btnClearCircuit.clicked.connect(self._clear_circuit)
         flayout.addRow('车底交路',hlayout)
 
         layout.addLayout(flayout)
@@ -402,9 +407,11 @@ class CurrentWidget(QtWidgets.QWidget):
         if self.train.carriageCircuit() is not None:
             self.circuitEdit.setText(self.train.carriageCircuit().name())
             self.btnEditCircuit.setEnabled(True)
+            self.btnClearCircuit.setEnabled(True)
         else:
             self.circuitEdit.setText('')
             self.btnEditCircuit.setEnabled(False)
+            self.btnClearCircuit.setEnabled(False)
 
         timeTable: QtWidgets.QTableWidget = self.timeTable
         timeTable.setRowCount(train.stationCount())
@@ -764,6 +771,17 @@ class CurrentWidget(QtWidgets.QWidget):
         if circuit is None:
             return
         self.editCurrentTrainCircuit.emit(circuit)
+
+    def _clear_circuit(self):
+        if not self.question("是否确认删除本次列车交路信息？\n"
+                             "注意：如果交路信息出现异常，可用本功能强制清除。"):
+            return
+        circuit = self.train.carriageCircuit()
+        if circuit is None:
+            return  # 按道理不会发生
+        circuit.removeTrain(self.train)
+        self.train.setCarriageCircuit(None)
+        self.setData(self.train)
 
     def _derr(self, note: str):
         # print("_derr")
