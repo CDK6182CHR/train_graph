@@ -26,6 +26,7 @@ class Line():
         "show":True,
         "passenger":True, //办客
         "freight":False, //办货
+        "tracks":str, //股道表。空白字符作为分隔。
     }
     """
     NoVia = 0x0
@@ -43,6 +44,7 @@ class Line():
         self.rulers = []
         self.routes = []
         self.notes = {}
+        self.tracks = []
         self.forbid = ServiceForbid(self)
         self.forbid2 = ConstructionForbid(self)
         self.item = None  # lineDB中使用。
@@ -145,6 +147,7 @@ class Line():
         self.name = origin["name"]
         self.stations = origin["stations"]
         self.notes = origin.get("notes",{})
+        self.tracks = origin.get('tracks',[])
         try:
             self.rulers
         except:
@@ -162,6 +165,7 @@ class Line():
         self.setNameMap()
         self.setFieldMap()
         self.verifyNotes()
+        self.resetRulers()
 
     def addStation_by_origin(self,origin,index=-1):
         if not isinstance(origin,LineStation):
@@ -206,6 +210,7 @@ class Line():
             "forbid":self.forbid.outInfo(),
             "forbid2":self.forbid2.outInfo(),
             "notes":self.notes,
+            "tracks":self.tracks,
         }
         try:
             self.rulers
@@ -573,5 +578,24 @@ class Line():
             return 0x2
         return 0x0
 
+    @staticmethod
+    def speedStr(mile:float,sec:int)->str:
+        """
+        工具函数，计算均速，并转换为字符串。
+        """
+        if sec:
+            return f"{mile*1000/sec*3.6:.3f}"
+        else:
+            return "NA"
+
+    def setStationTracks(self,name:str,tracks:list):
+        dct = self.stationDictByName(name,strict=True)
+        dct['tracks'] = tracks
+
+    def stationTracks(self,name:str)->list:
+        dct = self.stationDictByName(name, strict=True)
+        if dct is None:
+            return []
+        return dct.get('tracks',[])
 
 

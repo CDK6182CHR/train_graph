@@ -7,7 +7,20 @@ from .data.graph import Ruler,Line,Graph,Circuit,Train
 from datetime import datetime,timedelta
 from Timetable_new.checi3 import Checi
 from Timetable_new.utility import strToTime
-from .utility import PECelledTable,CellWidgetFactory,PECellWidget
+from .utility import PECelledTable,CellWidgetFactory,PECellWidget,PEControlledTable
+
+
+class CurrentTable(PEControlledTable):
+    def __init__(self,parent=None):
+        super(CurrentTable, self).__init__(meta=PECelledTable,parent=parent)
+
+    def exchangeRow(self,row1:int,row2:int):
+        """
+        只需交换1，2两列的QTimeEdit数据
+        """
+        for c in (1,2):
+            self.exchangeCellWidget(row1,row2,c,"time","setTime")
+
 
 class CurrentWidget(QtWidgets.QWidget):
     checkCurrentTrainRuler=QtCore.pyqtSignal(Train)
@@ -137,7 +150,8 @@ class CurrentWidget(QtWidgets.QWidget):
 
         layout.addLayout(flayout)
 
-        timeTable = PECelledTable()
+        timeTable = CurrentTable()
+        timeTable.RowInserted.connect(self._add_timetable_row)
         timeTable.setToolTip("按Alt+D将当前行到达时间复制为出发时间。")
         timeTable.setColumnCount(7)
         timeTable.setHorizontalHeaderLabels(["站名", "到点", "开点", '营业','股道','备注', "停时"])
@@ -159,27 +173,27 @@ class CurrentWidget(QtWidgets.QWidget):
 
         layout.addWidget(timeTable)
 
+        # hlayout = QtWidgets.QHBoxLayout()
+        # btnAdd = QtWidgets.QPushButton("添加(前)")
+        # btnAddL = QtWidgets.QPushButton("添加(后)")
+        # btnRm = QtWidgets.QPushButton("删除")
+        #
+        # btnAdd.clicked.connect(lambda: self._add_timetable_station(timeTable))
+        # btnAddL.clicked.connect(lambda: self._add_timetable_station(timeTable, True))
+        # btnRm.clicked.connect(lambda: self._remove_timetable_station(timeTable))
+        #
+        # hlayout.addWidget(btnAdd)
+        # hlayout.addWidget(btnAddL)
+        # hlayout.addWidget(btnRm)
+        # # hlayout.addWidget(btnLoad)
+        # layout.addLayout(hlayout)
+
         hlayout = QtWidgets.QHBoxLayout()
-        btnAdd = QtWidgets.QPushButton("添加(前)")
-        btnAddL = QtWidgets.QPushButton("添加(后)")
-        btnRm = QtWidgets.QPushButton("删除")
+        # btnCheck = QtWidgets.QPushButton("标尺对照")
+        # btnCheck.clicked.connect(lambda:self.checkCurrentTrainRuler.emit(self.train))
+        # btnCheck.setMinimumWidth(120)
         btnLoad = QtWidgets.QPushButton("导入站表")
-
-        btnAdd.clicked.connect(lambda: self._add_timetable_station(timeTable))
-        btnAddL.clicked.connect(lambda: self._add_timetable_station(timeTable, True))
-        btnRm.clicked.connect(lambda: self._remove_timetable_station(timeTable))
         btnLoad.clicked.connect(lambda: self._load_station_list(timeTable))
-
-        hlayout.addWidget(btnAdd)
-        hlayout.addWidget(btnAddL)
-        hlayout.addWidget(btnRm)
-        hlayout.addWidget(btnLoad)
-        layout.addLayout(hlayout)
-
-        hlayout = QtWidgets.QHBoxLayout()
-        btnCheck = QtWidgets.QPushButton("标尺对照")
-        btnCheck.clicked.connect(lambda:self.checkCurrentTrainRuler.emit(self.train))
-        btnCheck.setMinimumWidth(120)
 
         btnEvent = QtWidgets.QPushButton("切片输出")
         btnEvent.setToolTip("显示本车次在本线的停站、发车、通过、会车、待避、越行等事件列表。")
@@ -194,7 +208,7 @@ class CurrentWidget(QtWidgets.QWidget):
         btnAutoStartEnd = QtWidgets.QPushButton("自动始发终到(&R)")
         btnAutoStartEnd.clicked.connect(self._auto_start_end)
 
-        hlayout.addWidget(btnCheck)
+        hlayout.addWidget(btnLoad)
         hlayout.addWidget(btnEvent)
         hlayout.addWidget(btnCorrection)
         hlayout.addWidget(btnAutoBusiness)
@@ -430,7 +444,7 @@ class CurrentWidget(QtWidgets.QWidget):
             time_str = train.stopTimeStr(st_dict)
             item: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(time_str)
             item.setFlags(Qt.ItemIsEnabled)
-            timeTable.setItem(num, 5, item)
+            timeTable.setItem(num, 6, item)
 
             item = QtWidgets.QTableWidgetItem()
             item.setCheckState(Line.bool2CheckState(train.stationBusiness(st_dict)))
@@ -497,7 +511,7 @@ class CurrentWidget(QtWidgets.QWidget):
             time_str = "{}分".format(m)
             if s:
                 time_str += str(s) + "秒"
-        self.timeTable.item(row,5).setText(time_str)
+        self.timeTable.item(row,6).setText(time_str)
 
         if self.timeTable.item(row,3).checkState() == Qt.Checked:
             self.timeTable.item(row,0).setForeground(QtGui.QBrush(Qt.red))
@@ -557,15 +571,14 @@ class CurrentWidget(QtWidgets.QWidget):
         timeTable.item(row, 3).setText("")  # 停时变成0
         self.showStatus.emit(f"{timeTable.item(row,0).text()}站到达时间复制成功")
 
-    def _add_timetable_station(self, timeTable: QtWidgets.QTableWidget, later=False):
-        row = timeTable.currentIndex().row()
-        if later:
-            row += 1
-        self._add_timetable_row(row, timeTable)
 
-    def _add_timetable_row(self, row: int, timeTable: QtWidgets.QTableWidget, name: str = "",business=False):
-        timeTable.insertRow(row)
-        timeTable.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
+    def _add_timetable_row(self, row: int, name: str = "",business=False):
+        """
+        保留定义。insertRow()的功能几乎没变。
+        但要将insertRow(0)拿到外面去。
+        """
+        timeTable = self.timeTable
+        # timeTable.setRowHeight(row, self.graph.UIConfigData()['table_row_height'])
 
         item = QtWidgets.QTableWidgetItem(name)
         timeTable.setItem(row, 0, item)
@@ -592,9 +605,6 @@ class CurrentWidget(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Line.bool2CheckState(business))
         timeTable.setItem(row,3,item)
-
-    def _remove_timetable_station(self, timeTable: QtWidgets.QTableWidget):
-        timeTable.removeRow(timeTable.currentRow())
 
     def _load_station_list(self, timeTable):
         """
@@ -672,13 +682,14 @@ class CurrentWidget(QtWidgets.QWidget):
             else:
                 item.setSelected(False)
 
-    def _load_station_ok(self, listWidget: QtWidgets.QListWidget, timeTable: QtWidgets.QTableWidget):
+    def _load_station_ok(self, listWidget: QtWidgets.QListWidget, timeTable: CurrentTable):
         timeTable.setRowCount(0)
         for item in listWidget.selectedItems():
             zm = item.data(-1)
             row = timeTable.rowCount()
             # business = self.graph.lineStationBusiness(zm,self.train.isPassenger(detect=True))
-            self._add_timetable_row(row, timeTable, zm, False)
+            timeTable.insertRow(row)
+            self._add_timetable_row(row, zm, False)
         sender: QtWidgets.QPushButton = self.sender()
         sender.parentWidget().close()
 

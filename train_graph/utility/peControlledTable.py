@@ -1,5 +1,6 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
+from typing import Type
 
 
 class PEControlledTable(QtWidgets.QWidget):
@@ -10,10 +11,13 @@ class PEControlledTable(QtWidgets.QWidget):
     内置的东西都使用下划线开头。
     注意 暂时不支持cellWidget交换操作。
     """
-
-    def __init__(self, parent=None):
+    RowInserted = QtCore.pyqtSignal(int)
+    def __init__(self, meta:[Type[QtWidgets.QTableWidget]]=QtWidgets.QTableWidget, parent=None):
+        """
+        class PEControlledTable <T extends QTableWidget>
+        """
         super(PEControlledTable, self).__init__(parent)
-        self._tw = QtWidgets.QTableWidget(self)
+        self._tw = meta(self)
         self._defaultRowHeight = 30
         self._initUI()
 
@@ -45,15 +49,41 @@ class PEControlledTable(QtWidgets.QWidget):
         vlayout.addLayout(hlayout)
         self.setLayout(vlayout)
 
-    def insertRow(self, p_int):
+    def insertRow(self, row):
         """
         模版方法，指出插入一行的动作。
         """
-        self._tw.insertRow(p_int)
-        self._tw.setRowHeight(p_int, self._defaultRowHeight)
+        self._tw.insertRow(row)
+        self._tw.setRowHeight(row, self._defaultRowHeight)
+        self.RowInserted.emit(row)
 
     def setDefaultRowHeight(self, h):
         self._defaultRowHeight = h
+
+    def exchangeRow(self,row1:int,row2:int):
+        """
+        模版方法，交换两行的数据，由上移、下移函数调用。
+        保证两行有效。
+        """
+        TWI = QtWidgets.QTableWidgetItem
+        for c in range(self._tw.columnCount()):
+            i = TWI(self._tw.item(row1, c))
+            self._tw.setItem(row1, c, TWI(self._tw.item(row2, c)))
+            self._tw.setItem(row2, c, i)
+
+    def exchangeCellWidget(self,row1:int,row2:int,col:int,getMethodName:str,setMethodName:str):
+        """
+        在两行之间交换cellWidget的数据。
+        适用于形式：
+        \q tableWidget.cellWidget(row1,col).getMethodName()
+        \q tableWidget.cellWidget(row1,col).setMethodName(v)
+        """
+        w1 = self._tw.cellWidget(row1,col)
+        w2 = self._tw.cellWidget(row2,col)
+        v1 = getattr(w1,getMethodName)()
+        v2 = getattr(w2,getMethodName)()
+        getattr(w1,setMethodName)(v2)
+        getattr(w2,setMethodName)(v1)
 
     def __getattribute__(self, item):
         try:
@@ -87,28 +117,15 @@ class PEControlledTable(QtWidgets.QWidget):
 
     def up(self):
         row = self._tw.currentRow()
-        TWI = QtWidgets.QTableWidgetItem
         if row <= 0:
             return
-        for c in range(self._tw.columnCount()):
-            i = TWI(self._tw.item(row - 1, c))
-            self._tw.setItem(row - 1, c, TWI(self._tw.item(row, c)))
-            self._tw.setItem(row, c, i)
-            # w = self._tw.cellWidget(row - 1, c)
-            # self._tw.setCellWidget(row - 1, c, self._tw.cellWidget(row, c))
-            # self._tw.setCellWidget(row, c, w)
+
+        self.exchangeRow(row-1,row)
         self._tw.setCurrentCell(row - 1, self._tw.currentColumn())
 
     def down(self):
         row = self._tw.currentRow()
-        TWI = QtWidgets.QTableWidgetItem
         if row >= self._tw.rowCount() - 1:
             return
-        for c in range(self._tw.columnCount()):
-            i = TWI(self._tw.item(row + 1, c))
-            self._tw.setItem(row + 1, c, TWI(self._tw.item(row, c)))
-            self._tw.setItem(row, c, i)
-            # w = self._tw.cellWidget(row + 1, c)
-            # self._tw.setCellWidget(row + 1, c, self._tw.cellWidget(row, c))
-            # self._tw.setCellWidget(row, c, w)
+        self.exchangeRow(row+1,row)
         self._tw.setCurrentCell(row + 1, self._tw.currentColumn())

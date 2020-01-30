@@ -27,30 +27,20 @@ class CircuitDiagramWidget(QtWidgets.QDialog):
         # 2020.01.27新增显示站表部分
 
         class T(PEControlledTable):
-            def insertRow(self, p_int):
-                super(T, self).insertRow(p_int)
+            def insertRow(self, row):
+                super(T, self).insertRow(row)
                 spin = QtWidgets.QSpinBox()
                 spin.setRange(0,3000)
                 spin.setSingleStep(10)
-                self.setCellWidget(p_int,1,spin)
-            # 临时方案
-            def down(self):
-                row = self._tw.currentRow()
-                super(T, self).down()
-                if 0<=row<self.rowCount()-1:
-                    y = self._tw.cellWidget(row,1).value()
-                    y1 = self._tw.cellWidget(row+1,1).value()
-                    self._tw.cellWidget(row,1).setValue(y1)
-                    self._tw.cellWidget(row+1,1).setValue(y)
+                self.setCellWidget(row, 1, spin)
 
-            def up(self):
-                row = self._tw.currentRow()
-                super(T, self).up()
-                if 0<row<=self.rowCount()-1:
-                    y = self._tw.cellWidget(row,1).value()
-                    y1 = self._tw.cellWidget(row-1,1).value()
-                    self._tw.cellWidget(row,1).setValue(y1)
-                    self._tw.cellWidget(row-1,1).setValue(y)
+            # 临时方案
+            def exchangeRow(self,row1:int,row2:int):
+                super(T, self).exchangeRow(row1,row2)
+                y = self._tw.cellWidget(row1, 1).value()
+                y1 = self._tw.cellWidget(row2, 1).value()
+                self._tw.cellWidget(row1, 1).setValue(y1)
+                self._tw.cellWidget(row2, 1).setValue(y)
 
         tw:QtWidgets.QTableWidget = T()
         self.tableWidget = tw

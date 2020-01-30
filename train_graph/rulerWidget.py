@@ -147,7 +147,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         tableWidget.setColumnWidth(3, 50)
         tableWidget.setColumnWidth(4, 50)
         tableWidget.setColumnWidth(5, 70)
-        tableWidget.setColumnWidth(6, 70)
+        tableWidget.setColumnWidth(6, 80)
 
         # 方便起见，直接调用line对象
         line = ruler.line()
@@ -241,14 +241,9 @@ class RulerWidget(QtWidgets.QTabWidget):
         tableWidget.setCellWidget(now_line, 3, spinStart)
         tableWidget.setCellWidget(now_line, 4, spinStop)
 
-        try:
-            speed = 1000 * mile / (minute * 60 + second) * 3.6
-        except ZeroDivisionError:
-            speed = 0
+        tableWidget.setItem(now_line, 5, QtWidgets.QTableWidgetItem(f"{mile:.3f}"))
 
-        tableWidget.setItem(now_line,5,QtWidgets.QTableWidgetItem(f"{mile:.3f}"))
-
-        item = QtWidgets.QTableWidgetItem("%.2f" % speed)
+        item = QtWidgets.QTableWidgetItem(Line.speedStr(mile,minute*60*second))
         tableWidget.setItem(now_line, 6, item)
 
     def _updateRulerTabWidget(self,widget):
@@ -339,7 +334,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         tableWidget.cellWidget(row,3).setValue(info.get("start",0))
         tableWidget.cellWidget(row,4).setValue(info.get("stop",0))
         tableWidget.item(row,5).setText(f"{mile:.3f}")
-
+        tableWidget.item(row,6).setText(Line.speedStr(mile,int_sec))
 
     #slots
     def _ruler_different_changed(self, ruler: Ruler, checked: bool, tableWidget):
@@ -551,7 +546,7 @@ class RulerWidget(QtWidgets.QTabWidget):
             self.main._derr("错误：无此车次!")
             return
 
-        flag = self.main.qustion("车次覆盖区间的数据将丢失。是否继续？")
+        flag = self.main.question("车次覆盖区间的数据将丢失。是否继续？")
         if not flag:
             return
 
@@ -572,17 +567,14 @@ class RulerWidget(QtWidgets.QTabWidget):
 
         seconds = spinMin.value() * 60 + spinSec.value()
 
-        try:
-            speed = 1000 * mile / (seconds) * 3.6
-        except ZeroDivisionError:
-            speed = 0.0
+        speed_s = Line.speedStr(mile,seconds)
+        tableWidget.item(now_line, 6).setText(speed_s)
+        if not seconds:
             color = QtGui.QColor(Qt.red)
             color.setAlpha(150)
             tableWidget.item(now_line, 0).setBackground(QtGui.QBrush(color))
         else:
             tableWidget.item(now_line, 0).setBackground(QtGui.QBrush(Qt.transparent))
-
-        tableWidget.item(now_line, 6).setText("%.2f" % speed)
 
         if not seconds:
             # 这一行标红

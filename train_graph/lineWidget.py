@@ -6,15 +6,73 @@
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 from .data.line import Line,LineStation
-from .utility import PECelledTable,PECellWidget,CellWidgetFactory
+from .utility import PECelledTable,PECellWidget,CellWidgetFactory,PEControlledTable
+
+
+class LineTable(PEControlledTable):
+    def __init__(self,parent=None):
+        super(LineTable, self).__init__(meta=PECelledTable,parent=parent)
+
+    def insertRow(self, row):
+        super(LineTable, self).insertRow(row)
+        self.setItem(row, 0, QtWidgets.QTableWidgetItem(''))
+
+        spin1 = CellWidgetFactory.new(QtWidgets.QDoubleSpinBox)
+        spin1.setRange(-9999.0, 9999.0)
+        spin1.setDecimals(3)
+        self.setCellWidget(row, 1, spin1)
+        # spin1.valueChanged.connect(self.changed)
+
+        item = QtWidgets.QTableWidgetItem()
+        # item.setData()
+        self.setItem(row, 2, item)
+
+        spin2 = CellWidgetFactory.new(QtWidgets.QSpinBox)
+        spin2.setRange(0, 20)
+        self.setCellWidget(row, 3, spin2)
+        # spin2.valueChanged.connect(self.changed)
+
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Qt.Checked)
+        self.setItem(row, 4, item)
+
+        combo = CellWidgetFactory.new(QtWidgets.QComboBox)  # type:QtWidgets.QComboBox
+        combo.addItems(["不通过", "下行", "上行", "上下行"])
+        combo.setCurrentIndex(3)
+        combo.setStyleSheet("QComboBox{margin:3px}")
+        self.setCellWidget(row, 5, combo)
+        # combo.currentIndexChanged.connect(self.changed)
+
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Line.bool2CheckState(True))
+        self.setItem(row, 6, item)
+
+        item = QtWidgets.QTableWidgetItem()
+        item.setCheckState(Line.bool2CheckState(True))
+        self.setItem(row, 7, item)
+
+    def exchangeRow(self,row1:int,row2:int):
+        super(LineTable, self).exchangeRow(row1,row2)
+        # 只需要重写交换cellWidget部分
+        # value()方法
+        for c in (1,3):
+            v = self._tw.cellWidget(row1,c).value()
+            self._tw.cellWidget(row1,c).setValue(self._tw.cellWidget(row2,c).value())
+            self._tw.cellWidget(row2,c).setValue(v)
+        # currentIndex()方法
+        for c in (5,):
+            i = self._tw.cellWidget(row1,c).currentIndex()
+            self._tw.cellWidget(row1,c).setCurrentIndex(self._tw.cellWidget(row2,c).currentIndex())
+            self._tw.cellWidget(row2,c).setCurrentIndex(i)
+
 
 class LineWidget(QtWidgets.QWidget):
     showStatus = QtCore.pyqtSignal(str)
     lineChangedApplied = QtCore.pyqtSignal()
     LineApplied = QtCore.pyqtSignal(Line)
     lineNameChanged = QtCore.pyqtSignal(Line,str,str)  # new,old 2019.10.08新增
-    def __init__(self,line:Line):
-        super().__init__()
+    def __init__(self,line:Line,parent=None):
+        super(LineWidget, self).__init__(parent)
         self.line = line
         self.toSave = False  # 2019.10.07新增
 
@@ -25,7 +83,6 @@ class LineWidget(QtWidgets.QWidget):
         """
         self.line=line
         self.setData()
-
 
     def initWidget(self):
         """
@@ -43,7 +100,7 @@ class LineWidget(QtWidgets.QWidget):
         self.nameEdit = lineEdit
         flayout.addRow(label, lineEdit)
 
-        tableWidget = PECelledTable()
+        tableWidget = LineTable()
 
         tableWidget.setEditTriggers(tableWidget.CurrentChanged)
         self.tableWidget = tableWidget
@@ -62,21 +119,21 @@ class LineWidget(QtWidgets.QWidget):
         vlayout.addLayout(flayout)
         vlayout.addWidget(tableWidget)
 
-        btnAdd = QtWidgets.QPushButton("前插站")
-        btnAdd.setMinimumWidth(50)
-        btnAddL = QtWidgets.QPushButton("后插站")
-        btnAddL.setMinimumWidth(50)
-        btnDel = QtWidgets.QPushButton("删除站")
-        btnDel.setMinimumWidth(50)
-        btnAdd.clicked.connect(lambda: self._add_station(tableWidget))
-        btnAddL.clicked.connect(lambda: self._add_station(tableWidget, True))
-        btnDel.clicked.connect(lambda: self._del_station(tableWidget))
-
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(btnAdd)
-        hlayout.addWidget(btnAddL)
-        hlayout.addWidget(btnDel)
-        vlayout.addLayout(hlayout)
+        # btnAdd = QtWidgets.QPushButton("前插站")
+        # btnAdd.setMinimumWidth(50)
+        # btnAddL = QtWidgets.QPushButton("后插站")
+        # btnAddL.setMinimumWidth(50)
+        # btnDel = QtWidgets.QPushButton("删除站")
+        # btnDel.setMinimumWidth(50)
+        # btnAdd.clicked.connect(lambda: self._add_station(tableWidget))
+        # btnAddL.clicked.connect(lambda: self._add_station(tableWidget, True))
+        # btnDel.clicked.connect(lambda: self._del_station(tableWidget))
+        #
+        # hlayout = QtWidgets.QHBoxLayout()
+        # hlayout.addWidget(btnAdd)
+        # hlayout.addWidget(btnAddL)
+        # hlayout.addWidget(btnDel)
+        # vlayout.addLayout(hlayout)
 
         hlayout=QtWidgets.QHBoxLayout()
         btnOk = QtWidgets.QPushButton("确定")
@@ -206,56 +263,7 @@ class LineWidget(QtWidgets.QWidget):
             tableWidget.setRowHeight(now_line, 30)  # cannot infer to graph
             now_line += 1
 
-
-    #slots
-    def _add_station(self, tableWidget: QtWidgets.QTableWidget, later: bool = False):
-        num = tableWidget.currentIndex().row()
-        if later:
-            num += 1
-
-        tableWidget.insertRow(num)
-        tableWidget.setItem(num,0,QtWidgets.QTableWidgetItem(''))
-
-        spin1 = CellWidgetFactory.new(QtWidgets.QDoubleSpinBox)
-        spin1.setRange(-9999.0, 9999.0)
-        spin1.setDecimals(3)
-        tableWidget.setCellWidget(num, 1, spin1)
-        spin1.valueChanged.connect(self.changed)
-
-        item = QtWidgets.QTableWidgetItem()
-        # item.setData()
-        tableWidget.setItem(num,2,item)
-
-        spin2 = CellWidgetFactory.new(QtWidgets.QSpinBox)
-        spin2.setRange(0, 20)
-        tableWidget.setCellWidget(num, 3, spin2)
-        tableWidget.setEditTriggers(tableWidget.CurrentChanged)
-        spin2.valueChanged.connect(self.changed)
-
-        item = QtWidgets.QTableWidgetItem()
-        item.setCheckState(Qt.Checked)
-        tableWidget.setItem(num,4,item)
-
-        combo = CellWidgetFactory.new(QtWidgets.QComboBox)  # type:QtWidgets.QComboBox
-        combo.addItems(["不通过", "下行", "上行", "上下行"])
-        combo.setCurrentIndex(3)
-        combo.setStyleSheet("QComboBox{margin:3px}")
-        tableWidget.setCellWidget(num, 5, combo)
-        combo.currentIndexChanged.connect(self.changed)
-
-        item = QtWidgets.QTableWidgetItem()
-        item.setCheckState(Line.bool2CheckState(True))
-        tableWidget.setItem(num, 6, item)
-
-        item = QtWidgets.QTableWidgetItem()
-        item.setCheckState(True)
-        tableWidget.setItem(num, 7, item)
-
-        tableWidget.setRowHeight(num, 30)  # cannot infer to graph
-
-    def _del_station(self, tableWidget: QtWidgets.QTableWidget):
-        tableWidget.removeRow(tableWidget.currentIndex().row())
-
+    # slots
     def _discard_line_info_change(self, tableWidget,line):
         if not self.qustion("是否恢复线路信息？当前所有修改都将丢失。"):
             return

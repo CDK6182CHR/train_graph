@@ -96,6 +96,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         menu.addAction(QtWidgets.QAction('推定时刻(Ctrl+2)',self))
         menu.addSeparator()
         menu.addAction(QtWidgets.QAction('添加车次(Ctrl+Shift+C)',self))
+        menu.addAction(QtWidgets.QAction('标尺排图向导(Ctrl+R)',self))
 
     def setMargin(self):
         """

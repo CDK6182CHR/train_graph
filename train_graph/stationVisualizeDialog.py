@@ -95,9 +95,10 @@ class StationVisualizeDialog(QtWidgets.QDialog):
         hlayout = QtWidgets.QHBoxLayout()
         btnOk = QtWidgets.QPushButton("铺画")
         btnOk.clicked.connect(self._set_ok)
-        # btnCancel = QtWidgets.QPushButton("取消")
+        btnSave = QtWidgets.QPushButton("保存")
+        btnSave.clicked.connect(self._save_tracks)
         hlayout.addWidget(btnOk)
-        # hlayout.addWidget(btnCancel)
+        hlayout.addWidget(btnSave)
         vlayout.addLayout(hlayout)
 
         phlayout.addLayout(vlayout)
@@ -129,13 +130,15 @@ class StationVisualizeDialog(QtWidgets.QDialog):
         slider.valueChanged.connect(lambda x: self.stationVisualizeChanged.emit(x))
         layout.addLayout(hlayout)
 
-        widget = StationGraphWidget(station_dicts, self.graph, station_name, self)
+        widget = StationGraphWidget(station_dicts, self.graph, station_name,
+                                    self.graph.line.stationTracks(self.station_name),self)
         layout.addWidget(widget)
         self.visualWidget = widget  # type:StationGraphWidget
         self._updateTable()
 
         phlayout.addLayout(layout)
         self.setLayout(phlayout)
+        self.showManualMessage()
 
     def _updateTable(self):
         """
@@ -191,3 +194,29 @@ class StationVisualizeDialog(QtWidgets.QDialog):
 
         self.visualWidget.repaintGraphAdvanced()
         self._updateTable()
+        self.showManualMessage()
+
+    def _save_tracks(self):
+        if not self.question("将上表中的股道信息保存到线路信息中，并清除原来保存的信息，下次查看股道表时自动读入。\n"
+                             "是否确认？"):
+            return
+        tracks = []
+        for row in range(self.trackTable.rowCount()):
+            tracks.append(self.trackTable.item(row,0).text())
+        self.graph.line.setStationTracks(self.station_name,tracks)
+
+    def showManualMessage(self):
+        if self.visualWidget.msg:
+            txt = '\n'.join(self.visualWidget.msg)
+            QtWidgets.QMessageBox.information(self,'提示',txt)
+            self.visualWidget.msg.clear()
+
+    def question(self, note: str, default=True):
+        flag = QtWidgets.QMessageBox.question(self, "问题", note,
+                                              QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if flag == QtWidgets.QMessageBox.Yes:
+            return True
+        elif flag == QtWidgets.QMessageBox.No:
+            return False
+        else:
+            return default

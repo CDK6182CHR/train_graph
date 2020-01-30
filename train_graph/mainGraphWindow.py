@@ -68,8 +68,8 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.4.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200128'
-        self.release = 'R36'  # 发布时再改这个
+        self.date = '20200130'
+        self.release = 'R37'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -272,6 +272,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             '区间换线(Ctrl+5)':self._interval_exchange,
             '推定时刻(Ctrl+2)':self._detect_pass_time,
             '添加车次(Ctrl+Shift+C)':self._add_train_from_list,
+            '标尺排图向导(Ctrl+R)':self._add_train_by_ruler,
         }
         try:
             action_map[action.text()]()
@@ -1495,12 +1496,12 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         try:
             self.graph.loadGraph(filename)
             if 'DB' in self.graph.version():
-                if not self.qustion('此文件可能被标记为数据库文件。如果没有特殊目的，'
+                if not self.question('此文件可能被标记为数据库文件。如果没有特殊目的，'
                                     'pyETRC不建议您直接打开数据库文件（尽管这是可以的），'
                                     '而是使用ctrl+D向既有线路中导入车次。是否继续打开此文件？'):
                     return
             elif self.graph.version() > self.version:
-                if not self.qustion(f'此文件可能由高于当前软件版本的pyETRC保存。如果继续打开并保存此文件，'
+                if not self.question(f'此文件可能由高于当前软件版本的pyETRC保存。如果继续打开并保存此文件，'
                                     f'可能损失一些新版本的信息。是否确认打开此文件？'
                                     f'当前软件版本：{self.version}；文件标记版本：{self.graph.version()}'):
                     return
@@ -1589,7 +1590,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.graph.toTrc(filename)
 
     def _reset_graph(self):
-        flag = self.qustion("重新从文件中读取本运行图，所有未保存数据都将丢失，未保存过的运行图将重置为空运行图！"
+        flag = self.question("重新从文件中读取本运行图，所有未保存数据都将丢失，未保存过的运行图将重置为空运行图！"
                             "是否继续？")
         if not flag:
             return
@@ -1615,7 +1616,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut('就绪')
 
     def _about(self):
-        text = f"{self.title}  release {self.release}\n{self.date} \n六方车迷会谈 马兴越  保留一切权利\n"
+        text = f"{self.title}  release {self.release}\n{self.date} \n六方车迷会谈 萧迩珀  保留一切权利\n"
         text += "联系方式： 邮箱 mxy0268@qq.com"
         text += '\n本系统官方交流群：865211882'
         QtWidgets.QMessageBox.about(self, '关于', text)
@@ -1777,7 +1778,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.exec_()
 
     def _reverse_graph(self):
-        flag = self.qustion("将本线上下行交换，所有里程交换。是否继续？\n"
+        flag = self.question("将本线上下行交换，所有里程交换。是否继续？\n"
                             "此功能容易导致上下行逻辑混乱，除非当前运行图上下行错误，否则不建议使用此功能。\n"
                             "车站原里程和对里程也将同时交换。如果原来缺少对里程数据，则默认用原里程覆盖。")
         if not flag:
@@ -1910,7 +1911,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.exec_()
 
     def _reset_start_end(self):
-        flag = self.qustion("将本线所有列车始发站设置时刻表首站、终到站设置为时刻表末站，是否继续？")
+        flag = self.question("将本线所有列车始发站设置时刻表首站、终到站设置为时刻表末站，是否继续？")
         if not flag:
             return
         for train in self.graph.trains():
@@ -1927,7 +1928,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                "第一个（最后一个）站；\n（2）该车次时刻表中第一个（最后一个）站站名形式符合：" \
                "“{A}xx场”格式，其中A表示车次信息中的始发（终到）站。\n" \
                "是否继续？"
-        if not self.qustion(text):
+        if not self.question(text):
             return
         for train in self.graph.trains():
             train.autoStartEnd()
@@ -2028,16 +2029,16 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.close()
 
     def _reset_business(self):
-        if not self.qustion('此操作将重置所有列车营业站信息，手动手动设置的营业站信息将丢失。是否继续？'):
+        if not self.question('此操作将重置所有列车营业站信息，手动手动设置的营业站信息将丢失。是否继续？'):
             return
-        if not self.qustion('再次确认，您是否确实要重置所有列车营业站信息？此操作不可撤销。'):
+        if not self.question('再次确认，您是否确实要重置所有列车营业站信息？此操作不可撤销。'):
             return
         for train in self.graph.trains():
             train.autoBusiness()
         self.statusOut('重置营业站信息完毕')
 
     def _reset_passenger(self):
-        if not self.qustion('按系统设置中的“类型管理”信息设置所有列车的“是否旅客列车”字段为'
+        if not self.question('按系统设置中的“类型管理”信息设置所有列车的“是否旅客列车”字段为'
                             '“是”或者“否”。此操作有助于提高效率，但今后修改类型管理信息时，'
                             '车次的数据不会随之更新。是否继续？'):
             return
@@ -2047,14 +2048,14 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.statusOut('自动设置旅客列车信息完毕')
 
     def _auto_type(self):
-        if not self.qustion('按照所有列车的车次（全车次），根据本系统规定的正则判据，重置所有列车的类型。'
+        if not self.question('按照所有列车的车次（全车次），根据本系统规定的正则判据，重置所有列车的类型。'
                             '是否继续？'):
             return
         for train in self.graph.trains():
             train.autoTrainType()
 
     def _delete_all(self):
-        if not self.qustion('删除本图中所有车次，以便重新导入或铺画，此操作不可撤销。'
+        if not self.question('删除本图中所有车次，以便重新导入或铺画，此操作不可撤销。'
                             '是否继续？'):
             return
         self.graph.clearTrains()
@@ -2319,7 +2320,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialogLines.close()
 
     def _import_line_excel(self):
-        flag = self.qustion("从Excel表格中导入线路数据，抛弃当前线路数据，是否继续？"
+        flag = self.question("从Excel表格中导入线路数据，抛弃当前线路数据，是否继续？"
                             "Excel表格应包含三列，分别是站名、里程、等级，不需要表头。")
         if not flag:
             return
@@ -2382,7 +2383,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
                    "请确认您知悉以上内容并继续。\n本提示不影响确认动作的执行。")
 
     def _import_train_old(self):
-        flag = self.qustion("选择运行图，导入其中所有在本线的车次。您是否希望覆盖重复的车次？"
+        flag = self.question("选择运行图，导入其中所有在本线的车次。您是否希望覆盖重复的车次？"
                             "选择“是”以覆盖重复车次，“否”以忽略重复车次。")
 
         filename = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
@@ -2415,7 +2416,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.circuitWidget.setData()
 
     def _import_train_real(self):
-        flag = self.qustion("选择运行图，导入其中所有在本线的车次，车次前冠以“R”，类型为“实际”。是否继续？")
+        flag = self.question("选择运行图，导入其中所有在本线的车次，车次前冠以“R”，类型为“实际”。是否继续？")
         if not flag:
             return
 
@@ -2465,7 +2466,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
             self._derr("推定通过时刻：请先添加标尺！")
             return
         else:
-            if not self.qustion('此操作将删除要推定时刻列车时刻表中【非本线】的站点，是否继续？'):
+            if not self.question('此操作将删除要推定时刻列车时刻表中【非本线】的站点，是否继续？'):
                 return
         dialog = DetectWidget(self, self)
         dialog.okClicked.connect(self._detect_ok)
@@ -2477,7 +2478,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self._updateCurrentTrainRelatedWidgets(self.currentTrain())
 
     def _withdraw_detect(self):
-        if not self.qustion('此操作将删除时刻表中所有备注为“推定”的站，无论是否是由系统推定添加的。此操作不可撤销，是否继续？'):
+        if not self.question('此操作将删除时刻表中所有备注为“推定”的站，无论是否是由系统推定添加的。此操作不可撤销，是否继续？'):
             return
         for train in self.graph.trains():
             train.withdrawDetectStations()
@@ -2633,7 +2634,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def _dout(self, note: str):
         QtWidgets.QMessageBox.information(self, "提示", note)
 
-    def qustion(self, note: str, default=True):
+    def question(self, note: str, default=True):
         flag = QtWidgets.QMessageBox.question(self, self.title, note,
                                               QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
         if flag == QtWidgets.QMessageBox.Yes:

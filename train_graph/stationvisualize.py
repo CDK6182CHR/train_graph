@@ -26,7 +26,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
     Link = 0x2  # 接续交路间的贯穿线
     Departure = 0x3  # 无接续的始发
     Destination = 0x4  # 无接续的终到
-    def __init__(self,station_list,graph:Graph,station_name,mainWindow):
+    def __init__(self,station_list,graph:Graph,station_name,init_tracks,mainWindow):
         """
         :param station_list see:
         >>> graph.stationTimeTable(station_name)
@@ -73,9 +73,13 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         self._oppositeSplitTime = 0
 
         self.station_list = station_list
+        if init_tracks:
+            self._parseInitTrackOrder(init_tracks)
+        self.msg = []  # 警告信息
         self._makeList()
         # 初始化时，对股道做一次自动排序，但以后不按照这个。
-        self.track_order.sort()
+        if not init_tracks:
+            self.track_order.sort()
         self._initUI()
 
     def allowMainStay(self):
@@ -153,6 +157,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         # self.down_list = []  # 下行股道表，每个元素（list）是一个股道的占用次序。
         # self.up_list = []
         # self.single_list = []
+        self.msg.clear()
 
         newlist = []
         toDeleteTrains = []  # 要删除的列车。是因为接续而被删除的对象。保存原来的train对象。
@@ -204,6 +209,16 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
                 self._addStopTrain(train_dict)
         self._autoTrackNames()
         self._autoTrackOrder()
+
+    def _parseInitTrackOrder(self,tracks:list):
+        """
+        仅在初始化调用，解析股道顺序表。
+        保证所有的表都是空的。
+        """
+        for t in tracks:
+            self.single_names.append(t)
+            self.track_order.append(t)
+            self.single_list.append([])
 
     def _autoTrackNames(self):
         """
@@ -352,7 +367,11 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             # 按手动添加车次
             track_name = train_dict['track']
             track_index = self._getTrackIndex(track_name)
-            self.single_list[track_index].append(train_dict)
+            track = self.single_list[track_index]
+            if not self._isIdle(track,train_dict):
+                self.msg.append(f"通过时刻冲突：车次{train_dict['train'].fullCheci()}, "
+                                f"时刻{train_dict['ddsj'].strftime('%H:%M:%S')}, 股道{track_name}")
+            track.append(train_dict)
         elif self._doubleLine:
             # 双线铺画
             if down:
@@ -389,7 +408,12 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         added = False
         if self._manual and train_dict.get("track"):
             idx = self._getTrackIndex(train_dict['track'])
-            self.single_list[idx].append(train_dict)
+            track = self.single_list[idx]
+            if not self._isIdle(track,train_dict):
+                self.msg.append(f"停车时刻冲突：车次{train_dict['train'].fullCheci()}, "
+                                f"时刻{train_dict['ddsj'].strftime('%H:%M:%S')}-"
+                                f"{train_dict['cfsj'].strftime('%H:%M:%S')}, 股道{train_dict.get('track')}")
+            track.append(train_dict)
         elif self._doubleLine:
             #双线铺画
             if down:
