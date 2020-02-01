@@ -127,7 +127,6 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             self.up_names.clear()
             self.track_order.clear()
         self._makeList()
-        print("rapaintAdv: before initUI")
         self._initUI()
 
     def _repaint(self,seconds_per_pix:int=-1):
@@ -219,6 +218,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             self.single_names.append(t)
             self.track_order.append(t)
             self.single_list.append([])
+            self.single_map[t] = len(self.single_names)-1
 
     def _autoTrackNames(self):
         """

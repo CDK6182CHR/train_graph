@@ -627,6 +627,17 @@ class Graph:
                 return True
         return False
 
+    def validNewCircuitName(self)->str:
+        """
+        以新建x的格式返回一个有效的新建标尺名称。
+        """
+        s = "新建0"
+        i = 0
+        while self.circuitNameExisted(s):
+            i+=1
+            s = f"新建{i}"
+        return s
+
     def isNewRuler(self, ruler: Ruler):
         for r in self.line.rulers:
             if ruler is r:

@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 from .data.graph import Train,Graph
 from datetime import datetime
 
+
 class InteractiveTimetable(QtWidgets.QWidget):
     trainTimetableChanged = QtCore.pyqtSignal(Train,dict)  # 被调整的列车对象和被调整的站。
     def __init__(self,graph,parent=None):
@@ -28,7 +29,7 @@ class InteractiveTimetable(QtWidgets.QWidget):
         tableWidget.itemDoubleClicked.connect(self._double_clicked)
         self.tableWidget = tableWidget
         tableWidget.setColumnCount(3)
-        tableWidget.setHorizontalHeaderLabels(('站名','时刻','停时备注'))
+        tableWidget.setHorizontalHeaderLabels(('站名','时刻','停时股道'))
         for i,s in enumerate((100,100,100)):
             tableWidget.setColumnWidth(i,s)
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
@@ -70,7 +71,7 @@ class InteractiveTimetable(QtWidgets.QWidget):
             item = TWI(train.stopTimeStr(st_dict))
             item.setForeground(brush)
             tw.setItem(r, 2, item)
-            item = TWI(st_dict.get('note', ''))
+            item = TWI(st_dict.get('track', ''))
             item.setForeground(brush)
             tw.setItem(r + 1, 2, item)
 

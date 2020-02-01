@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 from .data.train import Train
 from .data.graph import Graph
 
+
 class TrainTimetable(QtWidgets.QWidget):
     def __init__(self,graph:Graph,parent=None):
         super(TrainTimetable, self).__init__(parent)
@@ -46,7 +47,7 @@ class TrainTimetable(QtWidgets.QWidget):
         tableWidget.setColumnCount(3)
         for i,s in enumerate((100,85,100)):
             tableWidget.setColumnWidth(i,s)
-        tableWidget.setHorizontalHeaderLabels(('站名','时刻','停时备注'))
+        tableWidget.setHorizontalHeaderLabels(('站名','时刻','停时股道'))
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
 
     def setData(self,train:Train=None):
@@ -116,7 +117,7 @@ class TrainTimetable(QtWidgets.QWidget):
 
             item2.setTextAlignment(Qt.AlignCenter)
             item3 = TWI(train.stopTimeStr(st_dict))
-            item4 = TWI(st_dict.get('note',''))
+            item4 = TWI(st_dict.get('track',''))
             # 设置颜色
             if True:
                 color = Qt.black

@@ -30,6 +30,7 @@ class CurrentWidget(QtWidgets.QWidget):
     currentTrainApplied = QtCore.pyqtSignal(Train)
     currentTrainDeleted = QtCore.pyqtSignal(Train)
     editCurrentTrainCircuit = QtCore.pyqtSignal(Circuit)
+    addCircuitFromCurrent = QtCore.pyqtSignal(Train)
     def __init__(self,graph):
         super().__init__()
         self.graph = graph  # type:Graph
@@ -136,11 +137,11 @@ class CurrentWidget(QtWidgets.QWidget):
         circuitEdit.setFocusPolicy(Qt.NoFocus)
         hlayout.addWidget(circuitEdit)
 
-        btnEditCircuit = QtWidgets.QPushButton('编辑')
+        btnEditCircuit = QtWidgets.QPushButton('添加到...')
         btnClearCircuit = QtWidgets.QPushButton('清除')
         self.btnEditCircuit = btnEditCircuit
         self.btnClearCircuit = btnClearCircuit
-        btnEditCircuit.setEnabled(False)
+        # btnEditCircuit.setEnabled(False)
         btnClearCircuit.setEnabled(False)
         hlayout.addWidget(btnEditCircuit)
         hlayout.addWidget(btnClearCircuit)
@@ -420,11 +421,13 @@ class CurrentWidget(QtWidgets.QWidget):
 
         if self.train.carriageCircuit() is not None:
             self.circuitEdit.setText(self.train.carriageCircuit().name())
-            self.btnEditCircuit.setEnabled(True)
+            # self.btnEditCircuit.setEnabled(True)
+            self.btnEditCircuit.setText("编辑")
             self.btnClearCircuit.setEnabled(True)
         else:
             self.circuitEdit.setText('')
-            self.btnEditCircuit.setEnabled(False)
+            # self.btnEditCircuit.setEnabled(False)
+            self.btnEditCircuit.setText('添加到...')
             self.btnClearCircuit.setEnabled(False)
 
         timeTable: QtWidgets.QTableWidget = self.timeTable
@@ -778,10 +781,33 @@ class CurrentWidget(QtWidgets.QWidget):
         self.setData(self.train)
 
     def _edit_circuit(self):
+        """
+        2020.02.01加上新的功能：当circuit is None时，触发添加到交路。
+        """
         circuit = self.train.carriageCircuit()
         if circuit is None:
+            self._add_to_circuit()
+        else:
+            self.editCurrentTrainCircuit.emit(circuit)
+
+    def _add_to_circuit(self):
+        """
+        添加到交路。
+        """
+        circuits = list(self.graph.circuits())
+        names = [c.name() for c in circuits]
+        names.insert(0,'(新建)  ')
+        name,ok = QtWidgets.QInputDialog.getItem(self,'添加到交路','请选择要添加到的交路，或者新建交路: ',
+                                              names,editable=False,)
+        if not ok:
             return
-        self.editCurrentTrainCircuit.emit(circuit)
+        if name == '(新建)  ':
+            # 新建交路
+            self.addCircuitFromCurrent.emit(self.train)
+        else:  # 添加到交路
+            circuit = self.graph.circuitByName(name)
+            circuit.addTrain(self.train)
+            self.editCurrentTrainCircuit.emit(circuit)
 
     def _clear_circuit(self):
         if not self.question("是否确认删除本次列车交路信息？\n"

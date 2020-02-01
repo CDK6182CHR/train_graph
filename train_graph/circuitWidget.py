@@ -166,7 +166,6 @@ class CircuitWidget(QtWidgets.QWidget):
         print("CircuitWidget::circuit_changed not correctly called!")
         self._circuit_added(circuit)
 
-
     def _circuit_added(self,circuit:Circuit):
         """
         circuitDialog调用。增加新的circuit，为提高效率而设置。
@@ -186,6 +185,10 @@ class CircuitWidget(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem()
         item.setCheckState(Qt.Unchecked)
         tw.setItem(row,0,item)
+
+    def add_circuit_from_current(self,train):
+        self._add_circuit()
+        self.dialog.addTrain(train)
 
     def batch_parse(self):
         dialog = BatchParseCircuit(self.graph,self,self.parent())

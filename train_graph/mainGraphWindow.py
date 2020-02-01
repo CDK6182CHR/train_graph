@@ -66,9 +66,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self, filename=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V2.4.1"
+        self.version = "V2.4.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200130'
+        self.date = '20200201'
         self.release = 'R37'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -425,6 +425,9 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         widget.currentTrainApplied.connect(self._current_applied)
         widget.currentTrainDeleted.connect(self._del_train_from_current)
         widget.editCurrentTrainCircuit.connect(self.circuitWidget.editCircuit)
+        widget.addCircuitFromCurrent.connect(self.circuitWidget.add_circuit_from_current)
+        self.circuitWidget.dialog.CircuitChangeApplied.connect(lambda x:widget.setData(widget.train))
+        # 从当前车次列表添加交路
 
     def _current_applied(self, train: Train):
         """

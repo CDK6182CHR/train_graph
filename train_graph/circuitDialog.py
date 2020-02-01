@@ -115,6 +115,15 @@ class CircuitDialog(QtWidgets.QDialog):
         for row,node in enumerate(circuit.nodes()):
             self.setTableRow(row,node)
 
+    def addTrain(self,train:Train):
+        """
+        2020.02.01新增。从当前车次中添加车次时候调用。
+        将车次添加到当前dialog的车次中，然后更新页面。
+        保证train不属于其他交路。
+        """
+        self.circuit.addTrain(train)
+        self.setData(self.circuit)
+
     def setTableRow(self,row:int,node:CircuitNode):
         """
         新建一行时，设置基本格式。保证该行存在。

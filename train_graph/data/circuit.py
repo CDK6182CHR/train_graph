@@ -240,6 +240,7 @@ class Circuit:
     def addTrain(self,train,index=None):
         """
         要求train不能属于其他交路。否则抛出TrainHasCircuitError。
+        完成一切操作。
         """
         if train.carriageCircuit() is not None:
             raise TrainHasCircuitError(train,train.carriageCircuit())
