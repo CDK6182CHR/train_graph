@@ -5,7 +5,7 @@ from .ruler import Ruler
 from .forbid import Forbid,ServiceForbid,ConstructionForbid
 from .route import Route
 from .linestation import LineStation
-from typing import Union
+from typing import Union,List
 from Timetable_new.utility import stationEqual
 from ..pyETRCExceptions import *
 
@@ -41,7 +41,7 @@ class Line():
         self.numberMap = None  # 站名->序号映射表。用于初始化时临时使用。使用期间保证站表是不变的。
         self.name = name
         self.stations = []
-        self.rulers = []
+        self.rulers = []  # type:List[Ruler]
         self.routes = []
         self.notes = {}
         self.tracks = []
@@ -342,6 +342,26 @@ class Line():
         """
         return st1['licheng'] <= st2['licheng']
 
+    def gapBetween(self, st1: str, st2: str)->float:
+        """
+        计算两个站间距离.
+        2020.01.23新增：如果是上行方向，则尝试使用对里程。
+        对里程按照点对点原则使用，只考虑两端点的对里程数据，不考虑中间的。
+        """
+        station1 = self.stationDictByName(st1)
+        station2 = self.stationDictByName(st2)
+
+        if station1 is None:
+            raise StationNotInLineException(st1)
+        if station2 is None:
+            raise StationNotInLineException(st2)
+
+        if not self.isDownGapByDict(station1, station2):
+            if station1.get('counter') is not None and \
+                    station2.get('counter') is not None:
+                return abs(station1['counter'] - station2['counter'])
+        return abs(station1["licheng"] - station2["licheng"])
+
     def stationViaDirection(self,name:str):
         """
         返回name指向车站的direction参数，若无此key，设为0x3；若无此车站，返回None.
@@ -373,13 +393,11 @@ class Line():
         return False
 
     def resetRulers(self):
-        print("line 180:",self.rulers)
         for ruler in self.rulers:
             ruler._line = self
             ruler.resetAllPassed()
 
         if self.isSplited():
-            print("设置ruler splited")
             for ruler in self.rulers:
                 ruler.setDifferent(True,change=True)
 

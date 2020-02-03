@@ -1,4 +1,4 @@
-from train_graph.mainGraphWindow import mainGraphWindow
+from train_graph.MainGraphWindow import MainGraphWindow
 from PyQt5.QtWidgets import QApplication
 import sys
 
@@ -7,7 +7,7 @@ try:
     f = sys.argv[1]
 except IndexError:
     f = None
-mainWindow = mainGraphWindow(f)
+mainWindow = MainGraphWindow(f)
 # mainWindow.showMaximized()
 
 app.exec_()

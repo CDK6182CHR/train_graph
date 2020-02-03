@@ -220,7 +220,7 @@ class ImportTrainDialog(QtWidgets.QDialog):
                 self.graph.addTrain(train)
 
         # 导入交路。重新创建所有的交路对象。
-        ruler_cnt = 0
+        circuit_cnt = 0
         if not self.radioNoCircuit.isChecked():
             coverCircuit = self.radioNewCircuit.isChecked()
             for circuit in self.anGraph.circuits():
@@ -243,7 +243,7 @@ class ImportTrainDialog(QtWidgets.QDialog):
                         newCircuit.addTrain(train)
                 if newCircuit.anyValidTrains():
                     self.graph.addCircuit(newCircuit)
-                    ruler_cnt+=1
+                    circuit_cnt+=1
         all_cnt = self.anGraph.trainCount()
         text = ""
         if cover:
@@ -252,8 +252,8 @@ class ImportTrainDialog(QtWidgets.QDialog):
         else:
             text += f"成功导入{new_cnt}个车次。"
             text+=f"有{all_cnt-new_cnt}个重复车次被跳过\n"
-        if ruler_cnt:
-            text+=f"同时引入{ruler_cnt}个新交路。"
+        if circuit_cnt:
+            text+=f"同时引入{circuit_cnt}个新交路。"
         QtWidgets.QMessageBox.information(self,'信息',text)
         self.anGraph.clearTrains()
         self.importTrainOk.emit()

@@ -83,7 +83,7 @@ class Forbid:
         }
         self._nodes.append(newNode)
 
-    def getInfo(self,fazhan,daozhan):
+    def getInfo(self,fazhan,daozhan)->dict:
         for node in self._nodes:
             if stationEqual(node["fazhan"],fazhan) and stationEqual(node["daozhan"],daozhan):
                 return node

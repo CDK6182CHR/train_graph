@@ -10,7 +10,7 @@ __all__ = [
 'intervalWidget',  # intervalWidget.py
 'lineDB',  # lineDB.py
 'lineWidget',  # lineWidget.py
-'mainGraphWindow',  # mainGraphWindow.py
+    'MainGraphWindow.py',  # mainGraphWindow.py
 'rulerPaint',  # rulerPaint.py
 'rulerWidget',  # rulerWidget.py
 'stationvisualize',  # stationvisualize.py

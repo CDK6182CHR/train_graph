@@ -194,9 +194,11 @@ class CurrentWidget(QtWidgets.QWidget):
         # btnCheck.clicked.connect(lambda:self.checkCurrentTrainRuler.emit(self.train))
         # btnCheck.setMinimumWidth(120)
         btnLoad = QtWidgets.QPushButton("导入站表")
+        self.btnLoad = btnLoad
         btnLoad.clicked.connect(lambda: self._load_station_list(timeTable))
 
         btnEvent = QtWidgets.QPushButton("切片输出")
+        self.btnEvent = btnEvent
         btnEvent.setToolTip("显示本车次在本线的停站、发车、通过、会车、待避、越行等事件列表。")
         btnEvent.clicked.connect(self.showCurrentTrainEvents.emit)
         btnEvent.setMinimumWidth(120)

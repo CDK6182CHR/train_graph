@@ -439,6 +439,7 @@ class Circuit:
     def identifyTrain(self,full_only=False)->list:
         """
         尝试从虚拟车次中识别存在的车次，变成实体车次。
+        2020.02.02新增：如果车次错误设置为实体，变为虚拟。
         :returns 解析报告
         """
         reports = [f'在{self}中进行车次识别']
@@ -457,6 +458,12 @@ class Circuit:
                         node.setVirtual(False)
                         node.setTrain(train)
                         train.setCarriageCircuit(self)
+            else:  # 非虚拟车次
+                checi = node.checi()
+                train = self.graph.trainFromCheci(checi, full_only=full_only)
+                if train is None:
+                    node.setVirtual(True)
+                    reports.append(f'[info]将车次{checi}判定为虚拟车次')
         return reports
 
     def firstCheci(self)->str:

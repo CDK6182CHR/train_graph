@@ -587,25 +587,13 @@ class Graph:
         for ruler in self.line.rulers:
             yield ruler
 
-    def gapBetween(self, st1: str, st2: str):
+    def gapBetween(self, st1: str, st2: str)->float:
         """
         计算两个站间距离.
         2020.01.23新增：如果是上行方向，则尝试使用对里程。
         对里程按照点对点原则使用，只考虑两端点的对里程数据，不考虑中间的。
         """
-        station1 = self.stationByDict(st1)
-        station2 = self.stationByDict(st2)
-
-        if station1 is None:
-            raise StationNotInLineException(st1)
-        if station2 is None:
-            raise StationNotInLineException(st2)
-
-        if not self.line.isDownGapByDict(station1, station2):
-            if station1.get('counter') is not None and \
-                    station2.get('counter') is not None:
-                return abs(station1['counter'] - station2['counter'])
-        return abs(station1["licheng"] - station2["licheng"])
+        return self.line.gapBetween(st1,st2)
 
     def lineSplited(self):
         """
@@ -1141,6 +1129,7 @@ class Graph:
                         train.setCarriageCircuit(circuit)
                     self.delTrain(t)
                     self.addTrain(train)
+        self.checkCircuits()
         return num
 
     def preAddTrainByGraph(self, graph):
@@ -1161,6 +1150,14 @@ class Graph:
                 self.addTrain(train)
         tm2 = time.perf_counter()
         print("预导入线路历时", tm2 - tm1)
+
+    def checkCircuits(self):
+        """
+        2020.02.02新增。
+        检查所有交路信息。如果找不到对应的车次，则设置为虚拟。
+        """
+        for circuit in self.circuits():
+            circuit.identifyTrain(full_only=True)
 
     def setMarkdown(self, mark: str):
         self._markdown = mark
@@ -1905,6 +1902,28 @@ class Graph:
         tm2 = time.perf_counter()
         print("Graph::diffWith()历时", tm2 - tm1)
         return result
+
+    def subGraph(self,line:Line):
+        """
+        给出指定line下的子图。
+        """
+        graph = Graph()
+        graph.setLine(line)
+        # 先导入所有交路
+        for circuit in self.circuits():
+            c = Circuit(graph)
+            c.coverBaseData(circuit)
+            graph.addCircuit(c)
+        for train in self.trains():
+            if train.isLocalTrain(graph):
+                circuit = train.carriageCircuit()
+                if circuit is not None:
+                    train.setCarriageCircuit(graph.circuitByName(circuit.name()))
+                graph.addTrain(train)
+        for circuit in graph._circuits[:]:
+            if not circuit.anyValidTrains():
+                graph._circuits.remove(circuit)
+        return graph
 
 
 if __name__ == '__main__':

@@ -50,9 +50,9 @@ from .helpDialog import HelpDialog
 from .changeTrainIntervalDialog import ChangeTrainIntervalDialog
 from .exchangeIntervalDialog import ExchangeIntervalDialog
 from .importTrainDialog import ImportTrainDialog
-from .linedb.lineLibDialog import LineLibDialog
+from .linedb.lineLibWidget import LineLibWidget
+from .dialogAdapter import DialogAdapter
 from .graphDiffDialog import GraphDiffDialog
-import time
 import traceback
 import cgitb
 
@@ -61,26 +61,29 @@ cgitb.enable(format='text')
 system_file = "system.json"
 
 
-class mainGraphWindow(QtWidgets.QMainWindow):
+class MainGraphWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, graph=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
         self.version = "V2.4.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200201'
+        self.date = '20200203'
         self.release = 'R37'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
-        self.showMaximized()
+        if not graph:
+            self.showMaximized()
         self._readSystemSetting()
 
         self._selectedTrain = None
-        self.graph = Graph()
-        self.graph.setSysVersion(self.version)
-        self._initGraph(filename)
+        self.graph = graph
+        if self.graph is None:
+            self.graph = Graph()
+            self.graph.setSysVersion(self.version)
+            self._initGraph(filename)
         self.GraphWidget = GraphicsWidget(self.graph, self)
         self.GraphWidget.menu.triggered.connect(self._shortcut_action_triggered)
 
@@ -1629,10 +1632,7 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         dialog.exec_()
 
     def statusOut(self, note: str, seconds: int = 0):
-        try:
-            self.statusBar().showMessage(f"{datetime.now().strftime('%H:%M:%S')} {note}", seconds)
-        except:
-            traceback.print_exc()
+        self.statusBar().showMessage(f"{datetime.now().strftime('%H:%M:%S')} {note}", seconds)
 
     def on_focus_changed(self, train: Train):
         """
@@ -2072,10 +2072,28 @@ class mainGraphWindow(QtWidgets.QMainWindow):
         self.circuitWidget.identify()
 
     def _view_line_data(self):
-        dialog = LineLibDialog(self.graph.sysConfigData()['default_db_file'],fromPyetrc=True,parent=self)
+        class T(DialogAdapter):
+            def keyPressEvent(self, event: QtGui.QKeyEvent):
+                """
+                禁用ESC退出
+                """
+                if event.key() != Qt.Key_Escape:
+                    super().keyPressEvent(event)
+                else:
+                    self.close()
+
+            def closeEvent(self, event: QtGui.QCloseEvent):
+                # if self.toSave:
+                if self.widget.checkUnsavedLib():
+                    event.ignore()
+                    return
+                event.accept()
+
+        dialog = LineLibWidget(self.graph.sysConfigData()['default_db_file'],fromPyetrc=True)
         dialog.DefaultDBFileChanged.connect(self._default_db_file_changed)
         dialog.ExportLineToGraph.connect(self._import_line_from_db)
-        dialog.exec_()
+        adapter = T(dialog,self,False)
+        adapter.exec_()
 
     def _default_db_file_changed(self,name):
         self.graph.sysConfigData()['default_db_file'] = name
@@ -2650,6 +2668,6 @@ class mainGraphWindow(QtWidgets.QMainWindow):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    mainWindow = mainGraphWindow()
+    mainWindow = MainGraphWindow()
     mainWindow.show()
     sys.exit(app.exec_())

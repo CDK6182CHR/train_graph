@@ -1,14 +1,14 @@
-from train_graph.mainGraphWindow import mainGraphWindow
+from train_graph.MainGraphWindow import MainGraphWindow
 import cProfile
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 import sys,pstats
 
-def cmds(w: mainGraphWindow):
+def cmds(w: MainGraphWindow):
     for i in range(100):
         w.trainWidget.trainTable.setCurrentCell(i, 0)
 
-def test_change_current_train(w:mainGraphWindow):
+def test_change_current_train(w:MainGraphWindow):
     """
     2019.07.06。
     测试删除车次引发的窗口更新操作情况。
@@ -23,7 +23,7 @@ def test_change_current_train(w:mainGraphWindow):
 
 def test_stats():
     app = QtWidgets.QApplication(sys.argv)
-    w = mainGraphWindow('source/京沪线上局段20190410.json')
+    w = MainGraphWindow('source/京沪线上局段20190410.json')
     # train_delete(w)
 
     p = pstats.Stats('profile/3.pstat')
@@ -34,17 +34,17 @@ def test_stats():
     p.strip_dirs()
     p.sort_stats('cumulative').print_stats()
 
-def test_interval_trains(w:mainGraphWindow):
+def test_interval_trains(w:MainGraphWindow):
     # w._interval_count()
     cProfile.run('w._interval_count()',filename='profile/7.pstat')
 
-def test_ruler_widget_refresh(w:mainGraphWindow):
+def test_ruler_widget_refresh(w:MainGraphWindow):
     # w.rulerWidget.setData()
     cProfile.run('w.rulerWidget.setData()',
                  filename='profile/8.pstat'
                  )
 
-def test_event_list(w:mainGraphWindow):
+def test_event_list(w:MainGraphWindow):
     train = w.graph.trainFromCheci('K849')
     w.GraphWidget._line_selected(train.firstItem())
     cProfile.run('w.GraphWidget.listTrainEvent()',
@@ -53,14 +53,14 @@ def test_event_list(w:mainGraphWindow):
 
 event = QtGui.QMouseEvent(QtCore.QEvent.MouseButtonPress,QtCore.QPoint(879, 407),Qt.LeftButton,
                               Qt.NoButton,Qt.NoModifier)
-def test_select_line(w:mainGraphWindow):
+def test_select_line(w:MainGraphWindow):
     # w.GraphWidget.mousePressEvent(event)
     w.trainDockWidget.setVisible(True)
     cProfile.run('w.GraphWidget.mousePressEvent(event)',
                  filename='profile/10.pstat'
                  )
 
-def test_refresh_docks(w:mainGraphWindow):
+def test_refresh_docks(w:MainGraphWindow):
     w._refreshDockWidgets()
     cProfile.run('w._refreshDockWidgets()',
                  filename='profile/15.pstat'
@@ -90,7 +90,7 @@ def compare_insert_rows():
     insert_rows()
     set_row_count()
 
-def test_open_graph(w:mainGraphWindow):
+def test_open_graph(w:MainGraphWindow):
     # w.open_graph_ok('source/京广线广铁段20190105.json')
     cProfile.run(
         "w.open_graph_ok('source/京广线广铁段20190105.json')",
@@ -99,7 +99,7 @@ def test_open_graph(w:mainGraphWindow):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    w = mainGraphWindow('source/达成单线20190125.json')
+    w = MainGraphWindow('source/达成单线20190125.json')
     test_open_graph(w)
 
     p = pstats.Stats('profile/17.pstat')

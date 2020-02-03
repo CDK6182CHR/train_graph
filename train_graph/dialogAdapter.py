@@ -9,6 +9,7 @@ class DialogAdapter(QtWidgets.QDialog):
         super(DialogAdapter, self).__init__(parent)
         self.widget = widget
         self.setWindowTitle(self.widget.windowTitle())
+        self.resize(widget.geometry().width(),widget.geometry().height())
         vlayout = QtWidgets.QVBoxLayout()
         vlayout.addWidget(self.widget)
         if closeButton:

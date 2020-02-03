@@ -4,6 +4,7 @@
 是Python基础dict的封装和扩展。
 """
 from ..data.line import Line
+from typing import Generator
 
 class Category(dict):
     def __init__(self,name='',data=None,parent=None):
@@ -184,6 +185,21 @@ class Category(dict):
             else:
                 cnt+=1
         return cnt
+
+    def lines(self)->Generator[Line,None,None]:
+        """
+        2020年2月2日新增。
+        DFS依次返回所有线路。
+        """
+        for name,data in self.items():
+            if isinstance(data,Category):
+                try:
+                    for t in data.lines():
+                        yield t
+                except RecursionError:
+                    print("recursion Error!")
+            else:
+                yield data
 
     def moveDrops(self,obj):
         """

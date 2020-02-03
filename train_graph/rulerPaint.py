@@ -635,6 +635,7 @@ class rulerPainter(QtWidgets.QWidget):
         self.btnNext.setEnabled(True)
         self.btnOk.setEnabled(False)
         self.btnFormer.setEnabled(False)
+        self.graphWindow.delTrainLine(self.train)
         self.stackedWidget.setCurrentIndex(0)
         self.timeTable.setRowCount(0)
 

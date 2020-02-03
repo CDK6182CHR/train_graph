@@ -9,11 +9,12 @@ from ..data.graph import Graph
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 
-class LineLibDialog(QtWidgets.QDialog):
+
+class LineLibWidget(QtWidgets.QWidget):
     ExportLineToGraph = QtCore.pyqtSignal(Line)
     DefaultDBFileChanged = QtCore.pyqtSignal(str)
     def __init__(self,filename='linesNew.pyetlib',fromPyetrc=True,parent=None):
-        super(LineLibDialog, self).__init__(parent)
+        super(LineLibWidget, self).__init__(parent)
         self.filename=filename
         self.fromPyetrc=fromPyetrc
         self.lineLib = LineLib(filename)
@@ -65,7 +66,7 @@ class LineLibDialog(QtWidgets.QDialog):
 
         btnChangeFile = QtWidgets.QPushButton('选择文件')
         hlayout.addWidget(btnChangeFile)
-        btnChangeFile.clicked.connect(self._change_filename)
+        btnChangeFile.clicked.connect(self.change_filename)
 
         btnDefaultFile = QtWidgets.QPushButton('设为默认文件')
         hlayout.addWidget(btnDefaultFile)
@@ -95,7 +96,7 @@ class LineLibDialog(QtWidgets.QDialog):
             "合并数据":self._merge_lib,
             "导出文件":self._export_data,
             "导出到运行图":self._export_to_graph,
-            "保存":self._save_lib,
+            "保存":self.save_lib,
         }
         for txt,func in buttons.items():
             btn = QtWidgets.QPushButton(txt)
@@ -152,7 +153,7 @@ class LineLibDialog(QtWidgets.QDialog):
                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No |
                                               QtWidgets.QMessageBox.Cancel)
         if flag == QtWidgets.QMessageBox.Yes:
-            self._save_lib()
+            self.save_lib()
         elif flag == QtWidgets.QMessageBox.Cancel or flag == QtWidgets.QMessageBox.NoButton:
             return True
         return False
@@ -205,7 +206,7 @@ class LineLibDialog(QtWidgets.QDialog):
         if item is not None:
             self.treeWidget.setCurrentItem(item)
 
-    def _change_filename(self):
+    def change_filename(self):
         if self.checkUnsavedLib():
             return
         filename,ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开文件",
@@ -344,7 +345,7 @@ class LineLibDialog(QtWidgets.QDialog):
         QtWidgets.QMessageBox.information(self,'提示',f'成功导入{c}条线路。\n有{d}条线路因名称或类名称冲突而被忽略。')
         self.setData()
 
-    def _save_lib(self):
+    def save_lib(self):
         self.lineLib.saveLib(self.filename)
         self.toSave=False
 
@@ -470,14 +471,14 @@ class LineLibDialog(QtWidgets.QDialog):
             return
         event.accept()
 
-    def keyPressEvent(self, event:QtGui.QKeyEvent):
-        """
-        禁用ESC退出
-        """
-        if event.key() != Qt.Key_Escape:
-            super().keyPressEvent(event)
-        else:
-            self.close()
+    # def keyPressEvent(self, event:QtGui.QKeyEvent):
+    #     """
+    #     禁用ESC退出
+    #     """
+    #     if event.key() != Qt.Key_Escape:
+    #         super().keyPressEvent(event)
+    #     else:
+    #         self.close()
 
 
 
