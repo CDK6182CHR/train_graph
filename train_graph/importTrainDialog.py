@@ -53,6 +53,10 @@ class ImportTrainDialog(QtWidgets.QDialog):
         btnView = QtWidgets.QPushButton('浏览')
         chlayout.addWidget(btnView)
         btnView.clicked.connect(self._view_file)
+        checkAll = QtWidgets.QCheckBox('仅本线车次')
+        checkAll.setChecked(True)
+        chlayout.addWidget(checkAll)
+        self.checkAll = checkAll
         flayout.addRow('文件名',chlayout)
 
         group1 = QtWidgets.QButtonGroup(self)
@@ -127,7 +131,7 @@ class ImportTrainDialog(QtWidgets.QDialog):
             return
         self.filenameEdit.setText(filename)
         self.anGraph.clearTrains()
-        self.anGraph.preAddTrainByGraph(newGraph)
+        self.anGraph.preAddTrainByGraph(newGraph,all=not self.checkAll.isChecked())
         self.trainWidget.setData()
         for i,train in enumerate(self.anGraph.trains()):
             if self.graph.checiExisted(train.fullCheci()):

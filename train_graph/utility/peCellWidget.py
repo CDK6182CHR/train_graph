@@ -2,11 +2,13 @@ from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from typing import *
 
+
 class PECellWidget:
     """
     只用来做类型检查
     """
     pass
+
 
 class CellWidgetFactory:
     @staticmethod

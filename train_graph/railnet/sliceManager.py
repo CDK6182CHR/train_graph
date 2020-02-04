@@ -107,6 +107,16 @@ class SliceManager(QtWidgets.QWidget):
         """
         pass
 
+    def clearAllSlices(self):
+        """
+        删除所有切片。
+        暂不考虑效率问题，借用slot实现。
+        """
+        lw = self.sliceListWidget
+        while lw.count():
+            lw.takeItem(0)
+            self.SliceDeleted.emit(0)
+
     # slots
     def _del(self):
         id = self.sliceListWidget.currentRow()
@@ -115,10 +125,14 @@ class SliceManager(QtWidgets.QWidget):
             self.SliceDeleted.emit(id)
 
     def _show(self):
-        pass
+        id = self.sliceListWidget.currentRow()
+        if 0 <= id <= self.sliceListWidget.count():
+            self.ShowSlice.emit(id)
 
     def _out(self):
-        pass
+        id = self.sliceListWidget.currentRow()
+        if 0 <= id <= self.sliceListWidget.count():
+            self.OutputSlice.emit(id)
 
     def _preview(self):
         via = []
@@ -134,6 +148,22 @@ class SliceManager(QtWidgets.QWidget):
             self.line = line
             self.lineWidget.setLine(line)
             self.lineWidget.setData()
+            self.currentVia = via   # 当前经由表
+
+    def addNewSlice(self,via:List[str]):
+        """
+        由经由表添加切片。读取时调用。
+        """
+        try:
+            line = self.net.outLine(via,withRuler=False)
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self,'错误','无效经由：\n'+repr(e))
+        else:
+            self.line = line
+            self.lineWidget.setLine(line)
+            self.lineWidget.setData()
+            self.currentVia = via   # 当前经由表
+            self._apply()
 
     def _apply(self):
         """
@@ -152,6 +182,14 @@ class SliceManager(QtWidgets.QWidget):
         if not name:
             name = f"{graph.firstStation()}-{graph.lastStation()}"
         item.setText(name)
-        item.setData(Qt.UserRole,graph)
+        item.setData(Qt.UserRole, self.currentVia)  # data中保存经由表数据。
         lw.addItem(item)
         self.SliceGraphAdded.emit(graph, name)
+        self.ShowSlice.emit(lw.count()-1)
+
+    def loadDigraph(self, filename:str):
+        self.net.reset()
+        try:
+            self.net.read(filename)
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self,'读取错误','无法解析文件: \n'+repr(e))

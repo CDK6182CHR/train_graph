@@ -30,6 +30,7 @@
 * 更准确、完整的数据支持，包括精确到秒的时刻和精确到三位小数的里程，允许上下行分设不同站点，标尺，天窗，交路等。
 * 做了一定的效率优化，对较大运行图的执行效果相对更好。
 * 提供了一些运行图快速微调工具和分析工具，例如调整某一站名（同时修改所有列车数据中引用的改站名），对比两运行图等。
+* 在`3.0.0`版本以后，提供了路网级的数据库管理模块，可以在更高层面上管理，更方便地查看、导出区段运行图。
 
 两系统各有长短。因此我们建议，如果有需求，可以两套系统结合使用。
 
@@ -49,6 +50,7 @@
    * `xlwt`。可选。在涉及输出`.xls`的操作中需要用到。
    * `xlrd`。可选。在涉及读取.`xls`的操作中需要用到。
    * `xpinyin`。可选。在本系统`2.3.0`版本之前的线路数据库排序中用到。
+   * `NetworkX`。可选。在`3.0.0`版本引入的路网数据管理中，用于以图论算法计算经由给出的路径。
 
 3. 作者开发的另一支持库`Timetable_new`。该库需要使用github上的源代码安装。
 
@@ -63,6 +65,7 @@ pip install PyQt5==5.10.1
 pip install xlwt
 pip install xlrd
 pip install xpinyin
+pip install networkx
 ```
 
 ### `Timetable_new`的安装
@@ -102,10 +105,11 @@ python main.py
 
 ### 可执行文件
 
-本项目目前有两个可执行文件。
+本项目目前有3个可执行文件。
 
 1. `main.py` 是主程序运行入口。
 2. `LineDB.py` 在`2.3.0`版本之后添加，是线路数据库维护系统的运行入口。
+3. `RailNetManager.py` 在`3.0.0`版本之后添加，相对独立的路网级运行图数据库管理系统。
 
 ### 包结构
 
@@ -117,12 +121,27 @@ python main.py
 
 * `line.py` 铁路线路数据对象。
 * `trainstation.py` `2.3.2`版本开始新增的列车时刻表中车站类。继承`dict`实现，并可以按需要新增功能。
+* `linestation.py` 与`trainstation.py`类似，是对应`Line`中的车站数据。
 * `train.py` 列车对象。
 * `ruler.py` 标尺（时分标准）对象。
 * `forbid.py` 天窗数据对象。
 * `graph.py` 运行图对象，主要包括一条线路`Line`和一组车次`Train`。
 * `circuit.py` 车底交路对象。每个交路包含若干车次`Train`的序列，每个车次可以属于至多一个交路。
 * `route.py` 尚未开发完成的列车运行径路对象。
+
+#### 公共工具域
+
+从大约`2.4.0`版本开始新增`utility`包，主要是通用的工具，以及对Qt既有组件的改进。目的在于，通过引进面向对象设计模式，提高代码复用能力。模块名、类名的前缀`pe`是`pyETRC`的简写，以区分于`Q`开头的Qt原生组件类。
+
+- `peCellWidget.py` 是对`QTableWidget`中的（通过`setCellWidget`方法设置的）单元格组件的改进。原生的`CellWidget`从没有包含所处的单元格位置信息，不能在其获得焦点时，同步修改`tableWidget.currentItem()`等属性。此模块用于解决这个问题。
+
+  其中，`PECellWidget`类仅对RTTI有用，暂无其他意义。**请不要直接实例化这个类**。请使用`CellWidgetFactory.new()`工厂方法创建实例控件。
+
+- `peCelledTable.py`与`PECellWidget`配套使用的支持单元格组件定位的表格。主要是重写了`setCellWidget`方法。
+
+- `peControlledTable.py` 是对需要支持增删、上下移动行的表格的封装。引进Adapter设计模式。本身继承的是`QWidget`，但将有关方法调用转发给内置的`QTableWidget`实例对象。
+
+  实例化时，也可以通过参数`meta`指定创建`QTableWidget`的某个子类实例，本项目中目前用到的是`PECelledTable`。
 
 #### 绘图域
 
@@ -136,9 +155,6 @@ python main.py
 与运行图数据操作相关的类主要有两种形式，一是以**停靠面板**方式，长期显示和有效的面板；二是以对话框为主的操作交互界面。前者包含了本系统的核心操作功能，下面简要说明停靠面板类及其相关类。
 
 * `circuitWidget.py` 交路编辑停靠面板，快捷键为`ctrl+4`。
-* `circuitDialog.py` 单个交路数据的编辑对话框，在`CircuitWidget`中发起编辑操作后弹出。
-* `circuitDiagram.py` 绘制交路图的面板。在`CircuitDialog`中发起查看交路图操作后产生。
-* `circuitDiagramWidget.py` 绘制交路图的对话框。
 * `colorWidget.py` 默认颜色设置面板。在`1.4.0`之后的版本中，被集成到`运行图设置`面板中。
 * `configWidget.py` 运行图设置面板。包含关于运行图铺画比例、运行图备注等设置。快捷键为`ctrl+G`
 * `currentWidget.py` 当前车次编辑面板。包含对当前选中的列车的车次、运行线管理、时刻表编辑等功能。这是最集中的修改列车信息的面板。快捷键为`ctrl+I`。
@@ -186,12 +202,22 @@ python main.py
 * `lineTreeWidget.py` 对话框左侧的文件树类。继承`QtWidgets.QTreeWidget`实现。关于线路、类别的增删逻辑，全都在本类实现。
 * `lineLibDialog.py` 线路数据库对话框。在主界面中由`ctrl+H`快捷键直接打开的就是这个对话框。
 
+#### 交路相关窗口
+
+由于交路部分涉及到的窗口较多，现在将和交路有关的窗口都合并到`circuitwidgets`包中，除`circuitWidget.py`停靠面板类之外。
+
+* `circuitDialog.py` 单个交路数据的编辑对话框，在`CircuitWidget`中发起编辑操作后弹出。
+* `circuitDiagram.py` 绘制交路图的面板。在`CircuitDialog`中发起查看交路图操作后产生。
+* `circuitDiagramWidget.py` 绘制交路图的对话框。
+* `ParseTextDialog.py` 解析交路文本的对话框。从`CircuitDialog`中的按钮触发，只解析一个交路。
+* `BatchParseCircuit.py` 批量解析交路文本的对话框。对应快捷键`ctrl+P`。
+* `AddTrainWidget.py` 添加车次的对话框，主要是封装的外层`QTabWidget`。
+* `AddRealTrain.py` 添加实体车次，是`AddTrainWidget`中的一个页面。
+* `AddVirtualTrain.py` 添加虚拟车次，是`AddTrainWidget`中的一个页面。所谓虚拟车次，是指仅有车次，但不指向本线一个具体`Train`对象的车次，它仅仅为了保持交路完整性而存在。但如果导入了那个车次的`Train`对象，则可以尝试识别虚拟车次。
+
 #### 其他杂项
 
 * `trainFilter.py` 车次筛选器。在全局用快捷键`ctrl+shift+L`启动“高级显示车次设置”时，会调用本类。在车次编辑、车站时刻表等处也有使用。
-* `thread.py` 与多线程有关的部分。目前仅用于处理“车次事件表”（`ctrl+Z`）。
-
-
 
 ## 文件格式
 
@@ -257,4 +283,18 @@ python main.py
 正常运行时，使用“线路数据库”（`ctrl+H`）功能中的“保存”将创建或者保存`*.pyetlib`文件。
 
 如果要通过代码操作，相关支持在`linedb/lineLib.py`文件中。使用`LineLib.loadLib()`方法来读取文件，使用`LineLib.saveLib()`方法来保存文件；更多具体的操作，请阅读`lineLib.py`和`category.py`的源代码。
+
+### 网络模块工作区配置文件`*.pnconf`
+
+在`3.0.0`版本后添加的网络数据库管理模块中使用。保存的是工作区配置的信息，具体包括：
+
+- 打开的线路数据库文件名（`*.pyetlib`）
+- 打开的车次数据库文件名（`*.pyetdb`）
+- 打开的所有运行图切片的经由表。
+
+但不会包含上述信息里的具体内容。
+
+> 也就是说，只记录线路数据库文件名，但不包含线路数据库的内容。
+
+一般情况下，没有必要编程处理这种数据格式。
 

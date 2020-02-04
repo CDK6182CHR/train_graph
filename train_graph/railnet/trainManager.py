@@ -82,7 +82,8 @@ class TrainManager(QtWidgets.QWidget):
             return default
 
     def statusOut(self, note: str, seconds: int = 0):
-        self.statusBar().showMessage(f"{datetime.now().strftime('%H:%M:%S')} {note}", seconds)
+        pass
+        # self.statusBar().showMessage(f"{datetime.now().strftime('%H:%M:%S')} {note}", seconds)
 
     # slots
     def _search_train(self, checi: str):

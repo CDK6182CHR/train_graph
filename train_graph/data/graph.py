@@ -1132,7 +1132,7 @@ class Graph:
         self.checkCircuits()
         return num
 
-    def preAddTrainByGraph(self, graph):
+    def preAddTrainByGraph(self, graph, all:bool=False):
         """
         2019.07.19新增。预导入所有与本线有关涉的车次和交路。
         此函数只能在临时对象中调用。自身的车次表、交路表应当是空的。
@@ -1141,7 +1141,7 @@ class Graph:
         tm1 = time.perf_counter()
         for train in graph.trains():
             # if train.localCount(self) >= 2:
-            if train.isLocalTrain(self):
+            if all or train.isLocalTrain(self):
                 circuit = train.carriageCircuit()
                 if circuit is not None:
                     if circuit not in self._circuits:

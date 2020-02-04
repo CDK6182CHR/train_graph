@@ -213,9 +213,12 @@ class LineLibWidget(QtWidgets.QWidget):
                                                          filter='pyETRC数据库文件(*.pyetlib;*.json)\n所有文件(*.*)')
         if not ok:
             return
-        self.filename = filename
+        self.loadFile(filename)
+
+    def loadFile(self,filename):
         try:
             self.lineLib.loadLib(filename)
+            self.filename = filename
         except Exception as e:
             QtWidgets.QMessageBox.warning(self,'错误','文件错误：\n'+repr(e))
             return
