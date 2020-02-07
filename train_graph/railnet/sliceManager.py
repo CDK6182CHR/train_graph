@@ -185,7 +185,19 @@ class SliceManager(QtWidgets.QWidget):
         item.setData(Qt.UserRole, self.currentVia)  # data中保存经由表数据。
         lw.addItem(item)
         self.SliceGraphAdded.emit(graph, name)
-        self.ShowSlice.emit(lw.count()-1)
+        n = lw.count()-1
+        self.ShowSlice.emit(n)
+        if n == 0:
+            txt = "此操作将利用数据库的数据生成区段运行图。运行图将用完整的pyETRC" \
+                  "列车运行图主程序展示。请注意，在区段运行图中修改已存在列车时刻，" \
+                  "将【会】直接更改数据库中内容；但进行其他更改，例如增删车次，" \
+                  "调整线路里程标尺，调整交路等，将【不会】作用于原数据库。" \
+                  "即使保存、另存也是如此。\n" \
+                  "但若[打开]其他运行图文件，则该窗口与数据库没有关系。" \
+                  "但不建议这样操作。\n" \
+                  "此提示每当添加第一个区段运行图时弹出。"
+            QtWidgets.QMessageBox.information(self,'提示',txt)
+
 
     def loadDigraph(self, filename:str):
         self.net.reset()
