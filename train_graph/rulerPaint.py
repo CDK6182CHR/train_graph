@@ -104,7 +104,7 @@ class rulerPainter(QtWidgets.QWidget):
 
         comboAppend = QtWidgets.QComboBox()
         comboAppend.setEditable(True)
-        self.comboAppend = combo
+        self.comboAppend = comboAppend
         for train in self.graph.trains():
             comboAppend.addItem(train.fullCheci())
 
@@ -428,6 +428,8 @@ class rulerPainter(QtWidgets.QWidget):
     def _start_time_changed(self,time:QtCore.QTime):
         self.start_time = datetime.strptime(time.toString('hh:mm:ss'),'%H:%M:%S')
         self._reCalculate(0)
+        if self.checkCurrentChanged.isChecked():
+            self._paint_to_here(self.maxRow)
 
     def _start_from_this_changed(self,checked:bool):
         self.start_from_this = checked

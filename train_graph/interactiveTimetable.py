@@ -27,6 +27,10 @@ class InteractiveTimetable(QtWidgets.QWidget):
         tableWidget = QtWidgets.QTableWidget()
         tableWidget.verticalHeader().hide()
         tableWidget.itemDoubleClicked.connect(self._double_clicked)
+        action = QtWidgets.QAction("切换营业/非营业（双击）",tableWidget)
+        action.triggered.connect(self._double_clicked)
+        tableWidget.addAction(action)
+        tableWidget.setContextMenuPolicy(Qt.ActionsContextMenu)
         self.tableWidget = tableWidget
         tableWidget.setColumnCount(3)
         tableWidget.setHorizontalHeaderLabels(('站名','时刻','停时股道'))

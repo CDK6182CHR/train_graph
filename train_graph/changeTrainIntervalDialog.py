@@ -81,6 +81,7 @@ class ChangeTrainIntervalDialog(QtWidgets.QDialog):
         painter.startTimeEdit.setTime(start_time_q)
         self.rulerPainter = painter
         painter.trainOK.connect(self._paint_ok)
+        painter.comboAppend.setEnabled(False)
         dock = QtWidgets.QDockWidget()
         dock.setWindowTitle("标尺排图向导")
         dock.setWidget(painter)

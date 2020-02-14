@@ -157,7 +157,7 @@ class LineWidget(QtWidgets.QWidget):
 
         self.setLayout(vlayout)
 
-        action = QtWidgets.QAction("复制[里程]到[对里程]",self.tableWidget)
+        action = QtWidgets.QAction("复制[里程]到[对里程] (Alt+Z)",self.tableWidget)
         action.triggered.connect(self._copy_counter)
         action.setShortcut('alt+Z')
         self.tableWidget.addAction(action)

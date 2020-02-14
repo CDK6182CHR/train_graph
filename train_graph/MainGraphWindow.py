@@ -66,9 +66,9 @@ class MainGraphWindow(QtWidgets.QMainWindow):
     def __init__(self, filename=None, graph=None):
         super().__init__()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V3.0.0"
+        self.version = "V3.0.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200207'
+        self.date = '20200214'
         self.release = 'R38'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -2144,11 +2144,14 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         spinSec = QtWidgets.QSpinBox()
         spinSec.setSingleStep(10)
         spinSec.setRange(0, 59)
-        label = QtWidgets.QLabel(':')
-        label.setFixedWidth(10)
+        label = QtWidgets.QLabel('分')
+        label.setFixedWidth(20)
         hlayout.addWidget(spinMin)
         hlayout.addWidget(label)
         hlayout.addWidget(spinSec)
+        label = QtWidgets.QLabel('秒')
+        label.setFixedWidth(20)
+        hlayout.addWidget(label)
         flayout.addRow("调整时间", hlayout)
 
         dialog.spinMin = spinMin
@@ -2342,7 +2345,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
 
     def _import_line_excel(self):
         flag = self.question("从Excel表格中导入线路数据，抛弃当前线路数据，是否继续？"
-                            "Excel表格应包含三列，分别是站名、里程、等级，不需要表头。")
+                            "Excel表格应包含四列，分别是站名、里程、等级、对里程（可选），不需要表头。")
         if not flag:
             return
 
@@ -2368,10 +2371,14 @@ class MainGraphWindow(QtWidgets.QMainWindow):
                 name = ws.cell_value(row, 0)
                 mile = float(ws.cell_value(row, 1))
                 level = int(ws.cell_value(row, 2))
+                try:
+                    counter = float(ws.cell_value(row,3))
+                except:
+                    counter = None
             except:
                 pass
             else:
-                new_line.addStation_by_info(name, mile, level)
+                new_line.addStation_by_info(name, mile, level, counter=counter)
         self.graph.line.copyData(new_line,True)
         self.GraphWidget.paintGraph(throw_error=False)
         self._refreshDockWidgets()

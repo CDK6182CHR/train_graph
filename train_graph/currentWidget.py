@@ -18,6 +18,7 @@ class CurrentTable(PEControlledTable):
         """
         只需交换1，2两列的QTimeEdit数据
         """
+        super(CurrentTable, self).exchangeRow(row1,row2)
         for c in (1,2):
             self.exchangeCellWidget(row1,row2,c,"time","setTime")
 

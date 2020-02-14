@@ -567,8 +567,8 @@ class Graph:
     def clearLineStationInfo(self):
         self.line.clear()
 
-    def stationExisted(self, name: str):
-        self.line.stationExisted(name)
+    def stationExisted(self, name: str)->bool:
+        return self.line.stationExisted(name)
 
     def addStationDict(self, info: dict):
         self.line.stations.append(info)
@@ -1006,9 +1006,13 @@ class Graph:
         for ruler in graph.rulers():
             thisruler = self.line.rulerByName(ruler.name())
             if thisruler is not None:
-                thisruler._nodes += ruler._nodes
+                thisruler._nodes.extend(ruler._nodes)
             else:
                 self.addRuler(ruler)
+
+        # 天窗处理，直接附加
+        self.line.forbid._nodes.extend(graph.line.forbid._nodes)
+        self.line.forbid2._nodes.extend(graph.line.forbid2._nodes)
 
     def resetAllItems(self):
         for train in self.trains():

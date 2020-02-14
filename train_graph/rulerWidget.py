@@ -140,7 +140,7 @@ class RulerWidget(QtWidgets.QTabWidget):
 
         tableWidget.verticalHeader().setVisible(False)
         tableWidget.setColumnCount(7)
-        tableWidget.setHorizontalHeaderLabels(["区间", "分", "秒", "起", "停","距离", "旅速"])
+        tableWidget.setHorizontalHeaderLabels(["区间", "分", "秒", "起", "停","距离", "均速"])
         tableWidget.setColumnWidth(0, 150)
         tableWidget.setColumnWidth(1, 40)
         tableWidget.setColumnWidth(2, 50)
@@ -243,7 +243,7 @@ class RulerWidget(QtWidgets.QTabWidget):
 
         tableWidget.setItem(now_line, 5, QtWidgets.QTableWidgetItem(f"{mile:.3f}"))
 
-        item = QtWidgets.QTableWidgetItem(Line.speedStr(mile,minute*60*second))
+        item = QtWidgets.QTableWidgetItem(Line.speedStr(mile,minute*60+second))
         tableWidget.setItem(now_line, 6, item)
 
     def _updateRulerTabWidget(self,widget):
