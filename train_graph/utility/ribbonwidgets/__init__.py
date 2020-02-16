@@ -4,7 +4,7 @@
 # @File    : __init__.py.py
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
-from .widgets import  MenuBar, GroupWidget, PEToolButton
+from .widgets import  MenuBar, GroupWidget, PEToolButton, PEDockButton
 from .ribbonwidget import QRibbonWidget
 
 

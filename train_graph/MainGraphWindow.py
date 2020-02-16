@@ -53,7 +53,7 @@ from .importTrainDialog import ImportTrainDialog
 from .linedb.lineLibWidget import LineLibWidget
 from .dialogAdapter import DialogAdapter
 from .graphDiffDialog import GraphDiffDialog
-from .utility import QRibbonToolBar, PEToolButton
+from .utility import QRibbonToolBar, PEToolButton, PEDockButton
 import traceback
 import cgitb
 
@@ -179,10 +179,11 @@ class MainGraphWindow(QtWidgets.QMainWindow):
     def _initUI(self):
         self.statusOut("系统正在初始化……")
         self.setCentralWidget(self.GraphWidget)
+
+        self._initDockFrames()
         self._initMenuBar()
         self._initToolBar()
 
-        self._initDockFrames()
         self._initDockWidgetContents()
         self._initDockShow()
 
@@ -1441,6 +1442,9 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             action.setChecked(True)
 
     def _dock_visibility_changed(self, name, dock):
+        """
+        此slot由停靠面板方面来调用
+        """
         self.GraphWidget._resetDistanceAxis()
         self.GraphWidget._resetTimeAxis()
         action = None
@@ -1451,56 +1455,47 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         if action is None:
             raise Exception("No action name {}, add or check it.".format(name))
         action.setChecked(dock.isVisible())
+        for btn in self.dockToolButtons:
+            if btn.dockName == name:
+                btn.setChecked(dock.isVisible())
 
     def _initToolBar(self):
         """
         https://blog.csdn.net/catamout/article/details/5545504
-        :return:
         """
-        return
+        from . import resource
+        self.dockToolButtons = []
+        QI = QtGui.QIcon
         toolBar = QRibbonToolBar(self)
-        menu = toolBar.add_menu('审阅')
-        group = toolBar.add_group('基础信息',menu)
-        btn = PEToolButton(group)
-        btn.setText('运行图信息')
-        btn.clicked.connect(self._line_info_out)
-        btn.setCheckable(False)
-        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        btn.setMouseTracking(True)
+        menu = toolBar.add_menu('列车')
 
-        pal:QtGui.QPalette = btn.palette()
-        pal.setColor(QtGui.QPalette.Button,Qt.white)
-        QP = QtGui.QPalette
-        # pal.setColor(QP.Button, Qt.white)
-        # pal.setColor(QP.Window,Qt.white)
-        # pal.setColor(QP.Inactive,QP.ButtonText,Qt.red)
-        # pal.setColor(QP.Active,QP.ButtonText,Qt.green)
-        # btn.setStyleSheet("")
-        # btn.setStyleSheet("QToolButton{"
-        #                             "min-height:20;"
-        #                             "border-style:solid;"
-        #                             "border-top-left-radius:2px;"
-        #                             "border-top-right-radius:2px;"
-        #                             "background: white"
-        #                             # "stop: 0.2 rgb(233,242,247),"
-        #                             # "stop: 0.7 rgb(176,208,225),"
-        #                             # "stop: 0.8 rgb(176,208,225),"
-        #                             # "stop: 1 rgb(192,216,232));"
-        #                             "}")
-
-        pal.setColor(QP.Button,Qt.white)
-        pal.setColor(QP.Active,QP.Button,Qt.red)
-        # btn.setPalette(pal)
+        group = toolBar.add_group('',menu)
+        btn = PEDockButton('车次列表','车次编辑',
+                           QI(':/list.png'),self.trainDockWidget)
         group.add_widget(btn)
+        self.dockToolButtons.append(btn)
 
-        group = toolBar.add_group('车次数据',menu)
-        btn = PEToolButton()
-        btn.setText("车次信息")
-        btn.setCheckable(True)
-        # btn.setStyleSheet("")
-        group.add_widget(btn)
+        group = toolBar.add_group('当前车次',menu)  # 2行
+        grid = QtWidgets.QGridLayout()
+        btn = PEDockButton('编辑','选中车次设置',
+                           QI(':/timetable.png'),self.currentDockWidget)
+        grid.addWidget(btn,0,0,2,1)
+        self.dockToolButtons.append(btn)
 
-        menu = toolBar.add_menu('修订')
+        combo = QtWidgets.QComboBox()
+        self.selectTrainCombo = combo
+        for train in self.graph.trains():
+            combo.addItem(train.fullCheci())
+        combo.currentTextChanged.connect(self._search_train)
+        grid.addWidget(combo,0,1,1,1)
+
+        btn = PEDockButton('车次信息','车次信息',QI(':/info.png'),
+                           self.trainInfoDockWidget,large=False)
+        self.dockToolButtons.append(btn)
+        grid.addWidget(btn,1,1,1,1)
+
+        group.add_layout(grid)
+
 
         self.addToolBar(toolBar)
 

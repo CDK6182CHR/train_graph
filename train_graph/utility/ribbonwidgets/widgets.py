@@ -20,7 +20,7 @@ class CornerButton(QPushButton):
         super(CornerButton, self).__init__(*args)
         self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         self.setIconSize(QSize(10, 10))
-        self.setFixedSize(10, 10)
+        self.setFixedSize(30, 20)
 
 
 # class TitleButton(QPushButton):
@@ -57,74 +57,6 @@ class TabBar(QTabBar):
         self.setMouseTracking(True)
 
 
-# class TitleBar(QWidget):
-#     """
-#     顶上的标题栏。
-#     """
-#     def __init__(self, parent=None):
-#         super(TitleBar, self).__init__(parent)
-#         raise Exception("depressed!")
-#
-#         self.title = 'no title'
-#
-#         self._init_ui()
-#         self.setMouseTracking(True)
-#
-#         font = QFont('Webdings')
-#
-#         # close
-#         self.button_close = TitleButton('r')
-#         self.button_close.setFont(font)
-#         self.button_close.setObjectName('ButtonClose')
-#         self._r_hl.insertWidget(0, self.button_close)
-#         # max
-#         self.button_max = TitleButton('1')
-#         self.button_max.setFont(font)
-#         self.button_max.setObjectName('ButtonMax')
-#         self._r_hl.insertWidget(0, self.button_max)
-#         # min
-#         self.button_min = TitleButton('0')
-#         self.button_min.setFont(font)
-#         self.button_min.setObjectName('ButtonMin')
-#         self._r_hl.insertWidget(0, self.button_min)
-#
-#     def _init_ui(self):
-#         hl = QHBoxLayout(self)
-#         hl.setContentsMargins(0, 0, 0, 0)
-#         hl.setSpacing(0)
-#         l_widget = BaseWidget()
-#         self._l_hl = QHBoxLayout(l_widget)
-#         self._l_hl.setContentsMargins(0, 0, 0, 0)
-#         self._l_hl.setSpacing(0)
-#         hl.addWidget(l_widget)
-#         hl.setContentsMargins(0, 0, 0, 0)
-#         self._label_title = QLabel(self.title)
-#         self._label_title.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-#         self._label_title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-#         hl.addWidget(self._label_title)
-#         r_widget = BaseWidget()
-#         self._r_hl = QHBoxLayout(r_widget)
-#         self._r_hl.setContentsMargins(0, 0, 0, 0)
-#         self._r_hl.setSpacing(0)
-#         hl.addWidget(r_widget)
-#
-#     def set_title(self, title:str):
-#         self.title = title
-#         self._label_title.setText(self.title)
-#
-#     def add_widget(self, icon:str, left=True):
-#         widget = TitleWidget()
-#         widget.setIcon(QIcon(icon))
-#         if left:
-#             self._l_hl.insertWidget(-1, widget)
-#         else:
-#             self._r_hl.insertWidget(0, widget)
-#
-#     def mouseDoubleClickEvent(self, QMouseEvent):
-#         super(TitleBar, self).mouseDoubleClickEvent(QMouseEvent)
-#         self.button_max.click()
-
-
 class MenuBar(QTabWidget):
     def __init__(self, parent=None):
         super(MenuBar, self).__init__(parent)
@@ -147,7 +79,7 @@ class MenuBar(QTabWidget):
         self._corner = CornerButton('5')
         self._corner.setObjectName('BUttonCorner')
         self._corner.setFont(font)
-        self.setCornerWidget(self._corner, Qt.BottomRightCorner)
+        self.setCornerWidget(self._corner, Qt.TopRightCorner)
         self._corner.clicked.connect(self._corner_clicked)
         self.currentChanged.connect(self._current_changed)
 
@@ -211,7 +143,7 @@ class GroupWidget(QWidget):
     def _init_ui(self):
         font = QFont('Wingdings')
 
-        self._gl = QGridLayout(self)
+        self._gl = QGridLayout(self)  # type:QGridLayout
         self._gl.setContentsMargins(3, 3, 3, 3)
         self._gl.setSpacing(1)
         label = QLabel(self._title)
@@ -230,9 +162,19 @@ class GroupWidget(QWidget):
     def add_widget(self, widget):
         self._gl.addWidget(widget, 0, 0, 1, 2)
 
+    def addWidget(self, widget, row:int, column:int, rowSpan:int=1,columnSpan:int=2):
+        """
+        void	addWidget(QWidget *widget, int row, int column, Qt::Alignment alignment = Qt::Alignment())
+void	addWidget(QWidget *widget, int fromRow, int fromColumn, int rowSpan, int columnSpan, Qt::Alignment alignment = Qt::Alignment())
+        """
+        self._gl.addWidget(widget,row,column,rowSpan,columnSpan)
+
+    def add_layout(self,layout):
+        self._gl.addLayout(layout,0,0,1,2)
+
 
 class PEToolButton(QToolButton):
-    def __init__(self,parent=None):
+    def __init__(self, text:str=None, icon:QIcon=None, parent=None,*,large=False):
         super(PEToolButton, self).__init__(parent)
         self.setStyleSheet("""
                     QToolButton{
@@ -246,3 +188,27 @@ class PEToolButton(QToolButton):
                         background:rgb(180,180,180);
                     }
                 """)
+        if text:
+            self.setText(text)
+        if icon:
+            self.setIcon(icon)
+        self.setMinimumWidth(80)
+        if large:
+            size: QSize = QSize(40, 40)
+            self.setIconSize(size)
+            self.setFixedHeight(70)
+            self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        else:
+            self.setFixedHeight(30)
+            self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+
+
+class PEDockButton(PEToolButton):
+    def __init__(self, showText:str, dockName:str, icon:QIcon, dock, parent=None,
+                 *,large=True):
+        super(PEDockButton, self).__init__(showText,icon,parent,large=large)
+        self.dockName = dockName
+        self.setCheckable(True)
+        self.dock = dock
+        self.clicked.connect(dock.setVisible)
+

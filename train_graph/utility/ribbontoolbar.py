@@ -5,8 +5,8 @@
 
 from PyQt5.QtCore import Qt,QFile
 from PyQt5.QtWidgets import QToolBar
-from .widgets import QRibbonWidget
-from .widgets import style
+from .ribbonwidgets import QRibbonWidget
+from .ribbonwidgets import style
 import os
 
 
