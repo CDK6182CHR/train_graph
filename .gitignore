@@ -2,6 +2,7 @@
 __pycache__
 *.pyc
 backup_packages
+venv
 build
 dist
 introduction

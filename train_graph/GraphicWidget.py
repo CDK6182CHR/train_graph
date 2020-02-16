@@ -894,17 +894,20 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         0：合法
         对合法但坐标越界的做处理了
         """
-        x, y = -1, -1
         # calculate start hour
         start_time = datetime(1900, 1, 1, hour=self.graph.UIConfigData()["start_hour"])
         dt = sj - start_time
 
-        y = self.graph.stationYValue(zm)
+        dct_line = self.graph.stationByDict(zm)
+        if dct_line is None:
+            return None  # 线路上不存在这个站
+
+        y = dct_line.get('y_value',-1)
         if self.graph.UIConfigData()["ordinate"] is not None:
-            if self.graph.stationExisted(zm):
-                if self.graph.stationDirection(zm) == 0x0:
-                    # 说明：按标尺排图时，若本线该站是“不通过”状态。
-                    y = -1
+            # if self.graph.stationExisted(zm):# 不必判断！
+            if dct_line.get('direction',Line.BothVia) == 0x0:
+                # 说明：按标尺排图时，若本线该站是“不通过”状态。
+                y = -1
 
         if y is None or y == -1:
             return None

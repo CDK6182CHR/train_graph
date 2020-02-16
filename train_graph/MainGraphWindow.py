@@ -15,7 +15,7 @@ copyright (c) mxy 2018
 右键菜单参考
 https://blog.csdn.net/qq_37233607/article/details/78649151
 """
-import sys
+import sys, time
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt
 from .data.graph import Graph,Ruler,Line,Train
@@ -65,6 +65,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
 
     def __init__(self, filename=None, graph=None):
         super().__init__()
+        start = time.time()
         self.name = "pyETRC列车运行图系统"
         self.version = "V3.0.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
@@ -117,6 +118,8 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.rulerPainter = None
         self.GraphWidget.lineDoubleClicked.connect(lambda:self.trainTimetableDockWidget.setVisible(True))
         self.updating=False
+        end = time.time()
+        print("系统初始化用时：",end-start)
 
     def _readSystemSetting(self):
         """
@@ -1625,6 +1628,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         text = f"{self.title}  release {self.release}\n{self.date} \n六方车迷会谈 萧迩珀  保留一切权利\n"
         text += "联系方式： 邮箱 mxy0268@qq.com"
         text += '\n本系统官方交流群：865211882'
+        text += '\n本系统在线文档：http://xep0268.top/pyetrc/doc'
         QtWidgets.QMessageBox.about(self, '关于', text)
 
     def _function_list(self):

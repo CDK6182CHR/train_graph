@@ -121,6 +121,7 @@ class HelpDialog(QtWidgets.QDialog):
         label = QtWidgets.QLabel("双击表中的功能以显示详细信息。")
         label.setWordWrap(True)
         vlayout.addWidget(label)
+        vlayout.addWidget(QtWidgets.QLabel('详细文档：http://xep0268.top/pyetrc/doc'))
 
         tableWidget = QtWidgets.QTableWidget()
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
