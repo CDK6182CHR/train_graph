@@ -53,6 +53,7 @@ from .importTrainDialog import ImportTrainDialog
 from .linedb.lineLibWidget import LineLibWidget
 from .dialogAdapter import DialogAdapter
 from .graphDiffDialog import GraphDiffDialog
+from .utility import QRibbonToolBar, PEToolButton
 import traceback
 import cgitb
 
@@ -67,9 +68,9 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         super().__init__()
         start = time.time()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V3.0.1"
+        self.version = "V3.1.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200214'
+        self.date = '20200216'
         self.release = 'R38'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -1452,17 +1453,56 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         action.setChecked(dock.isVisible())
 
     def _initToolBar(self):
-        pass
-        # toolBar=QtWidgets.QToolBar()
-        # actionZoonIn = QtWidgets.QAction('放大视图',self)
-        # toolBar.addAction(actionZoonIn)
-        # actionZoonIn.setShortcut('ctrl+=')
-        # actionZoomOut = QtWidgets.QAction('缩小视图',self)
-        # toolBar.addAction(actionZoomOut)
-        # actionZoomOut.setShortcut('ctrl+-')
-        # actionZoonIn.triggered.connect(lambda:self.GraphWidget.scale(1.25,1.25))
-        # actionZoomOut.triggered.connect(lambda:self.GraphWidget.scale(0.8,0.8))
-        # self.addToolBar(Qt.TopToolBarArea,toolBar)
+        """
+        https://blog.csdn.net/catamout/article/details/5545504
+        :return:
+        """
+        return
+        toolBar = QRibbonToolBar(self)
+        menu = toolBar.add_menu('审阅')
+        group = toolBar.add_group('基础信息',menu)
+        btn = PEToolButton(group)
+        btn.setText('运行图信息')
+        btn.clicked.connect(self._line_info_out)
+        btn.setCheckable(False)
+        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn.setMouseTracking(True)
+
+        pal:QtGui.QPalette = btn.palette()
+        pal.setColor(QtGui.QPalette.Button,Qt.white)
+        QP = QtGui.QPalette
+        # pal.setColor(QP.Button, Qt.white)
+        # pal.setColor(QP.Window,Qt.white)
+        # pal.setColor(QP.Inactive,QP.ButtonText,Qt.red)
+        # pal.setColor(QP.Active,QP.ButtonText,Qt.green)
+        # btn.setStyleSheet("")
+        # btn.setStyleSheet("QToolButton{"
+        #                             "min-height:20;"
+        #                             "border-style:solid;"
+        #                             "border-top-left-radius:2px;"
+        #                             "border-top-right-radius:2px;"
+        #                             "background: white"
+        #                             # "stop: 0.2 rgb(233,242,247),"
+        #                             # "stop: 0.7 rgb(176,208,225),"
+        #                             # "stop: 0.8 rgb(176,208,225),"
+        #                             # "stop: 1 rgb(192,216,232));"
+        #                             "}")
+
+        pal.setColor(QP.Button,Qt.white)
+        pal.setColor(QP.Active,QP.Button,Qt.red)
+        # btn.setPalette(pal)
+        group.add_widget(btn)
+
+        group = toolBar.add_group('车次数据',menu)
+        btn = PEToolButton()
+        btn.setText("车次信息")
+        btn.setCheckable(True)
+        # btn.setStyleSheet("")
+        group.add_widget(btn)
+
+        menu = toolBar.add_menu('修订')
+
+        self.addToolBar(toolBar)
 
     def _newGraph(self):
         flag = QtWidgets.QMessageBox.question(self, self.title, "是否保存对运行图的修改？",
