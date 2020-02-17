@@ -1487,6 +1487,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
                            QI(':/list.png'),self.trainDockWidget)
         btn.setToolTip('车次编辑（Ctrl+C）\n查看车次列表，添加和删除车次。')
         grid.addWidget(btn,0,0,2,1)
+        self.dockToolButtons.append(btn)
 
         combo = QtWidgets.QComboBox()
         self.selectTrainCombo = combo
@@ -1517,8 +1518,6 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         btn.setToolTip('添加车次（Ctrl+Shift+C）\n添加新的空白车次。')
         grid.addWidget(btn,1,2,1,1)
         group.add_layout(grid)
-
-        self.dockToolButtons.append(btn)
 
         m = QM('车次管理工具')
         self.__addMenuAction(m,'重置始发终到',self._reset_start_end)
@@ -1608,6 +1607,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         btn.setToolTip('交路编辑（Ctrl+4）\n'
                        '查看和编辑所有交路信息。')
         grid.addWidget(btn,0,0,2,1)
+        self.dockToolButtons.append(btn)
 
         btn = PEToolButton('文本解析',QI(':/text.png'))
         btn.clicked.connect(self._batch_parse_circuits)
@@ -1635,6 +1635,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
                            self.rulerDockWidget,large=False)
         btn.setToolTip('标尺编辑（Ctrl+B）\n设置各个标尺数据，添加或删除标尺。')
         grid.addWidget(btn,0,1,1,1)
+        self.dockToolButtons.append(btn)
 
         btn = PEToolButton('区间重排',QI(':/exchange.png'))
         btn.clicked.connect(self._change_train_interval)
@@ -1874,6 +1875,8 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         # 这是为了避免间接递归。若不加检查，这里取消后再次引发改变，则item选中两次。
         if self.GraphWidget.selectedTrain is not train:
             self.GraphWidget._line_un_selected()
+            self.selectTrainCombo.setCurrentText(train.fullCheci())
+
         self.setCurrentTrain(train)
         self.GraphWidget._line_selected(train.firstItem(), True)  # 函数会检查是否重复选择
         self._updateCurrentTrainRelatedWidgets(train,force=False)
