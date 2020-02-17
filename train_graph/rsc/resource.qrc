@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/">
+        <file>list.png</file>
+		<file>timetable.png</file>
+		<file>file.png</file>
+		<file>info.png</file>
+		<file>search.png</file>
+		<file>add.png</file>
+		<file>clock.png</file>
+		<file>electronic-clock.png</file>
+		<file>adjust.png</file>
+		<file>adjust-2.png</file>
+		<file>ruler.png</file>
+		<file>data.png</file>
+		<file>polyline.png</file>
+		<file>text.png</file>
+		<file>identify.png</file>
+		<file>edit.png</file>
+		<file>exchange.png</file>
+		<file>copy.png</file>
+    </qresource>
+</RCC>

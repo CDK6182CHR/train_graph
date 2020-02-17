@@ -124,8 +124,8 @@ class MenuBar(QTabWidget):
         self._hl.addItem(hs)
         return menu
 
-    def add_group(self, p_str, menu)->'GroupWidget':
-        group = GroupWidget(p_str, menu)
+    def add_group(self, p_str, menu, *, use_corner=False)->'GroupWidget':
+        group = GroupWidget(p_str, menu, useConer=use_corner)
         group.setObjectName('group')
         insert_index = len(menu.findChildren(GroupWidget, 'group')) - 1
         self._hl.insertWidget(insert_index, group)
@@ -133,12 +133,15 @@ class MenuBar(QTabWidget):
 
 
 class GroupWidget(QWidget):
-    def __init__(self, p_str, parent=None):
+    def __init__(self, p_str, parent=None, *, useConer=False):
         super(GroupWidget, self).__init__(parent)
         self._title = p_str
+        self.useCorner = useConer
         self._init_ui()
         self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Minimum)
         self.setMouseTracking(True)
+
+    LabelFont = QFont('SimSun',7)
 
     def _init_ui(self):
         font = QFont('Wingdings')
@@ -147,17 +150,21 @@ class GroupWidget(QWidget):
         self._gl.setContentsMargins(3, 3, 3, 3)
         self._gl.setSpacing(1)
         label = QLabel(self._title)
+        label.setFont(self.LabelFont)
         label.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
         label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        self._gl.addWidget(label, 1, 0, 1, 1)
         line = QFrame(self)
         line.setFrameShape(QFrame.VLine)
         line.setFrameShadow(QFrame.Raised)
+        line.setFixedWidth(10)
         self._gl.addWidget(line, 0, 2, 2, 1)
-        self.corner = CornerButton('y')
-        self.corner.setObjectName('BUttonCorner')
-        self.corner.setFont(font)
-        self._gl.addWidget(self.corner, 1, 1, 1, 1)
+        if self.useCorner:
+            self._gl.addWidget(label, 1, 0, 1, 1, Qt.AlignCenter)
+            self.corner = CornerButton('')  # 原来是y
+            self.corner.setFont(font)
+            self._gl.addWidget(self.corner, 1, 1, 1, 1)
+        else:
+            self._gl.addWidget(label, 1, 0, 1, 2, Qt.AlignCenter)
 
     def add_widget(self, widget):
         self._gl.addWidget(widget, 0, 0, 1, 2)
@@ -171,6 +178,10 @@ void	addWidget(QWidget *widget, int fromRow, int fromColumn, int rowSpan, int co
 
     def add_layout(self,layout):
         self._gl.addLayout(layout,0,0,1,2)
+
+    def set_corner_menu(self, menu):
+        if self.useCorner:
+            self.corner.setMenu(menu)
 
 
 class PEToolButton(QToolButton):
@@ -192,7 +203,7 @@ class PEToolButton(QToolButton):
             self.setText(text)
         if icon:
             self.setIcon(icon)
-        self.setMinimumWidth(80)
+        # self.setMinimumWidth(40)
         if large:
             size: QSize = QSize(40, 40)
             self.setIconSize(size)

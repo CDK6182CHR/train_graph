@@ -55,6 +55,8 @@ from .dialogAdapter import DialogAdapter
 from .graphDiffDialog import GraphDiffDialog
 from .utility import QRibbonToolBar, PEToolButton, PEDockButton
 import traceback
+from . import resource
+
 import cgitb
 
 cgitb.enable(format='text')
@@ -1001,8 +1003,8 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             self.GraphWidget._line_un_selected()
 
     def _add_train_from_list(self):
-        self.currentWidget.setData()
         self.currentDockWidget.setVisible(True)
+        self.currentWidget.setData()
         self.currentDockWidget.setFocus(True)
         self.currentWidget.checiEdit.setFocus(True)
 
@@ -1459,43 +1461,207 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             if btn.dockName == name:
                 btn.setChecked(dock.isVisible())
 
+    def __addMenuAction(self,m:QtWidgets.QMenu,text:str,slot,toolTip:str=''):
+        a = QtWidgets.QAction(text,self)
+        a.triggered.connect(slot)
+        if toolTip:
+            a.setToolTip(toolTip)
+        m.addAction(a)
+
     def _initToolBar(self):
         """
         https://blog.csdn.net/catamout/article/details/5545504
         """
-        from . import resource
+        # self.menuBar().setVisible(False)
         self.dockToolButtons = []
         QI = QtGui.QIcon
         toolBar = QRibbonToolBar(self)
+
+        # 选项卡列车
         menu = toolBar.add_menu('列车')
 
-        group = toolBar.add_group('',menu)
+        QG = QtWidgets.QGridLayout
+        group = toolBar.add_group('车次管理',menu,use_corner=True)
+        grid = QG()
         btn = PEDockButton('车次列表','车次编辑',
                            QI(':/list.png'),self.trainDockWidget)
-        group.add_widget(btn)
-        self.dockToolButtons.append(btn)
-
-        group = toolBar.add_group('当前车次',menu)  # 2行
-        grid = QtWidgets.QGridLayout()
-        btn = PEDockButton('编辑','选中车次设置',
-                           QI(':/timetable.png'),self.currentDockWidget)
+        btn.setToolTip('车次编辑（Ctrl+C）\n查看车次列表，添加和删除车次。')
         grid.addWidget(btn,0,0,2,1)
-        self.dockToolButtons.append(btn)
 
         combo = QtWidgets.QComboBox()
         self.selectTrainCombo = combo
         for train in self.graph.trains():
             combo.addItem(train.fullCheci())
         combo.currentTextChanged.connect(self._search_train)
-        grid.addWidget(combo,0,1,1,1)
+        grid.addWidget(combo,0,1,1,2)
 
-        btn = PEDockButton('车次信息','车次信息',QI(':/info.png'),
+        btn = PEToolButton('搜索',QI(':/search.png'))
+        btn.clicked.connect(self._search_from_menu)
+        # btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        btn.setToolTip('搜索车次（Ctrl+F）\n'
+                       '输入完整车次或完整的分方向车次来检索。')
+        grid.addWidget(btn,1,1,1,1)
+
+        QM = QtWidgets.QMenu
+        QA = QtWidgets.QAction
+        m = QM()
+        action = QtWidgets.QAction('模糊检索',self)
+        action.triggered.connect(self._multi_search_train)
+        action.setToolTip('模糊检索Ctrl+Shift+F')
+        m.addAction(action)
+        btn.setMenu(m)
+
+        btn = PEToolButton('添加',QI(':/add.png'))
+        btn.clicked.connect(self._add_train_from_list)
+        # btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        btn.setToolTip('添加车次（Ctrl+Shift+C）\n添加新的空白车次。')
+        grid.addWidget(btn,1,2,1,1)
+        group.add_layout(grid)
+
+        self.dockToolButtons.append(btn)
+
+        m = QM('车次管理工具')
+        self.__addMenuAction(m,'重置始发终到',self._reset_start_end)
+        self.__addMenuAction(m,'自动适配始发终到站',self._auto_start_end)
+        self.__addMenuAction(m,'重置营业站',self._reset_business)
+        self.__addMenuAction(m,'重置是否客车',self._reset_passenger)
+        self.__addMenuAction(m,'重置列车类型',self._auto_type)
+        m.addSeparator()
+        self.__addMenuAction(m,'删除所有车次',self._delete_all)
+        group.set_corner_menu(m)
+
+        group = toolBar.add_group('当前车次',menu,use_corner=False)  # 2行
+        grid = QtWidgets.QGridLayout()
+        btn = PEDockButton('编辑','选中车次设置',
+                           QI(':/timetable.png'),self.currentDockWidget)
+        btn.setToolTip('当前车次信息编辑（Ctrl+I）\n'
+                       '最完整的车次数据编辑面板。')
+        grid.addWidget(btn,0,0,2,1)
+        self.dockToolButtons.append(btn)
+
+        btn = PEDockButton('时刻表','车次时刻表',
+                           QI(':/clock.png'),
+                           self.trainTimetableDockWidget)
+        btn.setToolTip('车次时刻表（Ctrl+Y）\n只读的简洁形式列车时刻表。')
+        grid.addWidget(btn,0,1,2,1)
+        self.dockToolButtons.append(btn)
+
+        btn = PEDockButton('微调','交互式时刻表',
+                           QI(':/electronic-clock.png',),
+                           self.interactiveTimetableDockWidget,large=False)
+        btn.setToolTip('交互式列车时刻表（Ctrl+Shift+Y）\n'
+                       '调整当且车次时刻，且立即生效。')
+        grid.addWidget(btn,0,2,1,1)
+        self.dockToolButtons.append(btn)
+
+        btn = PEDockButton('信息','车次信息',QI(':/info.png'),
                            self.trainInfoDockWidget,large=False)
         self.dockToolButtons.append(btn)
-        grid.addWidget(btn,1,1,1,1)
+        grid.addWidget(btn,1,2,1,1)
+
+        btn = PEToolButton('平移',QI(':/adjust.png'))
+        btn.clicked.connect(self._adjust_train_time)
+        btn.setToolTip('平移时刻表（Ctrl+A）\n'
+                       '将部分或全部站时刻表提早或者推迟一定时间。')
+        grid.addWidget(btn,0,3,1,1)
+
+        btn = PEToolButton('修正',QI(':/adjust-2.png'))
+        btn.clicked.connect(lambda: self._correction_timetable(self.currentTrain()))
+        btn.setToolTip('修正时刻表（Ctrl+V）\n'
+                       '调整时刻表的顺序错误、发到站时刻排反等顺序问题。')
+        grid.addWidget(btn,1,3,1,1)
 
         group.add_layout(grid)
 
+        group = toolBar.add_group('分析',menu)
+        grid = QG()
+
+        btn = PEToolButton('标尺对照',QI(':/ruler.png'))
+        btn.clicked.connect(self._check_ruler_from_menu)
+        btn.setToolTip('标尺对照（Ctrl+W）\n'
+                       '将当前车次时刻表与指定标尺对比。')
+        grid.addWidget(btn,0,0,1,1)
+
+        btn = PEToolButton('事件表',QI(':/clock.png'))
+        btn.clicked.connect(self._train_event_out)
+        btn.setToolTip('车次事件表（Ctrl+Z）\n'
+                       '显示到开、越行、会让等事件表。')
+        grid.addWidget(btn,0,1,1,1)
+
+        btn = PEToolButton('车次对照',QI(':/compare.png'))
+        btn.clicked.connect(self._train_compare)
+        btn.setToolTip('两车次对照（Ctrl+Shift+W）\n'
+                       '对比两个车次在本线的区间运行时分。')
+        grid.addWidget(btn,1,1,1,1)
+
+        btn = PEToolButton('区间分析',QI(':/data.png'))
+        btn.clicked.connect(self._get_interval_info)
+        btn.setToolTip('区间数据分析（Ctrl+Shift+Q）\n'
+                       '显示列车在指定区间的停站数，均速等信息。')
+        grid.addWidget(btn,1,0,1,1)
+        group.add_layout(grid)
+
+        group = toolBar.add_group('交路',menu)
+        grid = QG()
+        btn = PEDockButton('交路编辑','交路编辑',QI(':/polyline.png'),
+                           self.circuitDockWidget)
+        btn.setToolTip('交路编辑（Ctrl+4）\n'
+                       '查看和编辑所有交路信息。')
+        grid.addWidget(btn,0,0,2,1)
+
+        btn = PEToolButton('文本解析',QI(':/text.png'))
+        btn.clicked.connect(self._batch_parse_circuits)
+        btn.setToolTip('批量解析交路文本（Ctrl+P）\n'
+                       '从文本形式的交路数据中，批量识别交路。')
+        grid.addWidget(btn,0,1,1,1)
+
+        btn = PEToolButton('批量识别',QI(':/identify.png'))
+        btn.clicked.connect(self._identify_virtual_trains)
+        btn.setToolTip('批量虚拟车次\n'
+                       '识别交路中的虚拟车次。如果车次属于本运行图，'
+                       '则设为实体车次。')
+        grid.addWidget(btn,1,1,1,1)
+        group.add_layout(grid)
+
+        group = toolBar.add_group('排图',menu)
+        grid = QG()
+        btn = PEToolButton('标尺排图',QI(':/edit.png'),large=True)
+        btn.clicked.connect(self._add_train_by_ruler)
+        btn.setToolTip('标尺排图向导（Ctrl+R）\n'
+                       '选择一种标尺，给定各站停车时间，计算时刻')
+        grid.addWidget(btn,0,0,2,1)
+
+        btn = PEDockButton('标尺编辑','标尺编辑',QI(':/ruler.png'),
+                           self.rulerDockWidget,large=False)
+        btn.setToolTip('标尺编辑（Ctrl+B）\n设置各个标尺数据，添加或删除标尺。')
+        grid.addWidget(btn,0,1,1,1)
+
+        btn = PEToolButton('区间重排',QI(':/exchange.png'))
+        btn.clicked.connect(self._change_train_interval)
+        btn.setToolTip('区间重排图（Ctrl+Shift+R）\n'
+                       '依据标尺，重新铺画某一区间运行线，并覆盖原有时刻。')
+        m = QM()
+        self.__addMenuAction(m,'区间换线',self._interval_exchange,
+                             '区间换线（Ctrl+5）\n交换两车次区间运行线。')
+        btn.setMenu(m)
+        grid.addWidget(btn,1,1,1,1)
+
+        btn = PEToolButton('批量复制',QI(':/copy.png'))
+        btn.clicked.connect(self._batch_copy_train)
+        btn.setToolTip('批量复制运行线（Ctrl+Shift+A）\n'
+                       '给定新车次及其始发时刻，批量复制当前车次运行线。')
+        grid.addWidget(btn,0,2,1,1)
+
+        btn = PEToolButton('推定时刻',QI(':/add.png'))
+        btn.clicked.connect(self._detect_pass_time)
+        btn.setToolTip('推定通过站时刻（Ctrl+2）\n'
+                       '假定没有时刻信息的中间站都不停靠，依据标尺，'
+                       '推定通过站时刻。')
+        m = QM()
+        self.__addMenuAction(m,'撤销所有推定结果',self._withdraw_detect)
+        btn.setMenu(m)
+        grid.addWidget(btn,1,2,1,1)
+        group.add_layout(grid)
 
         self.addToolBar(toolBar)
 

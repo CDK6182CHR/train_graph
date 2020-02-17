@@ -14,6 +14,7 @@ class QRibbonToolBar(QToolBar):
     def __init__(self, parent=None):
         super(QRibbonToolBar, self).__init__(parent)
         self.parent = parent
+        self.setWindowTitle('工具栏')
 
         # if not isinstance(self.parent, RibbonMainWindow):
         #     raise TypeError("__init__(self, parent=None) 'parent' requires 'FramelessWindow' type.")
