@@ -17,6 +17,7 @@ cgitb.enable(format='text')
 
 class rulerPainter(QtWidgets.QWidget):
     trainOK = QtCore.pyqtSignal(Train)
+    WindowClosed = QtCore.pyqtSignal()
     def __init__(self,graphWindow:GraphicsWidget,parent=None,setCheci=True):
         super(rulerPainter,self).__init__(parent)
         self.setCheci = setCheci  # 如果为False，则任何情况下都不显示设置车次的窗口。
@@ -412,6 +413,7 @@ class rulerPainter(QtWidgets.QWidget):
             self.parentWidget().close()
         except:
             pass
+        self.WindowClosed.emit()
 
     def _start_changed(self,item1):
         """
@@ -688,6 +690,7 @@ class rulerPainter(QtWidgets.QWidget):
             self.parentWidget().close()
         except:
             pass
+        self.WindowClosed.emit()
 
     def _test_collid(self):
         """

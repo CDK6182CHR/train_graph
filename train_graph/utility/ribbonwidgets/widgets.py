@@ -141,7 +141,7 @@ class GroupWidget(QWidget):
         self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Minimum)
         self.setMouseTracking(True)
 
-    LabelFont = QFont('SimSun',7)
+    LabelFont = QFont('SimSun',8)
 
     def _init_ui(self):
         font = QFont('Wingdings')

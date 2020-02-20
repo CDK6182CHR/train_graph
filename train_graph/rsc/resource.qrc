@@ -18,5 +18,25 @@
 		<file>edit.png</file>
 		<file>exchange.png</file>
 		<file>copy.png</file>
+		<file>compare.png</file>
+		<file>rail.png</file>
+		<file>database.png</file>
+		<file>excel.png</file>
+		<file>joint.png</file>
+		<file>forbid.png</file>
+		<file>exchange1.png</file>
+		<file>arrow.png</file>
+		<file>new-file.png</file>
+		<file>save1.png</file>
+		<file>saveas.png</file>
+		<file>open.png</file>
+		<file>ETRC-dynamic.png</file>
+		<file>pdf.png</file>
+		<file>png.png</file>
+		<file>refresh.png</file>
+		<file>brush.png</file>
+		<file>close.png</file>
+		<file>icon.ico</file>
+		<file>help.png</file>
     </qresource>
 </RCC>
