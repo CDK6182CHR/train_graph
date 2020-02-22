@@ -38,5 +38,10 @@
 		<file>close.png</file>
 		<file>icon.ico</file>
 		<file>help.png</file>
+		<file>menu.png</file>
+		<file>h_expand.png</file>
+		<file>h_shrink.png</file>
+		<file>v_expand.png</file>
+		<file>v_shrink.png</file>
     </qresource>
 </RCC>

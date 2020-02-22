@@ -6,7 +6,7 @@
 from PyQt5.QtCore import Qt, QSize, QPropertyAnimation, pyqtProperty
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QLabel, QHBoxLayout, QPushButton, QTabBar, QTabWidget, QGridLayout, \
-    QFrame, QSpacerItem, QToolButton
+    QFrame, QSpacerItem, QToolButton, QAction
 
 
 class BaseWidget(QWidget):
@@ -58,6 +58,9 @@ class TabBar(QTabBar):
 
 
 class MenuBar(QTabWidget):
+    ExpandHeight = 125
+    HiddenHeight = 30
+
     def __init__(self, parent=None):
         super(MenuBar, self).__init__(parent)
 
@@ -66,6 +69,7 @@ class MenuBar(QTabWidget):
         self._init_ui()
         self.setMinimumHeight(125)
         self.setMouseTracking(True)
+        self.tabBarClicked.connect(self._tab_clicked)
 
     def _set_height(self, height):
         self.setFixedHeight(height)
@@ -83,23 +87,29 @@ class MenuBar(QTabWidget):
         self._corner.clicked.connect(self._corner_clicked)
         self.currentChanged.connect(self._current_changed)
 
+    def expand(self):
+        self._corner.setText('5')
+        self._drop = False
+        self._set_height(self.ExpandHeight)
+
+    def shrink(self):
+        self._corner.setText('6')
+        self._drop = True
+        self._set_height(self.HiddenHeight)
+
     def _corner_clicked(self):
         # self._ani = QPropertyAnimation(self, b'_height')
         # self._ani.setDuration(100)
 
         if self._drop:  # 当前是否展开的状况
-            self._corner.setText('5')
-            self._drop = False
-            # self._ani.setStartValue(30)
-            # self._ani.setEndValue(125)
-            self._set_height(125)
+            self.expand()
         else:
-            self._corner.setText('6')
-            self._drop = True
-            # self._ani.setStartValue(125)
-            # self._ani.setEndValue(30)
-            self._set_height(30)
+            self.shrink()
         # self._ani.start()
+
+    def _tab_clicked(self):
+        if self._drop:
+            self.expand()
 
     def _current_changed(self, index):
         pass
@@ -185,7 +195,8 @@ void	addWidget(QWidget *widget, int fromRow, int fromColumn, int rowSpan, int co
 
 
 class PEToolButton(QToolButton):
-    def __init__(self, text:str=None, icon:QIcon=None, parent=None,*,large=False):
+    def __init__(self, text:str=None, icon:QIcon=None, action:QAction=None,
+                 parent=None,*,large=False):
         super(PEToolButton, self).__init__(parent)
         self.setStyleSheet("""
                     QToolButton{
@@ -199,6 +210,8 @@ class PEToolButton(QToolButton):
                         background:rgb(180,180,180);
                     }
                 """)
+        if action:
+            self.setDefaultAction(action)
         if text:
             self.setText(text)
         if icon:

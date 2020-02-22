@@ -72,7 +72,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V3.1.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200216'
+        self.date = '20200222'
         self.release = 'R38'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -1094,320 +1094,345 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         return True
 
     def _initMenuBar(self):
+        class PM(QtWidgets.QMenu):
+            def __init__(self,text,main:'MainGraphWindow',parent):
+                super(PM, self).__init__(text,parent)
+                self.main = main
+
+            def addAction(self, action):
+                super(PM, self).addAction(action)
+                self.main.addAction(action)
+
         menubar: QtWidgets.QMenuBar = self.menuBar()
         # 文件
-        m1: QtWidgets.QMenu = menubar.addMenu("文件(&F)")
-        actionNew = QtWidgets.QAction("新建", self)
-        actionNew.setShortcut('ctrl+N')
-        actionNew.triggered.connect(self._newGraph)
-        m1.addAction(actionNew)
+        if True:
+            m1: QtWidgets.QMenu = PM("文件(&F)",self, menubar)
+            menubar.addMenu(m1)
+            actionNew = QtWidgets.QAction("新建", self)
+            actionNew.setShortcut('ctrl+N')
+            actionNew.triggered.connect(self._newGraph)
+            m1.addAction(actionNew)
 
-        actionOpen = QtWidgets.QAction(QtGui.QIcon(), "打开", self)
-        actionOpen.setShortcut('ctrl+O')
-        actionOpen.triggered.connect(self._openGraph)
-        m1.addAction(actionOpen)
+            actionOpen = QtWidgets.QAction(QtGui.QIcon(), "打开", self)
+            actionOpen.setShortcut('ctrl+O')
+            actionOpen.triggered.connect(self._openGraph)
+            m1.addAction(actionOpen)
 
-        actionSave = QtWidgets.QAction("保存", self)
-        actionSave.setShortcut('ctrl+S')
-        actionSave.triggered.connect(self._saveGraph)
-        m1.addAction(actionSave)
+            actionSave = QtWidgets.QAction("保存", self)
+            actionSave.setShortcut('ctrl+S')
+            actionSave.triggered.connect(self._saveGraph)
+            m1.addAction(actionSave)
 
-        actionSaveAs = QtWidgets.QAction("另存为", self)
-        actionSaveAs.triggered.connect(self._saveGraphAs)
-        actionSaveAs.setShortcut('F12')
-        m1.addAction(actionSaveAs)
+            actionSaveAs = QtWidgets.QAction("另存为", self)
+            actionSaveAs.triggered.connect(self._saveGraphAs)
+            actionSaveAs.setShortcut('F12')
+            m1.addAction(actionSaveAs)
 
-        actionToTrc = QtWidgets.QAction("导出为ETRC运行图（.trc）格式", self)
-        actionToTrc.triggered.connect(self._toTrc)
-        actionToTrc.setShortcut('ctrl+M')
-        m1.addAction(actionToTrc)
+            actionToTrc = QtWidgets.QAction("导出为ETRC运行图（.trc）格式", self)
+            actionToTrc.triggered.connect(self._toTrc)
+            actionToTrc.setShortcut('ctrl+M')
+            m1.addAction(actionToTrc)
 
-        actionReset = QtWidgets.QAction("重新读取本运行图", self)
-        actionReset.triggered.connect(self._reset_graph)
-        m1.addAction(actionReset)
+            actionReset = QtWidgets.QAction("重新读取本运行图", self)
+            actionReset.triggered.connect(self._reset_graph)
+            m1.addAction(actionReset)
 
-        actionRefresh = QtWidgets.QAction("刷新", self)
-        actionRefresh.setShortcut('F5')
-        actionRefresh.triggered.connect(self._refresh_graph)
-        m1.addAction(actionRefresh)
+            actionRefresh = QtWidgets.QAction("刷新", self)
+            actionRefresh.setShortcut('F5')
+            actionRefresh.triggered.connect(self._refresh_graph)
+            m1.addAction(actionRefresh)
 
-        actionPaint = QtWidgets.QAction("立即铺画运行图", self)
-        actionPaint.setShortcut('shift+F5')
-        actionPaint.triggered.connect(lambda: self.GraphWidget.paintGraph(force=True))
-        m1.addAction(actionPaint)
+            actionPaint = QtWidgets.QAction("立即铺画运行图", self)
+            actionPaint.setShortcut('shift+F5')
+            actionPaint.triggered.connect(lambda: self.GraphWidget.paintGraph(force=True))
+            m1.addAction(actionPaint)
 
-        actionOutput = QtWidgets.QAction(QtGui.QIcon(), "导出运行图", self)
-        actionOutput.setShortcut("ctrl+T")
-        actionOutput.triggered.connect(self._outputGraph)
-        m1.addAction(actionOutput)
-        # self.actionOutput=actionOutput
+            actionOutput = QtWidgets.QAction(QtGui.QIcon(), "导出运行图", self)
+            actionOutput.setShortcut("ctrl+T")
+            actionOutput.triggered.connect(self._outputGraph)
+            m1.addAction(actionOutput)
+            # self.actionOutput=actionOutput
 
-        actionOutPdf = QtWidgets.QAction(QtGui.QIcon(), "导出矢量pdf运行图", self)
-        actionOutPdf.setShortcut("ctrl+shift+T")
-        actionOutPdf.triggered.connect(self._outputPdf)
-        m1.addAction(actionOutPdf)
+            actionOutPdf = QtWidgets.QAction(QtGui.QIcon(), "导出矢量pdf运行图", self)
+            actionOutPdf.setShortcut("ctrl+shift+T")
+            actionOutPdf.triggered.connect(self._outputPdf)
+            m1.addAction(actionOutPdf)
 
-        actionOutExcel = QtWidgets.QAction('导出点单', self)
-        actionOutExcel.setShortcut('ctrl+alt+T')
-        actionOutExcel.triggered.connect(self._outExcel)
-        self.addAction(actionOutExcel)
+            actionOutExcel = QtWidgets.QAction('导出点单', self)
+            actionOutExcel.setShortcut('ctrl+alt+T')
+            actionOutExcel.triggered.connect(self._outExcel)
+            self.addAction(actionOutExcel)
 
-        actionClose = QtWidgets.QAction("退出程序", self)
-        actionClose.setShortcut('alt+F4')
-        actionClose.triggered.connect(self.close)
-        m1.addAction(actionClose)
+            actionClose = QtWidgets.QAction("退出程序", self)
+            actionClose.setShortcut('alt+F4')
+            actionClose.triggered.connect(self.close)
+            m1.addAction(actionClose)
 
         # 工具
-        menu: QtWidgets.QMenu = menubar.addMenu("工具(&T)")
-        action = QtWidgets.QAction("标尺排图向导", self)
-        action.setShortcut('ctrl+R')
-        action.triggered.connect(self._add_train_by_ruler)
-        menu.addAction(action)
+        if True:
+            menu = PM("工具(&T)",self, menubar)
+            menubar.addMenu(menu)
+            action = QtWidgets.QAction("标尺排图向导", self)
+            action.setShortcut('ctrl+R')
+            action.triggered.connect(self._add_train_by_ruler)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction('当前车次区间重排', self)
-        action.setShortcut('ctrl+shift+R')
-        action.triggered.connect(self._change_train_interval)
-        menu.addAction(action)
+            action = QtWidgets.QAction('当前车次区间重排', self)
+            action.setShortcut('ctrl+shift+R')
+            action.triggered.connect(self._change_train_interval)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("搜索车次", self)
-        action.setShortcut('ctrl+F')
-        action.triggered.connect(self._search_from_menu)
-        menu.addAction(action)
+            action = QtWidgets.QAction("搜索车次", self)
+            action.setShortcut('ctrl+F')
+            action.triggered.connect(self._search_from_menu)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("模糊检索车次", self)
-        action.setShortcut('ctrl+shift+F')
-        action.triggered.connect(self._multi_search_train)
-        menu.addAction(action)
+            action = QtWidgets.QAction("模糊检索车次", self)
+            action.setShortcut('ctrl+shift+F')
+            action.triggered.connect(self._multi_search_train)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("重置所有始发终到站", self)
-        action.triggered.connect(self._reset_start_end)
-        menu.addAction(action)
+            action = QtWidgets.QAction("重置所有始发终到站", self)
+            action.triggered.connect(self._reset_start_end)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("自动适配始发终到站", self)
-        action.triggered.connect(self._auto_start_end)
-        # action.setShortcut('ctrl+M')
-        menu.addAction(action)
+            action = QtWidgets.QAction("自动适配始发终到站", self)
+            action.triggered.connect(self._auto_start_end)
+            # action.setShortcut('ctrl+M')
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("运行图拼接", self)
-        action.triggered.connect(self._joint_graph)
-        action.setShortcut('ctrl+J')
-        menu.addAction(action)
+            action = QtWidgets.QAction("运行图拼接", self)
+            action.triggered.connect(self._joint_graph)
+            action.setShortcut('ctrl+J')
+            menu.addAction(action)
 
-        action = QtWidgets.QAction('运行图对照',self)
-        action.setShortcut('ctrl+6')
-        action.triggered.connect(self._graph_diff)
-        menu.addAction(action)
+            action = QtWidgets.QAction('运行图对照',self)
+            action.setShortcut('ctrl+6')
+            action.triggered.connect(self._graph_diff)
+            menu.addAction(action)
 
-        actionZoonIn = QtWidgets.QAction('放大视图', self)
-        actionZoonIn.setShortcut('ctrl+=')
-        actionZoomOut = QtWidgets.QAction('缩小视图', self)
-        menu.addAction(actionZoonIn)
+            actionZoonIn = QtWidgets.QAction('放大视图', self)
+            actionZoonIn.setShortcut('ctrl+=')
+            actionZoomOut = QtWidgets.QAction('缩小视图', self)
+            menu.addAction(actionZoonIn)
 
-        actionZoomOut.setShortcut('ctrl+-')
-        actionZoonIn.triggered.connect(lambda: self.GraphWidget.scale(1.25, 1.25))
-        actionZoomOut.triggered.connect(lambda: self.GraphWidget.scale(0.8, 0.8))
-        menu.addAction(actionZoomOut)
+            actionZoomOut.setShortcut('ctrl+-')
+            actionZoonIn.triggered.connect(lambda: self.GraphWidget.scale(1.25, 1.25))
+            actionZoomOut.triggered.connect(lambda: self.GraphWidget.scale(0.8, 0.8))
+            menu.addAction(actionZoomOut)
 
-        menu.addSeparator()
-        actionResetType = QtWidgets.QAction('重置所有列车营业站', self)
-        actionResetType.triggered.connect(self._reset_business)
-        menu.addAction(actionResetType)
+            menu.addSeparator()
+            actionResetType = QtWidgets.QAction('重置所有列车营业站', self)
+            actionResetType.triggered.connect(self._reset_business)
+            menu.addAction(actionResetType)
 
-        actionResetPassenger = QtWidgets.QAction("自动设置是否客车", self)
-        actionResetPassenger.triggered.connect(self._reset_passenger)
-        menu.addAction(actionResetPassenger)
+            actionResetPassenger = QtWidgets.QAction("自动设置是否客车", self)
+            actionResetPassenger.triggered.connect(self._reset_passenger)
+            menu.addAction(actionResetPassenger)
 
-        actionAutoType = QtWidgets.QAction('重置所有列车类型', self)
-        actionAutoType.triggered.connect(self._auto_type)
-        menu.addAction(actionAutoType)
+            actionAutoType = QtWidgets.QAction('重置所有列车类型', self)
+            actionAutoType.triggered.connect(self._auto_type)
+            menu.addAction(actionAutoType)
 
-        actionDeleteAll = QtWidgets.QAction('删除所有车次',self)
-        actionDeleteAll.triggered.connect(self._delete_all)
-        menu.addAction(actionDeleteAll)
+            actionDeleteAll = QtWidgets.QAction('删除所有车次',self)
+            actionDeleteAll.triggered.connect(self._delete_all)
+            menu.addAction(actionDeleteAll)
 
-        menu.addSeparator()
-        action = QtWidgets.QAction('批量解析交路',self)
-        action.setShortcut('ctrl+P')
-        menu.addAction(action)
-        action.triggered.connect(self._batch_parse_circuits)
+            menu.addSeparator()
+            action = QtWidgets.QAction('批量解析交路',self)
+            action.setShortcut('ctrl+P')
+            menu.addAction(action)
+            action.triggered.connect(self._batch_parse_circuits)
 
-        action = QtWidgets.QAction("识别所有虚拟车次",self)
-        action.triggered.connect(self._identify_virtual_trains)
-        menu.addAction(action)
+            action = QtWidgets.QAction("识别所有虚拟车次",self)
+            action.triggered.connect(self._identify_virtual_trains)
+            menu.addAction(action)
 
         # 查看
-        menu = menubar.addMenu("查看(&I)")
+        if True:
+            menu = PM("查看(&I)",self, menubar)
+            menubar.addMenu(menu)
 
-        action = QtWidgets.QAction("运行图信息", self)
-        action.triggered.connect(self._line_info_out)
-        menu.addAction(action)
+            action = QtWidgets.QAction("运行图信息", self)
+            action.triggered.connect(self._line_info_out)
+            menu.addAction(action)
 
-        # action = QtWidgets.QAction("当前车次信息", self)
-        # action.setShortcut('ctrl+Q')
-        # action.triggered.connect(self._train_info)
-        # menu.addAction(action)
+            # action = QtWidgets.QAction("当前车次信息", self)
+            # action.setShortcut('ctrl+Q')
+            # action.triggered.connect(self._train_info)
+            # menu.addAction(action)
 
-        action = QtWidgets.QAction("当前车次标尺对照", self)
-        action.setShortcut('ctrl+W')
-        action.triggered.connect(self._check_ruler_from_menu)
-        menu.addAction(action)
+            action = QtWidgets.QAction("当前车次标尺对照", self)
+            action.setShortcut('ctrl+W')
+            action.triggered.connect(self._check_ruler_from_menu)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("两车次时分对照", self)
-        action.setShortcut('ctrl+shift+W')
-        action.triggered.connect(self._train_compare)
-        menu.addAction(action)
+            action = QtWidgets.QAction("两车次时分对照", self)
+            action.setShortcut('ctrl+shift+W')
+            action.triggered.connect(self._train_compare)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("当前车次区间性质计算", self)
-        action.setShortcut('ctrl+shift+Q')
-        action.triggered.connect(self._get_interval_info)
-        menu.addAction(action)
+            action = QtWidgets.QAction("当前车次区间性质计算", self)
+            action.setShortcut('ctrl+shift+Q')
+            action.triggered.connect(self._get_interval_info)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("当前车次事件表", self)
-        action.setShortcut('ctrl+Z')
-        action.triggered.connect(self._train_event_out)
-        menu.addAction(action)
+            action = QtWidgets.QAction("当前车次事件表", self)
+            action.setShortcut('ctrl+Z')
+            action.triggered.connect(self._train_event_out)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("车站时刻表输出", self)
-        action.setShortcut('ctrl+E')
-        action.triggered.connect(self._station_timetable)
-        menu.addAction(action)
+            action = QtWidgets.QAction("车站时刻表输出", self)
+            action.setShortcut('ctrl+E')
+            action.triggered.connect(self._station_timetable)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("区间对数表", self)
-        action.setShortcut('ctrl+3')
-        action.triggered.connect(self._interval_count)
-        menu.addAction(action)
+            action = QtWidgets.QAction("区间对数表", self)
+            action.setShortcut('ctrl+3')
+            action.triggered.connect(self._interval_count)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("区间车次表", self)
-        action.setShortcut('ctrl+shift+3')
-        action.triggered.connect(self._interval_trains)
-        menu.addAction(action)
+            action = QtWidgets.QAction("区间车次表", self)
+            action.setShortcut('ctrl+shift+3')
+            action.triggered.connect(self._interval_trains)
+            menu.addAction(action)
 
         # 调整
-        menu = menubar.addMenu("调整(&A)")
+        if True:
+            menu = PM("调整(&A)",self,menubar)
+            menubar.addMenu(menu)
 
-        action = QtWidgets.QAction("调整当前车次时刻", self)
-        action.setShortcut('ctrl+A')
-        action.triggered.connect(self._adjust_train_time)
-        menu.addAction(action)
+            action = QtWidgets.QAction("调整当前车次时刻", self)
+            action.setShortcut('ctrl+A')
+            action.triggered.connect(self._adjust_train_time)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("批量复制当前运行线", self)
-        action.setShortcut('ctrl+shift+A')
-        action.triggered.connect(self._batch_copy_train)
-        menu.addAction(action)
+            action = QtWidgets.QAction("批量复制当前运行线", self)
+            action.setShortcut('ctrl+shift+A')
+            action.triggered.connect(self._batch_copy_train)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction('区间换线', self)
-        action.setShortcut('ctrl+5')
-        action.triggered.connect(self._interval_exchange)
-        menu.addAction(action)
+            action = QtWidgets.QAction('区间换线', self)
+            action.setShortcut('ctrl+5')
+            action.triggered.connect(self._interval_exchange)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("反排运行图", self)
-        action.triggered.connect(self._reverse_graph)
-        menu.addAction(action)
+            action = QtWidgets.QAction("反排运行图", self)
+            action.triggered.connect(self._reverse_graph)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("修改站名", self)
-        action.setShortcut('ctrl+U')
-        action.triggered.connect(self._change_station_name)
-        menu.addAction(action)
+            action = QtWidgets.QAction("修改站名", self)
+            action.setShortcut('ctrl+U')
+            action.triggered.connect(self._change_station_name)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("批量站名映射", self)
-        action.setShortcut('ctrl+shift+U')
-        action.triggered.connect(self._change_massive_station)
-        menu.addAction(action)
+            action = QtWidgets.QAction("批量站名映射", self)
+            action.setShortcut('ctrl+shift+U')
+            action.triggered.connect(self._change_massive_station)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("推定通过时刻", self)
-        action.setShortcut('ctrl+2')
-        action.triggered.connect(self._detect_pass_time)
-        menu.addAction(action)
+            action = QtWidgets.QAction("推定通过时刻", self)
+            action.setShortcut('ctrl+2')
+            action.triggered.connect(self._detect_pass_time)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction('撤销全部推定结果',self)
-        action.triggered.connect(self._withdraw_detect)
-        menu.addAction(action)
+            action = QtWidgets.QAction('撤销全部推定结果',self)
+            action.triggered.connect(self._withdraw_detect)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction('高级显示车次设置', self)
-        action.setShortcut('ctrl+shift+L')
-        action.triggered.connect(self.showFilter.setFilter)
-        menu.addAction(action)
+            action = QtWidgets.QAction('高级显示车次设置', self)
+            action.setShortcut('ctrl+shift+L')
+            action.triggered.connect(self.showFilter.setFilter)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction('当前车次时刻表重排', self)
-        action.setShortcut('ctrl+V')
-        action.triggered.connect(self._correction_timetable)
-        menu.addAction(action)
+            action = QtWidgets.QAction('当前车次时刻表重排', self)
+            action.setShortcut('ctrl+V')
+            action.triggered.connect(self._correction_timetable)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction('添加车次',self)
-        action.setShortcut('ctrl+shift+C')
-        action.triggered.connect(self._add_train_from_list)
-        menu.addAction(action)
+            action = QtWidgets.QAction('添加车次',self)
+            action.setShortcut('ctrl+shift+C')
+            action.triggered.connect(self._add_train_from_list)
+            menu.addAction(action)
 
         # 数据
-        menu = menubar.addMenu("数据(&S)")
+        if True:
+            menu = PM("数据(&S)",self, menubar)
+            menubar.addMenu(menu)
 
-        action = QtWidgets.QAction("线路数据库", self)
-        action.setShortcut('ctrl+H')
-        action.triggered.connect(self._view_line_data)
-        menu.addAction(action)
+            action = QtWidgets.QAction("线路数据库", self)
+            action.setShortcut('ctrl+H')
+            action.triggered.connect(self._view_line_data)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("线路数据库(旧版)",self)
-        action.setShortcut('ctrl+alt+H')
-        action.triggered.connect(self._view_line_data_old)
-        menu.addAction(action)
+            action = QtWidgets.QAction("线路数据库(旧版)",self)
+            action.setShortcut('ctrl+alt+H')
+            action.triggered.connect(self._view_line_data_old)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("导入线路数据（旧版）", self)
-        action.setShortcut('ctrl+K')
-        action.triggered.connect(self._import_line)
-        menu.addAction(action)
+            action = QtWidgets.QAction("导入线路数据（旧版）", self)
+            action.setShortcut('ctrl+K')
+            action.triggered.connect(self._import_line)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("导入线路数据(Excel)", self)
-        action.setShortcut('ctrl+shift+K')
-        action.triggered.connect(self._import_line_excel)
-        menu.addAction(action)
+            action = QtWidgets.QAction("导入线路数据(Excel)", self)
+            action.setShortcut('ctrl+shift+K')
+            action.triggered.connect(self._import_line_excel)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("导入车次", self)
-        action.setShortcut('ctrl+D')
-        action.triggered.connect(self._import_train)
-        menu.addAction(action)
+            action = QtWidgets.QAction("导入车次", self)
+            action.setShortcut('ctrl+D')
+            self.actionImportTrain = action
+            action.triggered.connect(self._import_train)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("导入车次(旧版)",self)
-        action.setShortcut('ctrl+alt+D')
-        action.triggered.connect(self._import_train_old)
-        menu.addAction(action)
+            action = QtWidgets.QAction("导入车次(旧版)",self)
+            action.setShortcut('ctrl+alt+D')
+            action.triggered.connect(self._import_train_old)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("导入实际运行线", self)
-        action.setShortcut('ctrl+shift+D')
-        action.triggered.connect(self._import_train_real)
-        menu.addAction(action)
+            action = QtWidgets.QAction("导入实际运行线", self)
+            action.setShortcut('ctrl+shift+D')
+            action.triggered.connect(self._import_train_real)
+            menu.addAction(action)
 
         # 窗口
-        menu: QtWidgets.QMenu = menubar.addMenu("窗口(&W)")
-        self.actionWindow_list = []
-        actions = (
-            '线路编辑', '车次编辑', '标尺编辑', '选中车次设置', '运行图设置', '系统默认设置',
-            '显示类型设置', '天窗编辑', '交路编辑', '车次信息', '车次时刻表','交互式时刻表'
-        )
-        shorcuts = (
-            'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1', '4', 'Q', 'Y','shift+Y'
-        )
-        for a, s in zip(actions, shorcuts):
-            action = QtWidgets.QAction(a, self)
-            # action.setText(a)
-            action.setCheckable(True)
-            action.setShortcut(f'ctrl+{s}')
+        if True:
+            menu = PM("窗口(&W)",self,menubar)
+            menubar.addMenu(menu)
+            self.actionWindow_list = []
+            actions = (
+                '线路编辑', '车次编辑', '标尺编辑', '选中车次设置', '运行图设置', '系统默认设置',
+                '显示类型设置', '天窗编辑', '交路编辑', '车次信息', '车次时刻表','交互式时刻表'
+            )
+            shorcuts = (
+                'X', 'C', 'B', 'I', 'G', 'shift+G', 'L', '1', '4', 'Q', 'Y','shift+Y'
+            )
+            for a, s in zip(actions, shorcuts):
+                action = QtWidgets.QAction(a, self)
+                # action.setText(a)
+                action.setCheckable(True)
+                action.setShortcut(f'ctrl+{s}')
 
-            menu.addAction(action)
-            self.actionWindow_list.append(action)
+                menu.addAction(action)
+                self.actionWindow_list.append(action)
 
-        menu.triggered[QtWidgets.QAction].connect(self._window_menu_triggered)
+            menu.triggered[QtWidgets.QAction].connect(self._window_menu_triggered)
 
         # 帮助
-        menu = menubar.addMenu("帮助(&H)")
+        if True:
+            menu = PM("帮助(&H)",self,menubar)
+            menubar.addMenu(menu)
 
-        action = QtWidgets.QAction("关于", self)
-        action.triggered.connect(self._about)
-        menu.addAction(action)
+            action = QtWidgets.QAction("关于", self)
+            action.triggered.connect(self._about)
+            menu.addAction(action)
 
-        action = QtWidgets.QAction("简明功能表", self)
-        action.triggered.connect(self._function_list)
-        action.setShortcut('F1')
-        menu.addAction(action)
+            action = QtWidgets.QAction("简明功能表", self)
+            action.triggered.connect(self._function_list)
+            action.setShortcut('F1')
+            menu.addAction(action)
+        self.menuBar().setVisible(False)
 
     def _checkGraph(self):
         """
@@ -1479,379 +1504,440 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         QM = QtWidgets.QMenu
         toolBar = QRibbonToolBar(self)
 
+        # 开始选项卡
+        if True:
+            menu = toolBar.add_menu('开始')
+
+            group = toolBar.add_group('文件', menu)
+            grid = QG()
+            btn = PEToolButton('新建', QI(':/new-file.png'), large=True)
+            btn.clicked.connect(self._newGraph)
+            btn.setToolTip('新建运行图（Ctrl+N）\n'
+                           '关闭当前运行图并新建空白的运行图。')
+            grid.addWidget(btn, 0, 0, 2, 1)
+
+            btn = PEToolButton('打开', QI(':/open.png'), large=True)
+            btn.setToolTip('打开运行图（Ctrl+O）\n'
+                           '关闭当前运行图，并打开指定的运行图（pyETRC格式或ETRC格式）文件。')
+            btn.clicked.connect(self._openGraph)
+            grid.addWidget(btn, 0, 1, 2, 1)
+
+            btn = PEToolButton('保存', QI(':/save1.png'), large=True)
+            btn.setToolTip('保存运行图（Ctrl+S）\n'
+                           '保存当前运行图到文件（以pyETRC格式）。如果没有保存过，需指定文件。')
+            btn.clicked.connect(self._saveGraph)
+            grid.addWidget(btn, 0, 2, 2, 1)
+
+            btn = PEToolButton('另存为', QI(':/saveas.png'))
+            btn.setToolTip('运行图另存为...\n'
+                           '将当前运行图的修改保存到指定文件，而不是现有文件。')
+            btn.clicked.connect(self._saveGraphAs)
+            grid.addWidget(btn, 0, 3, 1, 1)
+
+            group.add_layout(grid)
+
+            group = toolBar.add_group('导出', menu)
+            grid = QG()
+            btn = PEToolButton('PDF文件', QI(':/pdf.png'), large=True)
+            btn.clicked.connect(self._outputPdf)
+            btn.setToolTip('导出PDF运行图（Ctrl+Shift+T）\n'
+                           '将当前的整张运行图导出为PDF格式矢量图形文件，以便在多种设备上查看。')
+            grid.addWidget(btn, 0, 0, 2, 1)
+
+            btn = PEToolButton('PNG文件', QI(':/png.png'))
+            btn.clicked.connect(self._outputGraph)
+            btn.setToolTip('导出PNG运行图（Ctrl+T）\n'
+                           '将当前的整张运行图导出为PNG格式的像素图。')
+            grid.addWidget(btn, 0, 1, 1, 1)
+
+            btn = PEToolButton('ETRC文件', QI(':/ETRC-dynamic.png'))
+            btn.clicked.connect(self._toTrc)
+            btn.setToolTip('导出为ETRC运行图文件（Ctrl+M）\n'
+                           '导出为ETRC列车运行图系统的*.trc格式运行图文件。')
+            grid.addWidget(btn, 1, 1, 1, 1)
+            group.add_layout(grid)
+
+            group = toolBar.add_group('更新', menu)
+            grid = QG()
+
+            btn = PEToolButton('刷新', QI(':/refresh.png'), large=True)
+            btn.clicked.connect(self._refresh_graph)
+            btn.setToolTip('刷新运行图（F5）\n'
+                           '重新铺画运行图，并更新所有停靠面板数据。\n'
+                           '当数据出现不同步异常时，可以调用此功能。')
+            grid.addWidget(btn, 0, 0, 2, 1)
+
+            btn = PEToolButton('重新铺画', QI(':/brush.png'))
+            btn.clicked.connect(lambda: self.GraphWidget.paintGraph(force=True))
+            btn.setToolTip('立即重新铺画运行图（Shift+F5）\n'
+                           '强制重新铺画运行图，但不更新停靠面板数据。')
+            grid.addWidget(btn, 0, 1, 1, 1)
+
+            btn = PEToolButton('重新读取', QI(':/exchange.png'))
+            btn.clicked.connect(self._reset_graph)
+            btn.setToolTip('重新读取当前运行图\n'
+                           '放弃所有未保存更改，重新从文件中读取本运行图。')
+            grid.addWidget(btn, 1, 1, 1, 1)
+            group.add_layout(grid)
+
+            group = toolBar.add_group('控制', menu)
+            grid = QG()
+            btn = PEToolButton('水平放大', QI(':/h_expand.png'))
+            btn.clicked.connect(self._h_expand)
+            grid.addWidget(btn, 0, 0, 1, 1)
+
+            btn = PEToolButton('水平缩小', QI(':/h_shrink.png'))
+            btn.clicked.connect(self._h_shrink)
+            grid.addWidget(btn, 1, 0, 1, 1)
+
+            btn = PEToolButton('垂直放大', QI(':/v_expand.png'))
+            btn.clicked.connect(self._v_expand)
+            grid.addWidget(btn, 0, 1, 1, 1)
+
+            btn = PEToolButton('垂直缩小', QI(':/v_shrink.png'))
+            btn.clicked.connect(self._v_shrink)
+            grid.addWidget(btn, 1, 1, 1, 1)
+            group.add_layout(grid)
+
+            group = toolBar.add_group('系统', menu)
+            grid = QG()
+
+            btn = PEToolButton('退出', QI(':/close.png'), large=True)
+            btn.clicked.connect(self.close)
+            btn.setToolTip('退出程序（Alt+F4）')
+            grid.addWidget(btn, 0, 0, 2, 1)
+
+            btn = PEToolButton('功能表', QI(':/help.png'))
+            btn.clicked.connect(self._function_list)
+            btn.setToolTip('简明功能表（F1）\n'
+                           '查看以快捷键为主要索引方式的功能表。\n'
+                           '详细文档请访问http://xep0268.top/pyetrc/doc')
+            grid.addWidget(btn, 0, 1, 1, 1)
+
+            btn = PEToolButton('关于', QI('icon.ico'))
+            btn.clicked.connect(self._about)
+            grid.addWidget(btn, 1, 1, 1, 1)
+
+            btn = PEToolButton('菜单栏', QI(':/menu.png'), large=True)
+            btn.setCheckable(True)
+            btn.clicked.connect(self.menuBar().setVisible)
+            btn.setToolTip('菜单栏开关\n'
+                           '显示或隐藏上方的菜单栏。')
+            grid.addWidget(btn, 0, 2, 2, 1)
+
+            group.add_layout(grid)
+
         # 线路 面板
-        menu = toolBar.add_menu('线路')
+        if True:
+            menu = toolBar.add_menu('线路')
 
-        group = toolBar.add_group('基础数据', menu)
-        grid = QG()
-        btn = PEDockButton('线路编辑', '线路编辑', QI(':/rail.png'), self.lineDockWidget)
-        btn.setToolTip('线路编辑（Ctrl+X）\n编辑本线站名、里程等基础数据。')
-        grid.addWidget(btn, 0, 0, 2, 1)
-        self.dockToolButtons.append(btn)
+            group = toolBar.add_group('基础数据', menu)
+            grid = QG()
+            btn = PEDockButton('线路编辑', '线路编辑', QI(':/rail.png'), self.lineDockWidget)
+            # btn = PEToolButton('线路编辑',QI(':/rail.png'),
+            #                    self.__dockActions['线路编辑'],large=True)
+            btn.setToolTip('线路编辑（Ctrl+X）\n编辑本线站名、里程等基础数据。')
+            grid.addWidget(btn, 0, 0, 2, 1)
+            self.dockToolButtons.append(btn)
 
-        btn = PEToolButton('数据库', QI(':/database.png'), large=True)
-        btn.clicked.connect(self._view_line_data)
-        btn.setToolTip('线路数据库（Ctrl+H）\n查看、管理和导入系统线路数据库。')
+            btn = PEToolButton('数据库', QI(':/database.png'),large=True)
+            # btn.clicked.connect(self._view_line_data)
+            btn.setToolTip('线路数据库（Ctrl+H）\n查看、管理和导入系统线路数据库。')
 
-        m = QM()
-        self.__addMenuAction(m, '线路数据库（旧版）', self._view_line_data_old,
-                             '线路数据库（旧版）（Ctrl+Alt+H）\n'
-                             '查看和维护旧版的内置数据库。\n'
-                             '[警告] 过时功能，可能在将来版本中删除。请使用“线路数据库”功能。')
-        self.__addMenuAction(m, '导入线路数据（旧版）', self._import_line,
-                             '导入线路数据（旧版）（Ctrl+K）\n从旧版内置数据库中导入线路数据。\n'
-                             '[警告] 过时功能，可能在将来版本中删除。请使用“线路数据库”功能。')
-        btn.setMenu(m)
-        grid.addWidget(btn, 0, 1, 2, 1)
+            m = QM()
+            self.__addMenuAction(m, '线路数据库（旧版）', self._view_line_data_old,
+                                 '线路数据库（旧版）（Ctrl+Alt+H）\n'
+                                 '查看和维护旧版的内置数据库。\n'
+                                 '[警告] 过时功能，可能在将来版本中删除。请使用“线路数据库”功能。')
+            self.__addMenuAction(m, '导入线路数据（旧版）', self._import_line,
+                                 '导入线路数据（旧版）（Ctrl+K）\n从旧版内置数据库中导入线路数据。\n'
+                                 '[警告] 过时功能，可能在将来版本中删除。请使用“线路数据库”功能。')
+            btn.setMenu(m)
+            grid.addWidget(btn, 0, 1, 2, 1)
 
-        btn = PEToolButton('从Excel', QI(':/excel.png'))
-        btn.setToolTip('导入线路数据（Excel）（Ctrl+Shift+K）\n'
-                       '从Excel表中导入线路基础数据。')
-        btn.clicked.connect(self._import_line_excel)
-        grid.addWidget(btn, 0, 2, 1, 1)
+            btn = PEToolButton('从Excel', QI(':/excel.png'))
+            btn.setToolTip('导入线路数据（Excel）（Ctrl+Shift+K）\n'
+                           '从Excel表中导入线路基础数据。')
+            btn.clicked.connect(self._import_line_excel)
+            grid.addWidget(btn, 0, 2, 1, 1)
 
-        btn = PEToolButton('线路拼接', QI(':/joint.png'))
-        btn.setToolTip('运行图拼接（Ctrl+J）\n'
-                       '选择运行图，连接线路，导入和连接车次（可选）。')
-        btn.clicked.connect(self._joint_graph)
-        grid.addWidget(btn, 1, 2, 1, 1)
+            btn = PEToolButton('线路拼接', QI(':/joint.png'))
+            btn.setToolTip('运行图拼接（Ctrl+J）\n'
+                           '选择运行图，连接线路，导入和连接车次（可选）。')
+            btn.clicked.connect(self._joint_graph)
+            grid.addWidget(btn, 1, 2, 1, 1)
 
-        btn = PEDockButton('标尺编辑', '标尺编辑', QI(':/ruler.png'), self.rulerDockWidget)
-        self.dockToolButtons.append(btn)
-        btn.setToolTip('标尺编辑（Ctrl+B）\n设置各个标尺数据，添加或删除标尺。')
-        grid.addWidget(btn, 0, 3, 2, 1)
+            btn = PEDockButton('标尺编辑', '标尺编辑', QI(':/ruler.png'), self.rulerDockWidget)
+            self.dockToolButtons.append(btn)
+            btn.setToolTip('标尺编辑（Ctrl+B）\n设置各个标尺数据，添加或删除标尺。')
+            grid.addWidget(btn, 0, 3, 2, 1)
 
-        btn = PEDockButton('天窗编辑', '天窗编辑', QI(':/forbid.png'), self.forbidDockWidget)
-        self.dockToolButtons.append(btn)
-        btn.setToolTip('天窗编辑（Ctrl+数字1）\n编辑综合维修天窗、综合施工天窗的时间段及是否显示等。')
-        grid.addWidget(btn, 0, 4, 2, 1)
+            btn = PEDockButton('天窗编辑', '天窗编辑', QI(':/forbid.png'), self.forbidDockWidget)
+            self.dockToolButtons.append(btn)
+            btn.setToolTip('天窗编辑（Ctrl+数字1）\n编辑综合维修天窗、综合施工天窗的时间段及是否显示等。')
+            grid.addWidget(btn, 0, 4, 2, 1)
 
-        group.add_layout(grid)
+            group.add_layout(grid)
 
-        group = toolBar.add_group('微调', menu)
-        grid = QG()
-        btn = PEToolButton('修改站名', QI(':/exchange1.png'), large=True)
-        btn.setToolTip('修改站名（Ctrl+U）\n'
-                       '将车站列表及所有车次中的一个站名修改为另一个站名。')
-        btn.clicked.connect(self._change_station_name)
-        grid.addWidget(btn, 0, 0, 2, 1)
+            group = toolBar.add_group('微调', menu)
+            grid = QG()
+            btn = PEToolButton('修改站名', QI(':/exchange1.png'), large=True)
+            btn.setToolTip('修改站名（Ctrl+U）\n'
+                           '将车站列表及所有车次中的一个站名修改为另一个站名。')
+            btn.clicked.connect(self._change_station_name)
+            grid.addWidget(btn, 0, 0, 2, 1)
 
-        btn = PEToolButton('站名映射', QI(':/arrow.png'))
-        btn.setToolTip('站名映射（Ctrl+Shift+U）\n'
-                       '批量将[北京西普速场]映射为[北京西::普速场]形式。')
-        grid.addWidget(btn, 0, 1, 1, 1)
-        btn.clicked.connect(self._change_massive_station)
+            btn = PEToolButton('站名映射', QI(':/arrow.png'))
+            btn.setToolTip('站名映射（Ctrl+Shift+U）\n'
+                           '批量将[北京西普速场]映射为[北京西::普速场]形式。')
+            grid.addWidget(btn, 0, 1, 1, 1)
+            btn.clicked.connect(self._change_massive_station)
 
-        btn = PEToolButton('线路反排', QI(':/exchange.png'))
-        btn.setToolTip('运行图反排\n'
-                       '颠倒本线上下行，同时交换所有列车的上下行车次。')
-        btn.clicked.connect(self._reverse_graph)
-        grid.addWidget(btn, 1, 1, 1, 1)
+            btn = PEToolButton('线路反排', QI(':/exchange.png'))
+            btn.setToolTip('运行图反排\n'
+                           '颠倒本线上下行，同时交换所有列车的上下行车次。')
+            btn.clicked.connect(self._reverse_graph)
+            grid.addWidget(btn, 1, 1, 1, 1)
 
-        group.add_layout(grid)
+            group.add_layout(grid)
 
-        group = toolBar.add_group('分析', menu)
-        grid = QG()
+            group = toolBar.add_group('分析', menu)
+            grid = QG()
 
-        btn = PEToolButton('车站时刻', QI(':/timetable.png'), large=True)
-        btn.clicked.connect(self._station_timetable)
-        btn.setToolTip('车站时刻表（Ctrl+E）\n'
-                       '查看指定车站的时刻表、股道分析图。')
-        grid.addWidget(btn, 0, 0, 2, 1)
+            btn = PEToolButton('车站时刻', QI(':/timetable.png'), large=True)
+            btn.clicked.connect(self._station_timetable)
+            btn.setToolTip('车站时刻表（Ctrl+E）\n'
+                           '查看指定车站的时刻表、股道分析图。')
+            grid.addWidget(btn, 0, 0, 2, 1)
 
-        btn = PEToolButton('运行图信息', QI(':/info.png'))
-        btn.clicked.connect(self._line_info_out)
-        btn.setToolTip('运行图信息\n'
-                       '查看和运行图和线路有关的基本信息。')
-        grid.addWidget(btn, 0, 1, 1, 1)
+            btn = PEToolButton('运行图信息', QI(':/info.png'))
+            btn.clicked.connect(self._line_info_out)
+            btn.setToolTip('运行图信息\n'
+                           '查看和运行图和线路有关的基本信息。')
+            grid.addWidget(btn, 0, 1, 1, 1)
 
-        btn = PEToolButton('运行图对比', QI(':/compare.png'))
-        btn.clicked.connect(self._graph_diff)
-        btn.setToolTip('运行图对比（Ctrl+6）\n'
-                       '对比本运行图和选定运行图（作为新运行图）所有车次的数据。')
-        grid.addWidget(btn, 1, 1, 1, 1)
-        group.add_layout(grid)
+            btn = PEToolButton('运行图对比', QI(':/compare.png'))
+            btn.clicked.connect(self._graph_diff)
+            btn.setToolTip('运行图对比（Ctrl+6）\n'
+                           '对比本运行图和选定运行图（作为新运行图）所有车次的数据。')
+            grid.addWidget(btn, 1, 1, 1, 1)
+            group.add_layout(grid)
 
         # 选项卡列车
-        menu = toolBar.add_menu('列车')
+        if True:
+            menu = toolBar.add_menu('列车')
 
-        group = toolBar.add_group('车次管理',menu,use_corner=True)
-        grid = QG()
-        btn = PEDockButton('车次列表','车次编辑',
-                           QI(':/list.png'),self.trainDockWidget)
-        btn.setToolTip('车次编辑（Ctrl+C）\n查看车次列表，添加和删除车次。')
-        grid.addWidget(btn,0,0,2,1)
-        self.dockToolButtons.append(btn)
+            group = toolBar.add_group('车次管理',menu,use_corner=True)
+            grid = QG()
+            btn = PEDockButton('车次列表','车次编辑',
+                               QI(':/list.png'),self.trainDockWidget)
+            btn.setToolTip('车次编辑（Ctrl+C）\n查看车次列表，添加和删除车次。')
+            grid.addWidget(btn,0,0,2,1)
+            self.dockToolButtons.append(btn)
 
-        combo = QtWidgets.QComboBox()
-        self.selectTrainCombo = combo
-        for train in self.graph.trains():
-            combo.addItem(train.fullCheci())
-        combo.currentTextChanged.connect(self._search_train)
-        grid.addWidget(combo,0,1,1,2)
+            combo = QtWidgets.QComboBox()
+            self.selectTrainCombo = combo
+            for train in self.graph.trains():
+                combo.addItem(train.fullCheci())
+            combo.currentTextChanged.connect(self._search_train)
+            grid.addWidget(combo,0,1,1,2)
 
-        btn = PEToolButton('搜索',QI(':/search.png'))
-        btn.clicked.connect(self._search_from_menu)
-        # btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        btn.setToolTip('搜索车次（Ctrl+F）\n'
-                       '输入完整车次或完整的分方向车次来检索。')
-        grid.addWidget(btn,1,1,1,1)
+            btn = PEToolButton('搜索',QI(':/search.png'))
+            btn.clicked.connect(self._search_from_menu)
+            # btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
+            btn.setToolTip('搜索车次（Ctrl+F）\n'
+                           '输入完整车次或完整的分方向车次来检索。')
+            grid.addWidget(btn,1,1,1,1)
 
-        m = QM()
-        action = QtWidgets.QAction('模糊检索',self)
-        action.triggered.connect(self._multi_search_train)
-        action.setToolTip('模糊检索Ctrl+Shift+F')
-        m.addAction(action)
-        btn.setMenu(m)
+            m = QM()
+            action = QtWidgets.QAction('模糊检索',self)
+            action.triggered.connect(self._multi_search_train)
+            action.setToolTip('模糊检索Ctrl+Shift+F')
+            m.addAction(action)
+            btn.setMenu(m)
 
-        btn = PEToolButton('添加',QI(':/add.png'))
-        btn.clicked.connect(self._add_train_from_list)
-        # btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        btn.setToolTip('添加车次（Ctrl+Shift+C）\n添加新的空白车次。')
-        grid.addWidget(btn,1,2,1,1)
-        group.add_layout(grid)
+            btn = PEToolButton('添加',QI(':/add.png'))
+            btn.clicked.connect(self._add_train_from_list)
+            # btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
+            btn.setToolTip('添加车次（Ctrl+Shift+C）\n添加新的空白车次。')
+            grid.addWidget(btn,1,2,1,1)
+            group.add_layout(grid)
 
-        m = QM('车次管理工具')
-        self.__addMenuAction(m,'重置始发终到',self._reset_start_end)
-        self.__addMenuAction(m,'自动适配始发终到站',self._auto_start_end)
-        self.__addMenuAction(m,'重置营业站',self._reset_business)
-        self.__addMenuAction(m,'重置是否客车',self._reset_passenger)
-        self.__addMenuAction(m,'重置列车类型',self._auto_type)
-        m.addSeparator()
-        self.__addMenuAction(m,'删除所有车次',self._delete_all)
-        group.set_corner_menu(m)
+            m = QM('车次管理工具')
+            self.__addMenuAction(m,'重置始发终到',self._reset_start_end)
+            self.__addMenuAction(m,'自动适配始发终到站',self._auto_start_end)
+            self.__addMenuAction(m,'重置营业站',self._reset_business)
+            self.__addMenuAction(m,'重置是否客车',self._reset_passenger)
+            self.__addMenuAction(m,'重置列车类型',self._auto_type)
+            m.addSeparator()
+            self.__addMenuAction(m,'删除所有车次',self._delete_all)
+            group.set_corner_menu(m)
 
-        group = toolBar.add_group('当前车次',menu,use_corner=False)  # 2行
-        grid = QtWidgets.QGridLayout()
-        btn = PEDockButton('编辑','选中车次设置',
-                           QI(':/timetable.png'),self.currentDockWidget)
-        btn.setToolTip('当前车次信息编辑（Ctrl+I）\n'
-                       '最完整的车次数据编辑面板。')
-        grid.addWidget(btn,0,0,2,1)
-        self.dockToolButtons.append(btn)
+            group = toolBar.add_group('当前车次',menu,use_corner=False)  # 2行
+            grid = QtWidgets.QGridLayout()
+            btn = PEDockButton('编辑','选中车次设置',
+                               QI(':/timetable.png'),self.currentDockWidget)
+            btn.setToolTip('当前车次信息编辑（Ctrl+I）\n'
+                           '最完整的车次数据编辑面板。')
+            grid.addWidget(btn,0,0,2,1)
+            self.dockToolButtons.append(btn)
 
-        btn = PEDockButton('时刻表','车次时刻表',
-                           QI(':/clock.png'),
-                           self.trainTimetableDockWidget)
-        btn.setToolTip('车次时刻表（Ctrl+Y）\n只读的简洁形式列车时刻表。')
-        grid.addWidget(btn,0,1,2,1)
-        self.dockToolButtons.append(btn)
+            btn = PEDockButton('时刻表','车次时刻表',
+                               QI(':/clock.png'),
+                               self.trainTimetableDockWidget)
+            btn.setToolTip('车次时刻表（Ctrl+Y）\n只读的简洁形式列车时刻表。')
+            grid.addWidget(btn,0,1,2,1)
+            self.dockToolButtons.append(btn)
 
-        btn = PEDockButton('微调','交互式时刻表',
-                           QI(':/electronic-clock.png',),
-                           self.interactiveTimetableDockWidget,large=False)
-        btn.setToolTip('交互式列车时刻表（Ctrl+Shift+Y）\n'
-                       '调整当且车次时刻，且立即生效。')
-        grid.addWidget(btn,0,2,1,1)
-        self.dockToolButtons.append(btn)
+            btn = PEDockButton('微调','交互式时刻表',
+                               QI(':/electronic-clock.png',),
+                               self.interactiveTimetableDockWidget,large=False)
+            btn.setToolTip('交互式列车时刻表（Ctrl+Shift+Y）\n'
+                           '调整当且车次时刻，且立即生效。')
+            grid.addWidget(btn,0,2,1,1)
+            self.dockToolButtons.append(btn)
 
-        btn = PEDockButton('信息','车次信息',QI(':/info.png'),
-                           self.trainInfoDockWidget,large=False)
-        self.dockToolButtons.append(btn)
-        grid.addWidget(btn,1,2,1,1)
+            btn = PEDockButton('信息','车次信息',QI(':/info.png'),
+                               self.trainInfoDockWidget,large=False)
+            self.dockToolButtons.append(btn)
+            grid.addWidget(btn,1,2,1,1)
 
-        btn = PEToolButton('平移',QI(':/adjust.png'))
-        btn.clicked.connect(self._adjust_train_time)
-        btn.setToolTip('平移时刻表（Ctrl+A）\n'
-                       '将部分或全部站时刻表提早或者推迟一定时间。')
-        grid.addWidget(btn,0,3,1,1)
+            btn = PEToolButton('平移',QI(':/adjust.png'))
+            btn.clicked.connect(self._adjust_train_time)
+            btn.setToolTip('平移时刻表（Ctrl+A）\n'
+                           '将部分或全部站时刻表提早或者推迟一定时间。')
+            grid.addWidget(btn,0,3,1,1)
 
-        btn = PEToolButton('修正',QI(':/adjust-2.png'))
-        btn.clicked.connect(lambda: self._correction_timetable(self.currentTrain()))
-        btn.setToolTip('修正时刻表（Ctrl+V）\n'
-                       '调整时刻表的顺序错误、发到站时刻排反等顺序问题。')
-        grid.addWidget(btn,1,3,1,1)
+            btn = PEToolButton('修正',QI(':/adjust-2.png'))
+            btn.clicked.connect(lambda: self._correction_timetable(self.currentTrain()))
+            btn.setToolTip('修正时刻表（Ctrl+V）\n'
+                           '调整时刻表的顺序错误、发到站时刻排反等顺序问题。')
+            grid.addWidget(btn,1,3,1,1)
 
-        group.add_layout(grid)
+            group.add_layout(grid)
 
-        group = toolBar.add_group('分析',menu)
-        grid = QG()
+            group = toolBar.add_group('分析',menu)
+            grid = QG()
 
-        btn = PEToolButton('标尺对照',QI(':/ruler.png'))
-        btn.clicked.connect(self._check_ruler_from_menu)
-        btn.setToolTip('标尺对照（Ctrl+W）\n'
-                       '将当前车次时刻表与指定标尺对比。')
-        grid.addWidget(btn,0,0,1,1)
+            btn = PEToolButton('标尺对照',QI(':/ruler.png'))
+            btn.clicked.connect(self._check_ruler_from_menu)
+            btn.setToolTip('标尺对照（Ctrl+W）\n'
+                           '将当前车次时刻表与指定标尺对比。')
+            grid.addWidget(btn,0,0,1,1)
 
-        btn = PEToolButton('事件表',QI(':/clock.png'))
-        btn.clicked.connect(self._train_event_out)
-        btn.setToolTip('车次事件表（Ctrl+Z）\n'
-                       '显示到开、越行、会让等事件表。')
-        grid.addWidget(btn,0,1,1,1)
+            btn = PEToolButton('事件表',QI(':/clock.png'))
+            btn.clicked.connect(self._train_event_out)
+            btn.setToolTip('车次事件表（Ctrl+Z）\n'
+                           '显示到开、越行、会让等事件表。')
+            grid.addWidget(btn,0,1,1,1)
 
-        btn = PEToolButton('车次对照',QI(':/compare.png'))
-        btn.clicked.connect(self._train_compare)
-        btn.setToolTip('两车次对照（Ctrl+Shift+W）\n'
-                       '对比两个车次在本线的区间运行时分。')
-        grid.addWidget(btn,1,1,1,1)
+            btn = PEToolButton('车次对照',QI(':/compare.png'))
+            btn.clicked.connect(self._train_compare)
+            btn.setToolTip('两车次对照（Ctrl+Shift+W）\n'
+                           '对比两个车次在本线的区间运行时分。')
+            grid.addWidget(btn,1,1,1,1)
 
-        btn = PEToolButton('区间分析',QI(':/data.png'))
-        btn.clicked.connect(self._get_interval_info)
-        btn.setToolTip('区间数据分析（Ctrl+Shift+Q）\n'
-                       '显示列车在指定区间的停站数，均速等信息。')
-        grid.addWidget(btn,1,0,1,1)
-        group.add_layout(grid)
+            btn = PEToolButton('区间分析',QI(':/data.png'))
+            btn.clicked.connect(self._get_interval_info)
+            btn.setToolTip('区间数据分析（Ctrl+Shift+Q）\n'
+                           '显示列车在指定区间的停站数，均速等信息。')
+            grid.addWidget(btn,1,0,1,1)
+            group.add_layout(grid)
 
-        group = toolBar.add_group('交路',menu)
-        grid = QG()
-        btn = PEDockButton('交路编辑','交路编辑',QI(':/polyline.png'),
-                           self.circuitDockWidget)
-        btn.setToolTip('交路编辑（Ctrl+4）\n'
-                       '查看和编辑所有交路信息。')
-        grid.addWidget(btn,0,0,2,1)
-        self.dockToolButtons.append(btn)
+            group = toolBar.add_group('交路',menu)
+            grid = QG()
+            btn = PEDockButton('交路编辑','交路编辑',QI(':/polyline.png'),
+                               self.circuitDockWidget)
+            btn.setToolTip('交路编辑（Ctrl+4）\n'
+                           '查看和编辑所有交路信息。')
+            grid.addWidget(btn,0,0,2,1)
+            self.dockToolButtons.append(btn)
 
-        btn = PEToolButton('文本解析',QI(':/text.png'))
-        btn.clicked.connect(self._batch_parse_circuits)
-        btn.setToolTip('批量解析交路文本（Ctrl+P）\n'
-                       '从文本形式的交路数据中，批量识别交路。')
-        grid.addWidget(btn,0,1,1,1)
+            btn = PEToolButton('文本解析',QI(':/text.png'))
+            btn.clicked.connect(self._batch_parse_circuits)
+            btn.setToolTip('批量解析交路文本（Ctrl+P）\n'
+                           '从文本形式的交路数据中，批量识别交路。')
+            grid.addWidget(btn,0,1,1,1)
 
-        btn = PEToolButton('批量识别',QI(':/identify.png'))
-        btn.clicked.connect(self._identify_virtual_trains)
-        btn.setToolTip('批量虚拟车次\n'
-                       '识别交路中的虚拟车次。如果车次属于本运行图，'
-                       '则设为实体车次。')
-        grid.addWidget(btn,1,1,1,1)
-        group.add_layout(grid)
+            btn = PEToolButton('批量识别',QI(':/identify.png'))
+            btn.clicked.connect(self._identify_virtual_trains)
+            btn.setToolTip('批量虚拟车次\n'
+                           '识别交路中的虚拟车次。如果车次属于本运行图，'
+                           '则设为实体车次。')
+            grid.addWidget(btn,1,1,1,1)
+            group.add_layout(grid)
 
-        group = toolBar.add_group('排图',menu)
-        grid = QG()
-        btn = PEToolButton('标尺排图',QI(':/edit.png'),large=True)
-        btn.clicked.connect(self._add_train_by_ruler)
-        btn.setToolTip('标尺排图向导（Ctrl+R）\n'
-                       '选择一种标尺，给定各站停车时间，计算时刻')
-        grid.addWidget(btn,0,0,2,1)
+            group = toolBar.add_group('排图',menu)
+            grid = QG()
+            btn = PEToolButton('标尺排图',QI(':/edit.png'),large=True)
+            btn.clicked.connect(self._add_train_by_ruler)
+            btn.setToolTip('标尺排图向导（Ctrl+R）\n'
+                           '选择一种标尺，给定各站停车时间，计算时刻')
+            grid.addWidget(btn,0,0,2,1)
 
-        btn = PEDockButton('标尺编辑','标尺编辑',QI(':/ruler.png'),
-                           self.rulerDockWidget,large=False)
-        btn.setToolTip('标尺编辑（Ctrl+B）\n设置各个标尺数据，添加或删除标尺。')
-        grid.addWidget(btn,0,1,1,1)
-        self.dockToolButtons.append(btn)
+            btn = PEDockButton('标尺编辑','标尺编辑',QI(':/ruler.png'),
+                               self.rulerDockWidget,large=False)
+            btn.setToolTip('标尺编辑（Ctrl+B）\n设置各个标尺数据，添加或删除标尺。')
+            grid.addWidget(btn,0,1,1,1)
+            self.dockToolButtons.append(btn)
 
-        btn = PEToolButton('区间重排',QI(':/exchange.png'))
-        btn.clicked.connect(self._change_train_interval)
-        btn.setToolTip('区间重排图（Ctrl+Shift+R）\n'
-                       '依据标尺，重新铺画某一区间运行线，并覆盖原有时刻。')
-        m = QM()
-        self.__addMenuAction(m,'区间换线',self._interval_exchange,
-                             '区间换线（Ctrl+5）\n交换两车次区间运行线。')
-        btn.setMenu(m)
-        grid.addWidget(btn,1,1,1,1)
+            btn = PEToolButton('区间重排',QI(':/exchange.png'))
+            btn.clicked.connect(self._change_train_interval)
+            btn.setToolTip('区间重排图（Ctrl+Shift+R）\n'
+                           '依据标尺，重新铺画某一区间运行线，并覆盖原有时刻。')
+            m = QM()
+            self.__addMenuAction(m,'区间换线',self._interval_exchange,
+                                 '区间换线（Ctrl+5）\n交换两车次区间运行线。')
+            btn.setMenu(m)
+            grid.addWidget(btn,1,1,1,1)
 
-        btn = PEToolButton('批量复制',QI(':/copy.png'))
-        btn.clicked.connect(self._batch_copy_train)
-        btn.setToolTip('批量复制运行线（Ctrl+Shift+A）\n'
-                       '给定新车次及其始发时刻，批量复制当前车次运行线。')
-        grid.addWidget(btn,0,2,1,1)
+            btn = PEToolButton('批量复制',QI(':/copy.png'))
+            btn.clicked.connect(self._batch_copy_train)
+            btn.setToolTip('批量复制运行线（Ctrl+Shift+A）\n'
+                           '给定新车次及其始发时刻，批量复制当前车次运行线。')
+            grid.addWidget(btn,0,2,1,1)
 
-        btn = PEToolButton('推定时刻',QI(':/add.png'))
-        btn.clicked.connect(self._detect_pass_time)
-        btn.setToolTip('推定通过站时刻（Ctrl+2）\n'
-                       '假定没有时刻信息的中间站都不停靠，依据标尺，'
-                       '推定通过站时刻。')
-        m = QM()
-        self.__addMenuAction(m,'撤销所有推定结果',self._withdraw_detect)
-        btn.setMenu(m)
-        grid.addWidget(btn,1,2,1,1)
-        group.add_layout(grid)
-
-        # 开始选项卡
-        menu = toolBar.add_menu('开始')
-
-        group = toolBar.add_group('文件',menu)
-        grid = QG()
-        btn = PEToolButton('新建',QI(':/new-file.png'),large=True)
-        btn.clicked.connect(self._newGraph)
-        btn.setToolTip('新建运行图（Ctrl+N）\n'
-                       '关闭当前运行图并新建空白的运行图。')
-        grid.addWidget(btn,0,0,2,1)
-
-        btn = PEToolButton('打开',QI(':/open.png'),large=True)
-        btn.setToolTip('打开运行图（Ctrl+O）\n'
-                            '关闭当前运行图，并打开指定的运行图（pyETRC格式或ETRC格式）文件。')
-        btn.clicked.connect(self._openGraph)
-        grid.addWidget(btn,0,1,2,1)
-
-        btn = PEToolButton('保存',QI(':/save1.png'),large=True)
-        btn.setToolTip('保存运行图（Ctrl+S）\n'
-                       '保存当前运行图到文件（以pyETRC格式）。如果没有保存过，需指定文件。')
-        btn.clicked.connect(self._saveGraph)
-        grid.addWidget(btn,0,2,2,1)
-
-        btn = PEToolButton('另存为',QI(':/saveas.png'))
-        btn.setToolTip('运行图另存为...\n'
-                       '将当前运行图的修改保存到指定文件，而不是现有文件。')
-        btn.clicked.connect(self._saveGraphAs)
-        grid.addWidget(btn,0,3,1,1)
-
-        group.add_layout(grid)
-
-        group = toolBar.add_group('导出',menu)
-        grid = QG()
-        btn = PEToolButton('PDF文件',QI(':/pdf.png'),large=True)
-        btn.clicked.connect(self._outputPdf)
-        btn.setToolTip('导出PDF运行图（Ctrl+Shift+T）\n'
-                       '将当前的整张运行图导出为PDF格式矢量图形文件，以便在多种设备上查看。')
-        grid.addWidget(btn,0,0,2,1)
-
-        btn = PEToolButton('PNG文件',QI(':/png.png'))
-        btn.clicked.connect(self._outputGraph)
-        btn.setToolTip('导出PNG运行图（Ctrl+T）\n'
-                       '将当前的整张运行图导出为PNG格式的像素图。')
-        grid.addWidget(btn,0,1,1,1)
-
-        btn = PEToolButton('ETRC文件',QI(':/ETRC-dynamic.png'))
-        btn.clicked.connect(self._toTrc)
-        btn.setToolTip('导出为ETRC运行图文件（Ctrl+M）\n'
-                       '导出为ETRC列车运行图系统的*.trc格式运行图文件。')
-        grid.addWidget(btn,1,1,1,1)
-        group.add_layout(grid)
-
-        group = toolBar.add_group('更新',menu)
-        grid = QG()
-
-        btn = PEToolButton('刷新',QI(':/refresh.png'),large=True)
-        btn.clicked.connect(self._refresh_graph)
-        btn.setToolTip('刷新运行图（F5）\n'
-                       '重新铺画运行图，并更新所有停靠面板数据。\n'
-                       '当数据出现不同步异常时，可以调用此功能。')
-        grid.addWidget(btn,0,0,2,1)
-
-        btn = PEToolButton('重新铺画',QI(':/brush.png'))
-        btn.clicked.connect(lambda: self.GraphWidget.paintGraph(force=True))
-        btn.setToolTip('立即重新铺画运行图（Shift+F5）\n'
-                       '强制重新铺画运行图，但不更新停靠面板数据。')
-        grid.addWidget(btn,0,1,1,1)
-
-        btn = PEToolButton('重新读取',QI(':/exchange.png'))
-        btn.clicked.connect(self._reset_graph)
-        btn.setToolTip('重新读取当前运行图\n'
-                       '放弃所有未保存更改，重新从文件中读取本运行图。')
-        grid.addWidget(btn,1,1,1,1)
-        group.add_layout(grid)
-
-        group = toolBar.add_group('',menu)
-        grid = QG()
-
-        btn = PEToolButton('退出',QI(':/close.png'),large=True)
-        btn.clicked.connect(self.close)
-        btn.setToolTip('退出程序（Alt+F4）')
-        grid.addWidget(btn,0,0,2,1)
-
-        btn = PEToolButton('功能表',QI(':/help.png'))
-        btn.clicked.connect(self._function_list)
-        btn.setToolTip('简明功能表（F1）\n'
-                       '查看以快捷键为主要索引方式的功能表。\n'
-                       '详细文档请访问http://xep0268.top/pyetrc/doc')
-        grid.addWidget(btn,0,1,1,1)
-
-        btn = PEToolButton('关于',QI('icon.ico'))
-        btn.clicked.connect(self._about)
-        grid.addWidget(btn,1,1,1,1)
-        group.add_layout(grid)
+            btn = PEToolButton('推定时刻',QI(':/add.png'))
+            btn.clicked.connect(self._detect_pass_time)
+            btn.setToolTip('推定通过站时刻（Ctrl+2）\n'
+                           '假定没有时刻信息的中间站都不停靠，依据标尺，'
+                           '推定通过站时刻。')
+            m = QM()
+            self.__addMenuAction(m,'撤销所有推定结果',self._withdraw_detect)
+            btn.setMenu(m)
+            grid.addWidget(btn,1,2,1,1)
+            group.add_layout(grid)
 
         self.addToolBar(toolBar)
+
+    def _h_expand(self):
+        if self.graph.UIConfigData()['seconds_per_pix']>1:
+            self.graph.UIConfigData()['seconds_per_pix']-=1
+        self.GraphWidget.paintGraph()
+        self.configWidget.setData()
+
+    def _h_shrink(self):
+        self.graph.UIConfigData()['seconds_per_pix'] += 1
+        self.GraphWidget.paintGraph()
+        self.configWidget.setData()
+
+    def _v_expand(self):
+        if self.graph.ordinateRuler():
+            if self.graph.UIConfigData()['seconds_per_pix_y']>1:
+                self.graph.UIConfigData()['seconds_per_pix_y']-=1
+        else:
+            self.graph.UIConfigData()['pixes_per_km']+=1
+        self.GraphWidget.paintGraph()
+        self.configWidget.setData()
+
+    def _v_shrink(self):
+        if self.graph.ordinateRuler():
+            self.graph.UIConfigData()['seconds_per_pix_y']+=1
+        else:
+            if self.graph.UIConfigData()['pixes_per_km'] > 1:
+                self.graph.UIConfigData()['pixes_per_km']-=1
+        self.GraphWidget.paintGraph()
+        self.configWidget.setData()
 
     def _newGraph(self):
         flag = QtWidgets.QMessageBox.question(self, self.title, "是否保存对运行图的修改？",
