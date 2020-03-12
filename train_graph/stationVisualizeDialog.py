@@ -13,7 +13,7 @@ class StationVisualizeDialog(QtWidgets.QDialog):
     def __init__(self,graph:Graph,station_dicts:list,station_name:str,parent=None):
         super(StationVisualizeDialog, self).__init__(parent)
         self.graph=graph
-        self.station_dicts = station_dicts
+        self.station_dicts = station_dicts.copy()
         self.station_name = station_name
         self.initUI()
 

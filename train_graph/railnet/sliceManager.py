@@ -141,7 +141,7 @@ class SliceManager(QtWidgets.QWidget):
             if isinstance(it,QtWidgets.QTableWidgetItem):
                 via.append(it.text())
         try:
-            line = self.net.outLine(via,withRuler=False)  # todo 暂时不导出标尺
+            line = self.net.outLine(via,withRuler=True)  # todo 暂时不导出标尺
         except Exception as e:
             QtWidgets.QMessageBox.warning(self,'错误','无效经由：\n'+repr(e))
         else:

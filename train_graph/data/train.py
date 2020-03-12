@@ -535,7 +535,7 @@ class Train():
             print("train::stationNameByIndex: index error",idx,len(self.timetable))
             raise Exception("Exception in train.py line 473")
 
-    def setUI(self,color=None,width=None):
+    def setUI(self,color:str=None,width=None):
         if color is not None:
             self.UI["Color"] = color
         if width is not None:

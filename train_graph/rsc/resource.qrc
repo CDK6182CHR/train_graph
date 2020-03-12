@@ -2,7 +2,6 @@
     <qresource prefix="/">
         <file>list.png</file>
 		<file>timetable.png</file>
-		<file>file.png</file>
 		<file>info.png</file>
 		<file>search.png</file>
 		<file>add.png</file>
@@ -43,5 +42,13 @@
 		<file>h_shrink.png</file>
 		<file>v_expand.png</file>
 		<file>v_shrink.png</file>
+		<file>add_train.png</file>
+		<file>filter.png</file>
+		<file>config.png</file>
+		<file>settings.png</file>
+		<file>zoom-in.png</file>
+		<file>zoom-out.png</file>
+		<file>counter.png</file>
+		<file>train.png</file>
     </qresource>
 </RCC>

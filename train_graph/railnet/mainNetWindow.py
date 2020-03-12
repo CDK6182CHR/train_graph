@@ -219,6 +219,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
         self.sliceManager.clearAllSlices()
         for via in dct['slices']:
             self.sliceManager.addNewSlice(via)
+        self._updateTitle()
 
     def _saveConf(self):
         filename,ok = QtWidgets.QFileDialog.getSaveFileName(self,'保存工作区配置',

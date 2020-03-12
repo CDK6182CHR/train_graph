@@ -217,10 +217,10 @@ class TrainWidget(QtWidgets.QWidget):
         tableWidget.item(row,4).setCheckState(Line.bool2CheckState(train.isShow()))
         mile = train.localMile(self.graph,fullAsDefault=False)
         tableWidget.item(row,5).setData(Qt.DisplayRole,mile)
-        tableWidget.item(row,5).setText(f"{mile:.1f}")
+        # tableWidget.item(row,5).setText(f"{mile:.1f}")
         speed=train.localSpeed(self.graph,fullAsDefault=False)
         tableWidget.item(row,6).setData(Qt.DisplayRole,speed)
-        tableWidget.item(row,6).setText(f"{speed:.2f}" if speed!=-1 else 'NA')
+        # tableWidget.item(row,6).setText(f"{speed:.2f}" if speed!=-1 else 'NA')
 
     def updateRowByTrain(self,train:Train):
         item:QtWidgets.QTableWidgetItem = self.trainMapToRow[train]

@@ -72,12 +72,12 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V3.1.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200222'
-        self.release = 'R38'  # 发布时再改这个
+        self.date = '20200312'
+        self.release = 'R39'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
-        self.setWindowIcon(QtGui.QIcon('icon.ico'))
+        self.setWindowIcon(QtGui.QIcon(':/icon.ico'))
         if not graph:
             self.showMaximized()
         self._readSystemSetting()
@@ -1618,11 +1618,18 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             btn.clicked.connect(self._about)
             grid.addWidget(btn, 1, 1, 1, 1)
 
-            btn = PEToolButton('菜单栏', QI(':/menu.png'), large=True)
-            btn.setCheckable(True)
-            btn.clicked.connect(self.menuBar().setVisible)
-            btn.setToolTip('菜单栏开关\n'
+            # btn = PEToolButton('菜单栏', QI(':/menu.png'), large=True)
+            # btn.setCheckable(True)
+            # btn.clicked.connect(self.menuBar().setVisible)
+            ac = QtWidgets.QAction('菜单栏',self)
+            ac.setShortcut('F2')
+            self.addAction(ac)
+            ac.setCheckable(True)
+            ac.triggered.connect(self.menuBar().setVisible)
+            ac.setIcon(QI(':/menu.png'))
+            ac.setToolTip('菜单栏开关（F2）\n'
                            '显示或隐藏上方的菜单栏。')
+            btn = PEToolButton(action=ac,large=True)
             grid.addWidget(btn, 0, 2, 2, 1)
 
             group.add_layout(grid)
@@ -1761,6 +1768,18 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             # btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
             btn.setToolTip('添加车次（Ctrl+Shift+C）\n添加新的空白车次。')
             grid.addWidget(btn,1,2,1,1)
+
+            btn = PEToolButton('导入车次',QI(':/add_train.png'),large=True)
+            btn.clicked.connect(self._import_train)
+            btn.setToolTip('导入车次（Ctrl+D）\n从选定的运行图文件或数据库文件导入车次数据。')
+
+            m = QM()
+            self.__addMenuAction(m,'导入车次（旧版）',self._import_train_old)
+            self.__addMenuAction(m,'导入实际运行线（旧版）',self._import_train_real,
+                                 '从指定运行图中导入车次，并添加前缀R。')
+            btn.setMenu(m)
+
+            grid.addWidget(btn,0,3,2,1)
             group.add_layout(grid)
 
             m = QM('车次管理工具')
@@ -1907,6 +1926,148 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             btn.setMenu(m)
             grid.addWidget(btn,1,2,1,1)
             group.add_layout(grid)
+
+        # 分析 面板
+        if True:
+            menu = toolBar.add_menu('分析')
+
+            group = toolBar.add_group('线路',menu)
+            grid = QG()
+            btn = PEToolButton('车站时刻', QI(':/timetable.png'), large=True)
+            btn.clicked.connect(self._station_timetable)
+            btn.setToolTip('车站时刻表（Ctrl+E）\n'
+                           '查看指定车站的时刻表、股道分析图。')
+            grid.addWidget(btn, 0, 0, 2, 1)
+
+            btn = PEToolButton('区间对数',QI(':/counter.png'))
+            btn.clicked.connect(self._interval_count)
+            btn.setToolTip('区间对数表（Ctrl+3）\n'
+                           '统计本线站点间各个区间的车次数、始发终到车次数等。')
+            grid.addWidget(btn,0,1,1,1)
+
+            btn = PEToolButton('区间车次',QI(':/train.png'))
+            btn.clicked.connect(self._interval_trains)
+            btn.setToolTip('区间车次表（Ctrl+Shift+3）\n'
+                           '显示指定区间的车次列表，参照12306查找区间车次的逻辑。')
+            grid.addWidget(btn,1,1,1,1)
+            group.add_layout(grid)
+
+            group = toolBar.add_group('车次时刻',menu)
+            grid = QG()
+            btn = PEToolButton('标尺对照', QI(':/ruler.png'), large=True)
+            btn.clicked.connect(self._check_ruler_from_menu)
+            btn.setToolTip('标尺对照（Ctrl+W）\n'
+                           '将当前车次时刻表与指定标尺对比。')
+            grid.addWidget(btn, 0, 0, 2, 1)
+
+            btn = PEToolButton('事件表', QI(':/clock.png'), large=True)
+            btn.clicked.connect(self._train_event_out)
+            btn.setToolTip('车次事件表（Ctrl+Z）\n'
+                           '显示到开、越行、会让等事件表。')
+            grid.addWidget(btn, 0, 1, 2, 1)
+
+            btn = PEToolButton('车次对照', QI(':/compare.png'))
+            btn.clicked.connect(self._train_compare)
+            btn.setToolTip('两车次对照（Ctrl+Shift+W）\n'
+                           '对比两个车次在本线的区间运行时分。')
+            grid.addWidget(btn, 1, 2, 1, 1)
+
+            btn = PEToolButton('区间分析', QI(':/data.png'))
+            btn.clicked.connect(self._get_interval_info)
+            btn.setToolTip('区间数据分析（Ctrl+Shift+Q）\n'
+                           '显示列车在指定区间的停站数，均速等信息。')
+            grid.addWidget(btn, 0, 2, 1, 1)
+
+            btn = PEToolButton('运行图对比', QI(':/compare.png'),large=True)
+            btn.clicked.connect(self._graph_diff)
+            btn.setToolTip('运行图对比（Ctrl+6）\n'
+                           '对比本运行图和选定运行图（作为新运行图）所有车次的数据。')
+            grid.addWidget(btn, 0, 3, 2, 1)
+
+            group.add_layout(grid)
+
+        # 显示 面板
+        if True:
+            menu = toolBar.add_menu('显示')
+
+            group = toolBar.add_group('',menu)
+            grid = QG()
+            btn = PEDockButton('显示类型', '显示类型设置', QI(':/filter.png'), self.typeDockWidget)
+            btn.setToolTip('显示类型设置（Ctrl+L）\n'
+                           '选择要显示的车次种类，或控制上下行车次显示/隐藏。')
+            grid.addWidget(btn,0,0,2,1)
+
+            m = QM()
+            self.__addMenuAction(m,'高级显示车次设置',self.showFilter.setFilter,
+                                 '高级显示车次设置（Ctrl+Shift+L）\n'
+                                 '调用通用列车筛选器筛选要显示的车次特征。')
+            btn.setMenu(m)
+
+            btn = PEDockButton('运行图设置','运行图设置',QI(':/config.png'),self.configDockWidget)
+            btn.setToolTip('运行图设置（Ctrl+G）\n'
+                           '主要与显示相关的运行图参数配置。')
+            grid.addWidget(btn,0,1,2,1)
+
+            btn = PEDockButton('默认设置','系统默认设置',QI(':/settings.png'),
+                               self.sysDockWidget,large=False)
+            btn.setToolTip('系统默认设置（Ctrl+Shift+G）\n'
+                           '配置针对新运行图和缺省配置的运行图采用的默认参数。')
+            grid.addWidget(btn,0,2,1,1)
+            group.add_layout(grid)
+
+            group = toolBar.add_group('坐标轴比例', menu)
+            grid = QG()
+            btn = PEToolButton('水平放大', QI(':/h_expand.png'))
+            btn.clicked.connect(self._h_expand)
+            grid.addWidget(btn, 0, 0, 1, 1)
+
+            btn = PEToolButton('水平缩小', QI(':/h_shrink.png'))
+            btn.clicked.connect(self._h_shrink)
+            grid.addWidget(btn, 1, 0, 1, 1)
+
+            btn = PEToolButton('垂直放大', QI(':/v_expand.png'))
+            btn.clicked.connect(self._v_expand)
+            grid.addWidget(btn, 0, 1, 1, 1)
+
+            btn = PEToolButton('垂直缩小', QI(':/v_shrink.png'))
+            btn.clicked.connect(self._v_shrink)
+            grid.addWidget(btn, 1, 1, 1, 1)
+            group.add_layout(grid)
+
+            group = toolBar.add_group('视图缩放',menu)
+            grid = QG()
+            btn = PEToolButton('放大视图',QI(':/zoom-in.png'))
+            btn.clicked.connect(lambda: self.GraphWidget.scale(1.25, 1.25))
+            grid.addWidget(btn,0,0,1,1)
+
+            btn = PEToolButton('缩小视图',QI(':/zoom-out.png'))
+            btn.clicked.connect(lambda: self.GraphWidget.scale(0.8, 0.8))
+            grid.addWidget(btn,1,0,1,1)
+            group.add_layout(grid)
+
+            group = toolBar.add_group('更新', menu)
+            grid = QG()
+
+            btn = PEToolButton('刷新', QI(':/refresh.png'), large=True)
+            btn.clicked.connect(self._refresh_graph)
+            btn.setToolTip('刷新运行图（F5）\n'
+                           '重新铺画运行图，并更新所有停靠面板数据。\n'
+                           '当数据出现不同步异常时，可以调用此功能。')
+            grid.addWidget(btn, 0, 0, 2, 1)
+
+            btn = PEToolButton('重新铺画', QI(':/brush.png'))
+            btn.clicked.connect(lambda: self.GraphWidget.paintGraph(force=True))
+            btn.setToolTip('立即重新铺画运行图（Shift+F5）\n'
+                           '强制重新铺画运行图，但不更新停靠面板数据。')
+            grid.addWidget(btn, 0, 1, 1, 1)
+
+            btn = PEToolButton('重新读取', QI(':/exchange.png'))
+            btn.clicked.connect(self._reset_graph)
+            btn.setToolTip('重新读取当前运行图\n'
+                           '放弃所有未保存更改，重新从文件中读取本运行图。')
+            grid.addWidget(btn, 1, 1, 1, 1)
+            group.add_layout(grid)
+
 
         self.addToolBar(toolBar)
 
