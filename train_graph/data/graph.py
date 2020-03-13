@@ -13,6 +13,8 @@ from datetime import datetime
 from ..pyETRCExceptions import *
 from typing import List, Union, Tuple, Dict
 from enum import Enum
+from functools import reduce
+from math import sqrt
 import time
 
 config_file = 'config.json'
@@ -1929,6 +1931,198 @@ class Graph:
                 graph._circuits.remove(circuit)
         return graph
 
+    def rulerFromMultiTrains(self, intervals:List[Tuple[str,str]], trains:List[Train],
+                             different:bool, useAverage:bool,
+                             defaultStart:int, defaultStop:int,
+                             cutSigma:int=None, cutSeconds:int=None,
+                             prec:int=1
+                             )->(Dict[Tuple[str,str],Tuple[int,int,int]],
+                                 Dict[Tuple[str, str], Dict[Train, Tuple[int, int]]]):
+        """
+        2020.03.13新增。从一组给定的（并假定拥有相同标尺）的车次中读取标尺。
+        假定各个车次各个区间的运行情况是独立的；即不认为一个车次各个区间的标尺是相同的。
+        取区间数据的方法和Ruler.rulerFromTrain相同。
+        :param different 上下行是否分设。如果不分设，上下行车次同时考虑。
+        :param useAverage 用平均数计算，或者用众数计算。
+        :param defaultStart 如果缺失数据，默认情况下用这个数据为起步附加时分。
+        :param cutSigma 用平均数计算时，去除超过标准差此倍数的数据。
+        :param cutSeconds 用平均数计算时，去除与平均数相差超过此数值的数据。
+        如果同时设置，cutSeconds优先（计算量小一些）。
+        :param prec 结果保留精度，单位为秒。众数时，如果最多的有多个数，也要取平均数到这个精度。
+        :returns (标尺数据，列车数据打表)
+        """
+        intSet = set(intervals)  # 用集合实现速查。对车次的每个站名，必须映射到本线，通过stationDictByName
+
+        # 对每个区间和车次打表。数据结构：
+        # dict (interval => dict (train => data, 区间附加标记))
+        data = {}  # type:Dict[Tuple[str,str],Dict[Train,Tuple[int,int]]]
+        for train in trains:
+            lastSt:TrainStation = None
+            lastLineSt:LineStation = None
+            for st in train.stationDicts():
+                line_dct = self.stationByDict(st['zhanmimng'])
+                if line_dct is None:
+                    continue
+                # 本线第一个站的情况
+                if lastSt is None:
+                    lastSt = st
+                    lastLineSt = line_dct
+                    continue
+                # 现在保证上站和本站都存在，且是本线区间
+                tupInt = (lastLineSt['zhanming'],line_dct['zhanming'])
+                if tupInt in intSet or (not different and
+                        (line_dct['zhanming'],lastLineSt['zhanming']) in intSet):
+                    # 属于要查找的区间
+                    data.setdefault(tupInt,{})[train] = (
+                        Train.dt(lastSt['cfsj'],st['ddsj']), train.intervalAttachType(lastSt,st)
+                    )
+
+                # continuing loop
+                lastSt = st
+                lastLineSt = line_dct
+
+        res = {}
+        for (fazhan, daozhan), int_dct in data.items():
+            int_data_trans = self.__intervalFt(int_dct)
+            if useAverage:
+                res[(fazhan,daozhan)] = self.__intervalRulerMean(int_data_trans,defaultStart,
+                                                               defaultStop,prec,cutSigma,cutSeconds)
+            else:  # 众数模式
+                res[(fazhan,daozhan)] = self.__intervalRulerMode(int_data_trans,defaultStart,defaultStop,prec)
+        return res, data
+
+    def __intervalFt(self,dct:Dict[Train,Tuple[int,int]])->Dict[int,Dict[int,int]]:
+        """
+        对车次区间各种起停附加的情况的各种数据分别统计频数。类似Fourier transform
+        """
+        res = {}
+        for _,(sec, tp) in dct.items():
+            d = res.setdefault(tp,{})
+            d[sec]=d.get(sec,0)+1
+        return res
+
+    def __intervalRulerMode(self, data:Dict[int,Dict[int,int]], defaultStart:int,
+                            defaultStop:int,prec:int)->(int,int,int):
+        """
+        众数模式计算给定区间的标尺。
+        :returns (interval, start, stop)
+        """
+        modes = {}
+        for tp, count_dct in data.items():
+            # 保证count_dct不是空的
+            lst = list(sorted(count_dct.items(),key=lambda x:x[1],reverse=True))
+            i = 1
+            while lst[i][1] == lst[i][1]:
+                i += 1  # i是第一个与众数的频数不相等的
+            selected_values = [lst[t][0] for t in range(i)]
+            modes[tp] = int(round(sum(selected_values)/len(selected_values),0))
+        return self.__computeIntervalRuler(modes,defaultStart,defaultStop,prec)
+
+    def __intervalRulerMean(self, data:Dict[int,Dict[int,int]], defaultStart:int,
+                            defaultStop:int,prec:int,
+                            cutSigma:int=None,cutSeconds:int=None)->(int,int,int):
+        """
+        平均数模式计算给定区间的标尺。
+        """
+
+        def moment(lst:List[Tuple[int, int]])->(float,float):
+            """返回均值和样本标准差"""
+            N = sum(map(lambda x:x[1],lst))  # 样本总量, 保证大于1
+            ave = reduce(lambda x,y:x+y[0]*y[1],lst,0)/N
+            sigma = sqrt(reduce(lambda x,y:x+(y[0]-ave)**2*y[1])/(N-1))
+            return ave, sigma
+
+        means = {}
+        for tp,count_dct in data.items():
+            lst:List[Tuple[int,int]] = list(sorted(count_dct.items(),key=lambda x:x[1],reverse=True))
+            # 修约数据。删除偏差太大的数据。
+            if cutSeconds:
+                while len(lst) > 1:
+                    ave,sigma = moment(lst)
+                    if abs(lst[-1][0]-ave) > cutSeconds:
+                        lst.pop()
+                    else:
+                        break
+            elif cutSigma:
+                while len(lst) > 1:
+                    ave,sigma = moment(lst)
+                    if abs(lst[-1][0]-ave)/sigma > cutSigma:
+                        lst.pop()
+                    else:
+                        break
+            ave,_ = moment(lst)
+            means[tp] = ave
+        return self.__computeIntervalRuler(means,defaultStart,defaultStop,prec)
+
+    @staticmethod
+    def __round(value:int, prec:int)->int:
+        """
+        按“四舍五入”原则将value修约到prec为单位的数值。
+        :return invariant: ret % prec == 0
+        """
+        if value < 0:
+            value = 0
+        q = value % prec
+        if q == 0:
+            return value
+        elif q >= prec/2:
+            return value+prec-q
+        else:
+            return value-q
+
+    @staticmethod
+    def __computeIntervalRuler(values:Dict[int,int],defaultStart:int,defaultStop:int,
+                               prec:int)->(int,int,int):
+        """
+        由算好的数据计算所给区间的区间数据，起步附加，停车附加
+        :param values 非空字典
+        根据自由度数分析。
+        """
+        a, b, c, d = (values.get(Train.AttachNone), values.get(Train.AttachStart),
+                      values.get(Train.AttachStop), values.get(Train.AttachBoth))
+        # 多了个自由度，用伪逆矩阵求解
+        if len(values) == 4:
+            x,y,z = (
+                0.75*a+0.25*b+0.25*c-0.25*d,
+                -0.5*a+0.50*b-0.50*c+0.50*d,
+                -0.5*a-0.50*b+0.50*c+0.50*d
+            )
+        elif len(values) == 3:
+            # 3个自由度，刚好有唯一解。打表
+            if a is None:
+                x,y,z = (b+c-d,-c+d,-b+d)
+            elif b is None:
+                x,y,z = (a, -c+d, -a+c)
+            elif c is None:
+                x,y,z = (a,-a+b,-b+d)
+            else:  # d is None
+                x,y,z = (a,-a+b,-a+c)
+        elif len(values) == 2:
+            if a is not None:
+                if b is not None:
+                    x,y,z = (a,b-a,defaultStop)
+                elif c is not None:
+                    x,y,z = (a,defaultStart,c-a)
+                else:  # d is not None:
+                    x,y,z = (a,defaultStart,d-a-defaultStart)
+            else:  # a is None
+                if b is None:  # c,d
+                    x,y,z = (c-defaultStop,d-c,defaultStop)
+                elif c is None:  # b,d
+                    x,y,z = (b-defaultStart,defaultStart,d-b)
+                else:  # d is None, b,c
+                    x,y,z = (b-defaultStart,defaultStart,c-b+defaultStart)
+        else:  # 1个自由度
+            y,z = defaultStart,defaultStop
+            if a is not None:
+                x = a
+            elif b is not None:
+                x = b-defaultStart
+            elif c is not None:
+                x = c-defaultStop
+            else:  # d
+                x = d-defaultStart-defaultStop
+        return Graph.__round(x,prec),Graph.__round(y,prec),Graph.__round(z,prec)
 
 if __name__ == '__main__':
     graph = Graph()

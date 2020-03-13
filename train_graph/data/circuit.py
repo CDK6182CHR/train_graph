@@ -168,6 +168,7 @@ class Circuit:
         self._owner = origin.get('owner','')
         for n in origin.get('order',[]):
             self._order.append(CircuitNode(self.graph,origin=n))
+        self.checkRealTrains()
 
     def outInfo(self)->list:
         dct = {
@@ -465,6 +466,16 @@ class Circuit:
                     node.setVirtual(True)
                     reports.append(f'[info]将车次{checi}判定为虚拟车次')
         return reports
+
+    def checkRealTrains(self):
+        """
+        检查所有非虚拟车次，将不存在的设置成虚拟。
+        """
+        for node in self.nodes():
+            try:
+                node.train()
+            except TrainNotFoundException:
+                node.setVirtual(True)
 
     def firstCheci(self)->str:
         if self._order:

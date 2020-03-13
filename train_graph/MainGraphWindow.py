@@ -70,9 +70,9 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         super().__init__()
         start = time.time()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V3.1.0"
+        self.version = "V3.1.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200312'
+        self.date = '20200313'
         self.release = 'R39'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -266,6 +266,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.trainInfoWidget.setData()
         self.trainTimetableWidget.setData(None)
         self.interactiveTimetableWidget.setData()
+        self._refreshSelectedTrainCombo()
         self.statusOut('所有停靠面板刷新完毕')
 
     def _shortcut_action_triggered(self,action:QtWidgets.QAction):
@@ -455,6 +456,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         else:
             self.trainWidget.updateRowByTrain(train)
         self._updateCurrentTrainRelatedWidgets(train)
+        self._refreshSelectedTrainCombo()
         self.statusOut("车次信息更新完毕")
 
     def _del_train_from_current(self, train: Train):
@@ -973,6 +975,8 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             self.GraphWidget.repaintTrainLine(train)
 
     def _search_train(self, checi: str):
+        if self.updating:
+            return
         if not checi:
             return
         train: Train = self.graph.trainFromCheci(checi)
@@ -2070,6 +2074,15 @@ class MainGraphWindow(QtWidgets.QMainWindow):
 
 
         self.addToolBar(toolBar)
+
+    def _refreshSelectedTrainCombo(self):
+        self.updating=True
+        self.selectTrainCombo.clear()
+        for train in self.graph.trains():
+            self.selectTrainCombo.addItem(train.fullCheci())
+        if self.currentTrain():
+            self.selectTrainCombo.setCurrentText(self.currentTrain().fullCheci())
+        self.updating = False
 
     def _h_expand(self):
         if self.graph.UIConfigData()['seconds_per_pix']>1:
