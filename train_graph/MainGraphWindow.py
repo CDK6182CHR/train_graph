@@ -53,6 +53,7 @@ from .importTrainDialog import ImportTrainDialog
 from .linedb.lineLibWidget import LineLibWidget
 from .dialogAdapter import DialogAdapter
 from .graphDiffDialog import GraphDiffDialog
+from .readRulerWizard import ReadRulerWizard
 from .utility import QRibbonToolBar, PEToolButton, PEDockButton
 import traceback
 from . import resource
@@ -72,7 +73,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V3.1.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200313'
+        self.date = '20200314'
         self.release = 'R39'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -622,15 +623,15 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             item = QtWidgets.QTableWidgetItem(stop)
             tableWidget.setItem(row, 3, item)
 
-            if tudy != uiji:
+            if tudy != uiji and node is not None:
                 try:
                     rate = (uiji - tudy) / tudy
                 except ZeroDivisionError:
                     rate = 1
 
                 ds = uiji - tudy
-                ds_str = "%01d:%02d" % (int(ds / 60), ds % 60)
-                if ds_str[0] != '-' and ds < 0:
+                ds_str = "%01d:%02d" % (abs(ds)//60, abs(ds) % 60)
+                if ds < 0:
                     ds_str = '-' + ds_str
 
                 tableWidget.setItem(row, 7, QtWidgets.QTableWidgetItem(ds_str))
@@ -1184,6 +1185,11 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             action = QtWidgets.QAction('当前车次区间重排', self)
             action.setShortcut('ctrl+shift+R')
             action.triggered.connect(self._change_train_interval)
+            menu.addAction(action)
+
+            action = QtWidgets.QAction('多车次标尺读取向导', self)
+            action.setShortcut('ctrl+shift+B')
+            action.triggered.connect(self._read_ruler_from_trains)
             menu.addAction(action)
 
             action = QtWidgets.QAction("搜索车次", self)
@@ -2389,6 +2395,16 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.graph.delTrain(anTrain)
         self.statusOut('车次调整完毕')
         del self.changeTrainIntervalDialog
+
+    def _read_ruler_from_trains(self):
+        wizard = ReadRulerWizard(self.graph,self)
+        wizard.rulerFinished.connect(self._read_ruler_from_trains_ok)
+        wizard.exec_()
+
+    def _read_ruler_from_trains_ok(self,ruler:Ruler, isNew:bool):
+        if isNew:
+            self.graph.addRuler(ruler)
+        self.rulerWidget.setData()
 
     def _station_timetable(self):
         dialog = QtWidgets.QDialog(self)

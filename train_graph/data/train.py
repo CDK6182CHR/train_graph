@@ -1464,6 +1464,15 @@ class Train():
         else:
             return f"{sec//60}分"
 
+    @staticmethod
+    def sec2strmin(s:int)->str:
+        """将秒数转换为形如 1:20 的字符串"""
+        sec = abs(int(round(s,0)))
+        res = f"{sec//60}:{sec%60:02d}"
+        if s < 0:
+            res = '-'+res
+        return res
+
     def stopTimeStr(self, dct: dict) -> str:
         """
         2019.06.25新增工具性函数。

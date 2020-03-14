@@ -611,6 +611,14 @@ class Graph:
                 return True
         return False
 
+    def validRulerName(self)->str:
+        s = "新标尺0"
+        i = 0
+        while self.rulerNameExisted(s):
+            i+=1
+            s = f"新标尺{i}"
+        return s
+
     def circuitNameExisted(self, name, ignore: Circuit = None):
         for c in self.circuits():
             if c is not ignore and c.name() == name:
@@ -1937,7 +1945,8 @@ class Graph:
                              cutSigma:int=None, cutSeconds:int=None,
                              prec:int=1
                              )->(Dict[Tuple[str,str],Tuple[int,int,int]],
-                                 Dict[Tuple[str, str], Dict[Train, Tuple[int, int]]]):
+                                 Dict[Tuple[str, str], Dict[Train, Tuple[int, int]]],
+                                 Dict[Tuple[str, str], Dict[int, Dict[int, int]]]):
         """
         2020.03.13新增。从一组给定的（并假定拥有相同标尺）的车次中读取标尺。
         假定各个车次各个区间的运行情况是独立的；即不认为一个车次各个区间的标尺是相同的。
@@ -1949,7 +1958,7 @@ class Graph:
         :param cutSeconds 用平均数计算时，去除与平均数相差超过此数值的数据。
         如果同时设置，cutSeconds优先（计算量小一些）。
         :param prec 结果保留精度，单位为秒。众数时，如果最多的有多个数，也要取平均数到这个精度。
-        :returns (标尺数据，列车数据打表)
+        :returns (标尺数据，列车数据打表, FT数据打表)
         """
         intSet = set(intervals)  # 用集合实现速查。对车次的每个站名，必须映射到本线，通过stationDictByName
 
@@ -1960,7 +1969,7 @@ class Graph:
             lastSt:TrainStation = None
             lastLineSt:LineStation = None
             for st in train.stationDicts():
-                line_dct = self.stationByDict(st['zhanmimng'])
+                line_dct = self.stationByDict(st['zhanming'])
                 if line_dct is None:
                     continue
                 # 本线第一个站的情况
@@ -1982,14 +1991,16 @@ class Graph:
                 lastLineSt = line_dct
 
         res = {}
+        ft = {}
         for (fazhan, daozhan), int_dct in data.items():
             int_data_trans = self.__intervalFt(int_dct)
+            ft[(fazhan,daozhan)] = int_data_trans
             if useAverage:
                 res[(fazhan,daozhan)] = self.__intervalRulerMean(int_data_trans,defaultStart,
                                                                defaultStop,prec,cutSigma,cutSeconds)
             else:  # 众数模式
                 res[(fazhan,daozhan)] = self.__intervalRulerMode(int_data_trans,defaultStart,defaultStop,prec)
-        return res, data
+        return res, data, ft
 
     def __intervalFt(self,dct:Dict[Train,Tuple[int,int]])->Dict[int,Dict[int,int]]:
         """
@@ -2012,7 +2023,7 @@ class Graph:
             # 保证count_dct不是空的
             lst = list(sorted(count_dct.items(),key=lambda x:x[1],reverse=True))
             i = 1
-            while lst[i][1] == lst[i][1]:
+            while i < len(lst) and lst[i][1] == lst[0][1]:
                 i += 1  # i是第一个与众数的频数不相等的
             selected_values = [lst[t][0] for t in range(i)]
             modes[tp] = int(round(sum(selected_values)/len(selected_values),0))
@@ -2028,8 +2039,10 @@ class Graph:
         def moment(lst:List[Tuple[int, int]])->(float,float):
             """返回均值和样本标准差"""
             N = sum(map(lambda x:x[1],lst))  # 样本总量, 保证大于1
+            if N == 1:
+                return lst[0][0],0
             ave = reduce(lambda x,y:x+y[0]*y[1],lst,0)/N
-            sigma = sqrt(reduce(lambda x,y:x+(y[0]-ave)**2*y[1])/(N-1))
+            sigma = sqrt(reduce(lambda x,y:x+(y[0]-ave)**2*y[1],lst,0)/(N-1))
             return ave, sigma
 
         means = {}
@@ -2040,14 +2053,16 @@ class Graph:
                 while len(lst) > 1:
                     ave,sigma = moment(lst)
                     if abs(lst[-1][0]-ave) > cutSeconds:
-                        lst.pop()
+                        value,_ = lst.pop()
+                        del count_dct[value]
                     else:
                         break
             elif cutSigma:
                 while len(lst) > 1:
                     ave,sigma = moment(lst)
-                    if abs(lst[-1][0]-ave)/sigma > cutSigma:
-                        lst.pop()
+                    if sigma and abs(lst[-1][0]-ave)/sigma > cutSigma:
+                        value,_ = lst.pop()
+                        del count_dct[value]
                     else:
                         break
             ave,_ = moment(lst)
@@ -2080,7 +2095,7 @@ class Graph:
         """
         a, b, c, d = (values.get(Train.AttachNone), values.get(Train.AttachStart),
                       values.get(Train.AttachStop), values.get(Train.AttachBoth))
-        # 多了个自由度，用伪逆矩阵求解
+        # 多了个数据，用伪逆矩阵求解
         if len(values) == 4:
             x,y,z = (
                 0.75*a+0.25*b+0.25*c-0.25*d,
@@ -2088,7 +2103,7 @@ class Graph:
                 -0.5*a-0.50*b+0.50*c+0.50*d
             )
         elif len(values) == 3:
-            # 3个自由度，刚好有唯一解。打表
+            # 3个数据，刚好有唯一解。打表
             if a is None:
                 x,y,z = (b+c-d,-c+d,-b+d)
             elif b is None:

@@ -5,7 +5,7 @@ from .ruler import Ruler
 from .forbid import Forbid,ServiceForbid,ConstructionForbid
 from .route import Route
 from .linestation import LineStation
-from typing import Union,List
+from typing import Union,List,Generator,Tuple
 from Timetable_new.utility import stationEqual
 from ..pyETRCExceptions import *
 
@@ -585,7 +585,29 @@ class Line():
             st_dict['direction'] = viaMap[st_dict.get("direction",Line.BothVia)]
         self.stations.reverse()
 
-
+    def adjIntervals(self, down)->List[Tuple[str,str]]:
+        """
+        依次产生所有的邻接区间。
+        :param different 是否上下行分设。如果不是，则只关心下行。
+        """
+        if not self.stations:
+            return []
+        res = []
+        if down:
+            last = self.stations[0]['zhanming']
+            for st in self.stations[1:]:
+                if not st['direction'] & self.DownVia:
+                    continue
+                res.append((last,st['zhanming']))
+                last = st['zhanming']
+        else:
+            last = self.stations[-1]['zhanming']
+            for st in self.stations[-2::-1]:
+                if not st['direction'] & self.UpVia:
+                    continue
+                res.append((last,st['zhanming']))
+                last = st['zhanming']
+        return res
 
     @staticmethod
     def bool2CheckState(t):
