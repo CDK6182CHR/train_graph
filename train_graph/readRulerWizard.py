@@ -77,6 +77,7 @@ class ReadRulerWizard(QtWidgets.QWizard):
         self.resultDict = {}
         self.resultData = {}
         self.resultFt = {}
+        self.resultUsed = {}
         self.button(self.FinishButton).clicked.connect(self._finish)
 
     def initUI(self):
@@ -94,12 +95,36 @@ class ReadRulerWizard(QtWidgets.QWizard):
         pg.setTitle('概览')
         lay = QtWidgets.QVBoxLayout()
         label = QtWidgets.QLabel('欢迎使用标尺自动生成向导\n'
-                                 '此向导将引导用户选择一组本线区间，'
-                                 '并选择一组具有相同标尺的车次，根据这些车次的运行数据生成标尺。\n'
                                  '点击[下一步]开始配置。'
                                  )
         label.setWordWrap(True)
         lay.addWidget(label)
+
+        label = QtWidgets.QLabel('逻辑说明：\n'
+                                 '此向导将引导用户选择一组本线的区间，并按照一组选定的车次在该区间的'
+                                 '运行时分，计算区间运行时分标准（标尺）。\n'
+                                 '按照车次在区间的起停附加情况（通通，起通，通停，'
+                                 '起停四种）可将车次分为四类。并按照下列两种算法之一决定每一类的标准数据\n'
+                                 '（1）众数模式。找出每一组数据（运行秒数）中出现次数最多的那个'
+                                 '作为本类的运行数据。如果有多个出现次数一样的，则取算数平均值。\n'
+                                 '（2）均值模式。首先删除每一组数据中的离群数据。如果数据偏离样本均值'
+                                 '超过用户指定的秒数或者用户指定的样本标准差倍数，则剔除数据。然后取所有'
+                                 '剩余数据的平均值作为本类运行数据。\n\n'
+                                 '产生的四类情况的数据实质上就是一个线性方程组。按照方程的数量，'
+                                 '分为四种情况：\n'
+                                 'a. 4类都有数据，即有四个方程。在众数模式下，如果存在一个数量最少的类，'
+                                 '则删除这个方程，求解剩余3个方程构成的线性方程组即得结果。在其他情况下，'
+                                 '用伪逆的方法近似求解这个线性方程组。\n'
+                                 'b. 有3类有数据，即3个方程，刚好对应3个未知数（通通时分、起步附加、'
+                                 '停车附加），线性方程组一定有唯一解，求解即可。\n'
+                                 'c. 有2类有数据。此时需要用到用户输入的[默认起步附加时分]和[默认停车'
+                                 '附加时分]中的一个。如果起、停之中有一个是能确定的，则使用这个能确定'
+                                 '的数据；如果起、停是对称的，则优先用[默认起步附加时分]。\n'
+                                 'd. 只有1类有数据。此时用户输入的[默认起步附加时分]和'
+                                 '[默认停车附加时分]都会使用。')
+        label.setWordWrap(True)
+        lay.addWidget(label)
+
         pg.setLayout(lay)
         self.addPage(pg)
 
@@ -347,14 +372,26 @@ class ReadRulerWizard(QtWidgets.QWizard):
         pg.setSubTitle('计算结果如下表所示。\n'
                        '点击[完成]应用结果，否则结果不会被应用。\n'
                        '双击行显示详细计算数据。\n'
-                       '表中的[数据点]是指在[通通]/[起通]/[通停]/[起停]这四种情况中，'
-                       '有多少种情况的有效数据。')
+                       '表中的[数据类]是指在[通通]/[起通]/[通停]/[起停]这四种情况中，'
+                       '有多少种情况的有效数据；'
+                       '[数据总量]是指用于计算的数据总条数；[满足车次]是指用于计算的车次中，'
+                       '严格满足标尺的数量。'
+                       )
         tw = QtWidgets.QTableWidget()
         tw.setEditTriggers(tw.NoEditTriggers)
         tw.itemDoubleClicked.connect(self._show_detail)
         self.previewTable = tw
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(tw)
+        tw.setContextMenuPolicy(Qt.ActionsContextMenu)
+
+        ac = QtWidgets.QAction('显示各车次数据（双击）',tw)
+        ac.triggered.connect(self._show_detail)
+        tw.addAction(ac)
+
+        ac = QtWidgets.QAction('按类型整理数据',tw)
+        ac.triggered.connect(self._order_by_type)
+        tw.addAction(ac)
 
         tw.setColumnCount(7)
         tw.setHorizontalHeaderLabels(['区间','通通','起步','停车','数据类','数据总量', '满足车次'])
@@ -373,7 +410,7 @@ class ReadRulerWizard(QtWidgets.QWizard):
         return cnt
 
     def calculate(self):
-        res,data,ft = self.graph.rulerFromMultiTrains(
+        res,data,ft,used = self.graph.rulerFromMultiTrains(
             self.selectedIntervals(), self.selectTrains,
             self.checkDiff.isChecked(),self.radioMean.isChecked(),
             self.spinStart.value(),self.spinStop.value(),
@@ -387,6 +424,7 @@ class ReadRulerWizard(QtWidgets.QWizard):
         self.resultDict = res
         self.resultData = data
         self.resultFt = ft
+        self.resultUsed = used
 
         tw = self.previewTable
         ints = self.selectedIntervals()
@@ -587,6 +625,19 @@ class ReadRulerWizard(QtWidgets.QWizard):
         return res
 
     @staticmethod
+    def __type2rich_str(tp:int)->str:
+        res = ''
+        if tp & Train.AttachStart:
+            res += '起'
+        else:
+            res+='通'
+        if tp & Train.AttachStop:
+            res += '停'
+        else:
+            res+='通'
+        return res
+
+    @staticmethod
     def __stdInterval(tp:int,interval:int,start:int,stop:int)->int:
         if tp & Train.AttachStart:
             interval+=start
@@ -594,11 +645,13 @@ class ReadRulerWizard(QtWidgets.QWizard):
             interval+=stop
         return interval
 
-    def _show_detail(self, item:QtWidgets.QTableWidgetItem):
+    def _show_detail(self, item:QtWidgets.QTableWidgetItem=None):
         """
         显示各个车次与计算标尺的比较.
         暂不考虑排序。
         """
+        if not isinstance(item,QtWidgets.QTableWidgetItem):
+            item = self.previewTable.currentItem()
         i = item.row()
         fz,dz = self.previewTable.item(i,0).data(Qt.UserRole)
 
@@ -606,14 +659,14 @@ class ReadRulerWizard(QtWidgets.QWizard):
         tw.setWindowTitle(f'计算细节*{fz}{self.blocker()}{dz}')
 
         tw.setEditTriggers(tw.NoEditTriggers)
-        tw.setColumnCount(6)
-        tw.setHorizontalHeaderLabels(['车次','附加','标准','实际','差时','绝对值'])
+        tw.setColumnCount(7)
+        tw.setHorizontalHeaderLabels(['车次','附加','标准','实际','差时','绝对值','标记'])
         header:QtWidgets.QHeaderView = tw.horizontalHeader()
         header.setSectionsClickable(True)
         header.sectionClicked.connect(tw.sortByColumn)
         header.setSortIndicatorShown(True)
 
-        for i,s in enumerate((120,60,80,80,80,80)):
+        for i,s in enumerate((120,60,80,80,80,80,90)):
             tw.setColumnWidth(i,s)
 
         TWI = QtWidgets.QTableWidgetItem
@@ -632,6 +685,49 @@ class ReadRulerWizard(QtWidgets.QWizard):
             it = TWI()
             it.setData(Qt.DisplayRole,abs(sec-std))
             tw.setItem(row,5,it)
+            it = TWI()
+            if self.radioMean.isChecked():
+                # 均值模式，标记截断数据
+                if self.resultFt[(fz,dz)][tp].get(sec,None) is None:
+                    it.setText('截断')
+            else:
+                # 众数模式，标记采信数据和类型弃用数据
+                if not self.resultUsed[(fz,dz)][tp][2]:
+                    it.setText('类型弃用')
+                elif sec == self.resultUsed[(fz,dz)][tp][0]:
+                    it.setText('采信')
+            tw.setItem(row,6,it)
         dialog = DialogAdapter(tw,self)
-        dialog.resize(600,600)
-        dialog.exec_()
+        dialog.resize(700,600)
+        dialog.show()
+
+    def _order_by_type(self):
+        row = self.previewTable.currentRow()
+        if not 0<=row<self.previewTable.rowCount():
+            return
+        fz,dz = self.previewTable.item(row,0).data(Qt.UserRole)
+
+        tw = QtWidgets.QTableWidget()
+        tw.setEditTriggers(tw.NoEditTriggers)
+        header = tw.horizontalHeader()
+        header.setSortIndicatorShown(True)
+        header.setSectionsClickable(True)
+        header.sectionClicked.connect(tw.sortByColumn)
+
+        tw.setColumnCount(4)
+        tw.setHorizontalHeaderLabels(['类型','采信数据','有效数','使用'])
+        tw.setRowCount(len(self.resultUsed[(fz,dz)]))
+        TWI = QtWidgets.QTableWidgetItem
+        for i,s in enumerate((80,100,70,70)):
+            tw.setColumnWidth(i,s)
+
+        for i, (tp, (value, cnt, used)) in enumerate(self.resultUsed[(fz,dz)].items()):
+            tw.setItem(i,0,TWI(self.__type2rich_str(tp)))
+            tw.setItem(i,1,TWI(Train.sec2strmin(value)))
+            tw.setItem(i,2,TWI(str(cnt)))
+            tw.setItem(i,3,TWI('√' if used else '×'))
+
+        tw.setWindowTitle(f'类型数据{fz}{self.blocker()}{dz}')
+        dialog = DialogAdapter(tw,self)
+        dialog.resize(400,400)
+        dialog.show()

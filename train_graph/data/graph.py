@@ -1946,7 +1946,8 @@ class Graph:
                              prec:int=1
                              )->(Dict[Tuple[str,str],Tuple[int,int,int]],
                                  Dict[Tuple[str, str], Dict[Train, Tuple[int, int]]],
-                                 Dict[Tuple[str, str], Dict[int, Dict[int, int]]]):
+                                 Dict[Tuple[str, str], Dict[int, Dict[int, int]]],
+                                 Dict[Tuple[str, str], Dict[int, Tuple[int, int, bool]]]):
         """
         2020.03.13新增。从一组给定的（并假定拥有相同标尺）的车次中读取标尺。
         假定各个车次各个区间的运行情况是独立的；即不认为一个车次各个区间的标尺是相同的。
@@ -1958,7 +1959,8 @@ class Graph:
         :param cutSeconds 用平均数计算时，去除与平均数相差超过此数值的数据。
         如果同时设置，cutSeconds优先（计算量小一些）。
         :param prec 结果保留精度，单位为秒。众数时，如果最多的有多个数，也要取平均数到这个精度。
-        :returns (标尺数据，列车数据打表, FT数据打表)
+        :returns (标尺数据，列车数据打表, FT数据打表, 最终采用数据表)
+        最终彩信数据三元组：[各区间、类型的采信数据，数据量，是否代入]
         """
         intSet = set(intervals)  # 用集合实现速查。对车次的每个站名，必须映射到本线，通过stationDictByName
 
@@ -1992,15 +1994,17 @@ class Graph:
 
         res = {}
         ft = {}
+        used = {}
         for (fazhan, daozhan), int_dct in data.items():
             int_data_trans = self.__intervalFt(int_dct)
             ft[(fazhan,daozhan)] = int_data_trans
             if useAverage:
-                res[(fazhan,daozhan)] = self.__intervalRulerMean(int_data_trans,defaultStart,
+                res[(fazhan,daozhan)],used[(fazhan,daozhan)] = self.__intervalRulerMean(int_data_trans,
+                                                                                        defaultStart,
                                                                defaultStop,prec,cutSigma,cutSeconds)
             else:  # 众数模式
-                res[(fazhan,daozhan)] = self.__intervalRulerMode(int_data_trans,defaultStart,defaultStop,prec)
-        return res, data, ft
+                res[(fazhan,daozhan)],used[(fazhan,daozhan)] = self.__intervalRulerMode(int_data_trans,defaultStart,defaultStop,prec)
+        return res, data, ft, used
 
     def __intervalFt(self,dct:Dict[Train,Tuple[int,int]])->Dict[int,Dict[int,int]]:
         """
@@ -2013,25 +2017,32 @@ class Graph:
         return res
 
     def __intervalRulerMode(self, data:Dict[int,Dict[int,int]], defaultStart:int,
-                            defaultStop:int,prec:int)->(int,int,int):
+                            defaultStop:int,prec:int)->(int,int,int,Dict[int,Tuple[int,int,bool]]):
         """
         众数模式计算给定区间的标尺。
-        :returns (interval, start, stop)
+        众数模式下，如果能删除一个数据（最少的一个数据与次少的数量不一致），则不适用伪逆。
+        :returns ((interval, start, stop), 各类型使用数据的报告)
         """
         modes = {}
+        used = {}
         for tp, count_dct in data.items():
             # 保证count_dct不是空的
-            lst = list(sorted(count_dct.items(),key=lambda x:x[1],reverse=True))
-            i = 1
-            while i < len(lst) and lst[i][1] == lst[0][1]:
-                i += 1  # i是第一个与众数的频数不相等的
-            selected_values = [lst[t][0] for t in range(i)]
-            modes[tp] = int(round(sum(selected_values)/len(selected_values),0))
-        return self.__computeIntervalRuler(modes,defaultStart,defaultStop,prec)
+            lst = list(sorted(count_dct.items(),key=lambda x:(x[1],-x[0]),reverse=True))
+            modes[tp] = lst[0][0]  # 相同时，取快的那个
+            used[tp] = (lst[0][0], lst[0][1], True)
+        if len(modes) == 4:
+            # 先找出每一类的第一个数据及其出现次数
+            ls = list(sorted(list(map(lambda x:(x[0],max(x[1].values())),data.items())),
+                             key=lambda x:x[1]))
+            if ls[0][1] != ls[1][1]:
+                del modes[ls[0][0]]
+                used[ls[0][0]] = (used[ls[0][0]][0],used[ls[0][0]][1],False)
+        return self.__computeIntervalRuler(modes,defaultStart,defaultStop,prec),used
 
     def __intervalRulerMean(self, data:Dict[int,Dict[int,int]], defaultStart:int,
                             defaultStop:int,prec:int,
-                            cutSigma:int=None,cutSeconds:int=None)->(int,int,int):
+                            cutSigma:int=None,
+                            cutSeconds:int=None)->(Tuple[int,int,int],Dict[int,Tuple[int,int,bool]]):
         """
         平均数模式计算给定区间的标尺。
         """
@@ -2045,29 +2056,40 @@ class Graph:
             sigma = sqrt(reduce(lambda x,y:x+(y[0]-ave)**2*y[1],lst,0)/(N-1))
             return ave, sigma
 
+        def furthest(lst, av)->int:
+            """返回距离均值最远的那个index，自然是第一个或最后一个。保证输入非空"""
+            if abs(lst[0][0]-av) > abs(lst[-1][0]-av):
+                return 0
+            return -1
+
         means = {}
+        used = {}  # 均值情况的数据量为剩余数据总量
         for tp,count_dct in data.items():
-            lst:List[Tuple[int,int]] = list(sorted(count_dct.items(),key=lambda x:x[1],reverse=True))
+            # 按值排序，每次选择距离中心最远的一个决定要不要删掉。
+            lst:List[Tuple[int,int]] = list(sorted(count_dct.items(),reverse=True))
             # 修约数据。删除偏差太大的数据。
             if cutSeconds:
                 while len(lst) > 1:
                     ave,sigma = moment(lst)
-                    if abs(lst[-1][0]-ave) > cutSeconds:
-                        value,_ = lst.pop()
+                    i = furthest(lst,ave)
+                    if abs(lst[i][0]-ave) > cutSeconds:
+                        value,_ = lst.pop(i)
                         del count_dct[value]
                     else:
                         break
             elif cutSigma:
                 while len(lst) > 1:
                     ave,sigma = moment(lst)
-                    if sigma and abs(lst[-1][0]-ave)/sigma > cutSigma:
-                        value,_ = lst.pop()
+                    i = furthest(lst,ave)
+                    if sigma and abs(lst[i][0]-ave)/sigma > cutSigma:
+                        value,_ = lst.pop(i)
                         del count_dct[value]
                     else:
                         break
             ave,_ = moment(lst)
             means[tp] = ave
-        return self.__computeIntervalRuler(means,defaultStart,defaultStop,prec)
+            used[tp] = (ave, sum(count_dct.values()), True)
+        return self.__computeIntervalRuler(means,defaultStart,defaultStop,prec), used
 
     @staticmethod
     def __round(value:int, prec:int)->int:
