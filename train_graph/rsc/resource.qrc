@@ -50,5 +50,6 @@
 		<file>zoom-out.png</file>
 		<file>counter.png</file>
 		<file>train.png</file>
+		<file>ruler_pen.png</file>
     </qresource>
 </RCC>

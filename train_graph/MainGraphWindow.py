@@ -73,8 +73,8 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V3.1.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200314'
-        self.release = 'R39'  # 发布时再改这个
+        self.date = '20200315'
+        self.release = 'R40'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -493,7 +493,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
 
         tableWidget = QtWidgets.QTableWidget()
         tableWidget.setColumnCount(8)
-        tableWidget.setHorizontalHeaderLabels(['区间', '时分', '起', '停', '实际', '均速', '附加', '差时'])
+        tableWidget.setHorizontalHeaderLabels(['区间', '标准', '起', '停', '实际', '均速', '附加', '差时'])
 
         rulerCombo.currentTextChanged.connect(lambda x: self._change_ruler_reference(tableWidget, x))
 
@@ -532,7 +532,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             item.setData(-1, [former, name])
 
             dt = (ddsj - former_time[1]).seconds
-            dt_str = "%02d:%02d" % (int(dt / 60), dt % 60)
+            dt_str = "%02d:%02d" % (dt//60, dt % 60)
             item = QtWidgets.QTableWidgetItem(dt_str)
             item.setData(-1, dt)
             tableWidget.setItem(row, 4, item)
@@ -625,7 +625,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
 
             if tudy != uiji and node is not None:
                 try:
-                    rate = (uiji - tudy) / tudy
+                    rate = min(((uiji - tudy) / tudy,1))
                 except ZeroDivisionError:
                     rate = 1
 
@@ -1689,10 +1689,16 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             btn.setToolTip('标尺编辑（Ctrl+B）\n设置各个标尺数据，添加或删除标尺。')
             grid.addWidget(btn, 0, 3, 2, 1)
 
+            btn = PEToolButton('标尺综合',QI(':/ruler_pen.png'),large=True)
+            btn.clicked.connect(self._read_ruler_from_trains)
+            btn.setToolTip('标尺综合（Ctrl+Shift+B）\n'
+                           '从一组给定的车次中，综合分析区间标尺数据。')
+            grid.addWidget(btn,0,4,2,1)
+
             btn = PEDockButton('天窗编辑', '天窗编辑', QI(':/forbid.png'), self.forbidDockWidget)
             self.dockToolButtons.append(btn)
             btn.setToolTip('天窗编辑（Ctrl+数字1）\n编辑综合维修天窗、综合施工天窗的时间段及是否显示等。')
-            grid.addWidget(btn, 0, 4, 2, 1)
+            grid.addWidget(btn, 0, 5, 2, 1)
 
             group.add_layout(grid)
 
@@ -2317,6 +2323,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         """
         if self.updating:
             return
+        self.updating = True
         # print("current train changed. line 1708", row,train.fullCheci())
 
         # 取消不响应非显示列车的逻辑。2018年11月20日
@@ -2325,14 +2332,17 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             return
             """
 
+        focus = True
         # 这是为了避免间接递归。若不加检查，这里取消后再次引发改变，则item选中两次。
         if self.GraphWidget.selectedTrain is not train:
             self.GraphWidget._line_un_selected()
-            self.selectTrainCombo.setCurrentText(train.fullCheci())
+            focus = False
+        self.selectTrainCombo.setCurrentText(train.fullCheci())
 
         self.setCurrentTrain(train)
-        self.GraphWidget._line_selected(train.firstItem(), True)  # 函数会检查是否重复选择
+        self.GraphWidget._line_selected(train.firstItem(), focus)  # 函数会检查是否重复选择
         self._updateCurrentTrainRelatedWidgets(train,force=False)
+        self.updating = False
 
     def _updateCurrentTrainRelatedWidgets(self,train:Train,force=True,sender=-1):
         """
