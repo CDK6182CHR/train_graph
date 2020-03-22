@@ -702,13 +702,37 @@ class Graph:
             else:
                 train.setIsShow(True, affect_item=False)
 
-    def setDirShow(self, down, show):
+    def setDirShow(self, down, show, itemWise=False):
         """
-        约定此处指入图时的上下行
+        :param itemWise  是否精确到每一段运行线。True-按照每一段运行线的上下行组织，可能导致运行线的部分显示；False-仅按照入图上下行。
         """
         for train in self.trains():
-            if train.firstDown() == down and train.type not in self.UIConfigData()['not_show_types']:
-                train.setIsShow(show, affect_item=False)
+            if train.type not in self.UIConfigData()['not_show_types']:
+                if itemWise:
+                    # 如果要显示，且没有铺画过，必须强制设成要显示，以免漏掉
+                    if show and not train._itemInfo:
+                        train.setIsShow(True, affect_item=False)
+                    elif show:
+                        # 显示所有包含指定方向的
+                        if not train.isShow():
+                            for info in train.itemInfo():
+                                if info['down'] == down:
+                                    train.setIsShow(True, affect_item=False)
+                                    break
+                    else:  # not show
+                        if train.isShow():
+                            foundNonThis = False
+                            for info in train.itemInfo():
+                                if info['down'] != down:
+                                    foundNonThis = True
+                                    break
+                            if not foundNonThis:
+                                # 不显示【所有运行线全为本方向】的车次
+                                train.setIsShow(False, affect_item=False)
+
+                else:
+                    if train.firstDown() == down:
+                        train.setIsShow(show, affect_item=False)
 
     def trainExisted(self, train: Train, ignore: Train = None):
         """

@@ -394,12 +394,12 @@ class Train():
         """
         清空item对象但不删除信息
         """
-        self._items = []
+        self._items.clear()
 
     def clearItemInfo(self):
-        self._itemInfo = []
+        self._itemInfo.clear()
 
-    def autoItem(self):
+    def autoItem(self)->bool:
         return self._autoItem
 
     def setAutoItem(self, on: bool):

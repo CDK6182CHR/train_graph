@@ -8,6 +8,7 @@ from .data.train import Train
 
 class TypeWidget(QtWidgets.QWidget):
     TypeShowChanged = QtCore.pyqtSignal()
+    ItemWiseDirShowChanged = QtCore.pyqtSignal(bool, bool)  # down, show
 
     def __init__(self, graph: Graph, parent=None):
         super(TypeWidget, self).__init__(parent)
@@ -44,6 +45,13 @@ class TypeWidget(QtWidgets.QWidget):
         hlayout.addWidget(btnRev)
         vlayout.addLayout(hlayout)
 
+        check = QtWidgets.QCheckBox('运行线级别行别显示控制')
+        check.setToolTip('如果启用，则对每一段运行线判断是否符合显示条件，可能导致运行线不完整；'
+                         '否则仅根据入图方向判定是否显示。\n'
+                         '如果使用此功能后，想要显示完整运行线，请用[刷新]或[重新铺画运行图]功能。')
+        self.checkEnableItemWise = check
+        vlayout.addWidget(check)
+
         listWidget = QtWidgets.QListWidget()
         self.listWidget = listWidget
         listWidget.setSelectionMode(listWidget.MultiSelection)
@@ -65,6 +73,9 @@ class TypeWidget(QtWidgets.QWidget):
         vlayout.addLayout(hlayout)
         self.setLayout(vlayout)
 
+    def setData(self):
+        self._setTypeList()
+
     def _setTypeList(self):
         """
         影响不大，暂时保留
@@ -79,8 +90,12 @@ class TypeWidget(QtWidgets.QWidget):
 
     # slots
     def _set_dir_show(self, down, show):
-        self.graph.setDirShow(down, show)
-        self.TypeShowChanged.emit()
+        itemWise = self.checkEnableItemWise.isChecked()
+        self.graph.setDirShow(down, show, itemWise)
+        if itemWise:
+            self.ItemWiseDirShowChanged.emit(down,show)
+        else:
+            self.TypeShowChanged.emit()
 
     def _select_passenger(self):
         for i in range(self.listWidget.count()):

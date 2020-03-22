@@ -479,6 +479,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     t2 = ruler.getInfo(latter_dict["zhanming"], station, True)["interval"]
                 except:
                     print(station, former_dict["zhanming"], latter_dict["zhanming"])
+                    raise RulerNotCompleteError(former_dict['zhanming'],station)
                 dy = t1 / (t1 + t2) * total_y
                 y = former_dict["y_value"] + dy
 
@@ -1034,6 +1035,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             else:
                 text += f"{dct_pre['ddsj'].strftime('%H:%M:%S')}/..."
             self.setToolTip(text)
+            self.setStatusTip(text)
         else:
             # 区间事件. 效率考虑，直接弄成作差。
             dt1:timedelta = dct_lat['ddsj'] - dct_pre['cfsj']
@@ -1065,6 +1067,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     speed_str = f"{speed:.2f} km/h"
                 text += f"区间里程{mile:.2f} km，技术速度{speed_str}"
             self.setToolTip(text)
+            self.setStatusTip(text)
         super(GraphicsWidget, self).mouseMoveEvent(event)
 
     def resizeEvent(self, event: QtGui.QResizeEvent):

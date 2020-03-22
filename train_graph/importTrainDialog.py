@@ -129,6 +129,7 @@ class ImportTrainDialog(QtWidgets.QDialog):
         except Exception as e:
             QtWidgets.QMessageBox.warning(self,'错误','运行图文件错误\n'+str(e))
             return
+        print("导入文件注释",newGraph.markdown())
         self.filenameEdit.setText(filename)
         self.anGraph.clearTrains()
         self.anGraph.preAddTrainByGraph(newGraph,all=not self.checkAll.isChecked())

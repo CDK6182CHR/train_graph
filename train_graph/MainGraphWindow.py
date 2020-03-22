@@ -71,9 +71,9 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         super().__init__()
         start = time.time()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V3.1.1"
+        self.version = "V3.1.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200315'
+        self.date = '20200322'
         self.release = 'R40'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -888,6 +888,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         typeWidget = TypeWidget(self.graph, self)
         self.typeWidget = typeWidget
         typeWidget.TypeShowChanged.connect(self._apply_type_show)
+        typeWidget.ItemWiseDirShowChanged.connect(self._apply_itemwise_dir_show)
 
         self.typeDockWidget.setWidget(typeWidget)
 
@@ -899,6 +900,17 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.trainWidget.updateShow()
         for train in self.graph.trains():
             self.GraphWidget.setTrainShow(train)
+
+    def _apply_itemwise_dir_show(self, down, show):
+        """
+        精确到Item级别的显示变化控制。不再调用上一个函数。
+        """
+        self.trainWidget.updateShow()
+        for train in self.graph.trains():
+            self.GraphWidget.setTrainShow(train)
+            for item in train.items():
+                if (item.down == down) and not show:
+                    item.setVisible(False)
 
     def _initRulerDock(self):
         rulerDock = QtWidgets.QDockWidget()
@@ -3124,6 +3136,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.GraphWidget.paintGraph()
         self.trainWidget.setData()
         self.circuitWidget.setData()
+        self.typeWidget.setData()
 
     def _import_train_real(self):
         flag = self.question("选择运行图，导入其中所有在本线的车次，车次前冠以“R”，类型为“实际”。是否继续？")
