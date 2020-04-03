@@ -7,7 +7,7 @@ from .ruler import Ruler
 from .train import Train, TrainStation
 from .circuit import Circuit, CircuitNode
 from copy import copy
-from Timetable_new.utility import stationEqual
+from Timetable_new.utility import stationEqual, strToTime
 import json, re
 from datetime import datetime
 from ..pyETRCExceptions import *
@@ -2184,6 +2184,50 @@ class Graph:
             else:  # d
                 x = d-defaultStart-defaultStop
         return Graph.__round(x,prec),Graph.__round(y,prec),Graph.__round(z,prec)
+
+    def importTrainFromExcel(self,filename)->(int,int,int):
+        """
+        从指定Excel文件中导入时刻表数据。返回：
+        导入成功数据数，失败数据数，新建车次数
+        """
+        import xlrd
+        suc,fail,new = 0,0,0
+        wb = xlrd.open_workbook(filename)
+        for ws in wb.sheets():
+            for row in range(ws.nrows):
+                try:
+                    cc = ws.cell_value(row,0)
+                    zm = ws.cell_value(row,1)
+                    dd = ws.cell_value(row,2)
+                    if isinstance(dd,str):
+                        dd = strToTime(dd)
+                    else:
+                        dd = xlrd.xldate_as_datetime(dd,1)
+                    cf = ws.cell_value(row,3)
+                    if isinstance(cf,str):
+                        cf = strToTime(cf)
+                    else:
+                        cf = xlrd.xldate_as_datetime(cf,1)
+                    try:
+                        track = ws.cell_value(row,4)
+                    except IndexError:
+                        track = ''
+                    try:
+                        note = ws.cell_value(row,5)
+                    except IndexError:
+                        note = ''
+                    train = self.trainFromCheci(cc,full_only=True)
+                    if train is None:
+                        train = Train(self,checi_full=cc)
+                        self.addTrain(train)
+                        new+=1
+                    train.addStation(zm,dd,cf,note=note,track=track)
+                    suc+=1
+                except Exception as e:
+                    print(f"Graph::importTrainFromExcel: import failed. "
+                          f"Sheet: {ws.name}, row: {row+1}"+repr(e))
+                    fail+=1
+        return suc,fail,new
 
 if __name__ == '__main__':
     graph = Graph()

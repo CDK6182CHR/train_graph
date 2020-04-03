@@ -1408,6 +1408,10 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             action.triggered.connect(self._import_train)
             menu.addAction(action)
 
+            action = QtWidgets.QAction('导入车次时刻表（Excel）', self)
+            action.triggered.connect(self._import_train_excel)
+            menu.addAction(action)
+
             action = QtWidgets.QAction("导入车次(旧版)",self)
             action.setShortcut('ctrl+alt+D')
             action.triggered.connect(self._import_train_old)
@@ -1805,6 +1809,8 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             self.__addMenuAction(m,'导入车次（旧版）',self._import_train_old)
             self.__addMenuAction(m,'导入实际运行线（旧版）',self._import_train_real,
                                  '从指定运行图中导入车次，并添加前缀R。')
+            self.__addMenuAction(m,'导入车次时刻（Excel）',self._import_train_excel,
+                                 '使用指定的格式导入Excel车次时刻文件。')
             btn.setMenu(m)
 
             grid.addWidget(btn,0,3,2,1)
@@ -3137,6 +3143,32 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.trainWidget.setData()
         self.circuitWidget.setData()
         self.typeWidget.setData()
+
+    def _import_train_excel(self):
+        """
+        2020.04.03新增。导入一种指定格式的车次时刻表数据。
+        格式：【车次，站名，到达时刻，出发时刻，[股道]，[备注]】
+        """
+        if not self.question('导入指定格式的车次数据表。表格应有六列，不要表头：\n'
+                             '车次，站名，到达时刻，出发时刻，股道（可选），备注（可选）\n'
+                             '其中车次必须是全车次。各行数据将按顺序插入到车次时刻表中；如果车次不存在，将'
+                             '新建车次。\n'
+                             '所选工作簿的每个工作表都会被导入。\n'
+                             '是否确认继续？'):
+            return
+        filename, ok = QtWidgets.QFileDialog.getOpenFileName(self, "打开Excel表",
+                                                             filter='Microsoft Excel工作簿(*.xls;*.xlsx)\n所有文件(*)')
+        if not ok:
+            return
+        try:
+            suc,fail,new = self.graph.importTrainFromExcel(filename)
+            self._dout(f'成功导入{suc}条时刻数据，并新建{new}个车次。另有{fail}条数据导入失败。\n'
+                       f'详细导入报错请看控制台。')
+            if suc:
+                self.GraphWidget.paintGraph()
+                self._refreshDockWidgets()
+        except Exception as e:
+            self._derr('导入错误：\n'+repr(e))
 
     def _import_train_real(self):
         flag = self.question("选择运行图，导入其中所有在本线的车次，车次前冠以“R”，类型为“实际”。是否继续？")
