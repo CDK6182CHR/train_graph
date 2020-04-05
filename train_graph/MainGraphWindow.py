@@ -55,6 +55,7 @@ from .dialogAdapter import DialogAdapter
 from .graphDiffDialog import GraphDiffDialog
 from .readRulerWizard import ReadRulerWizard
 from .utility import QRibbonToolBar, PEToolButton, PEDockButton
+from .rulerTable import RulerTable
 import traceback
 from . import resource
 
@@ -73,7 +74,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.name = "pyETRC列车运行图系统"
         self.version = "V3.1.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200322'
+        self.date = '20200405'
         self.release = 'R40'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -1319,6 +1320,11 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             action.triggered.connect(self._interval_trains)
             menu.addAction(action)
 
+            action = QtWidgets.QAction('标尺一览表',self)
+            action.triggered.connect(self._ruler_table)
+            action.setShortcut('F3')  # 调试专用快捷键
+            menu.addAction(action)
+
         # 调整
         if True:
             menu = PM("调整(&A)",self,menubar)
@@ -2526,6 +2532,11 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         """
         dialog = IntervalTrainDialog(self.graph, self)
         dialog.exec_()
+
+    def _ruler_table(self):
+        w = RulerTable(self.graph)
+        d = DialogAdapter(w)
+        d.exec_()
 
     def _search_from_menu(self):
         name, ok = QtWidgets.QInputDialog.getText(self, "搜索车次", "请输入车次：")
