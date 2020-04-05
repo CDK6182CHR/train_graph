@@ -68,7 +68,7 @@ class RulerTable(QtWidgets.QTableWidget):
             zm = st_dict['zhanming']
             self.setSpan(i*2+1,m,2,1)
             item = CTWI(zm)
-            item.setBackground(QtGui.QBrush(QtGui.QColor('#eeeeee')))
+            item.setBackground(QtGui.QBrush(QtGui.QColor('#f5f5f5')))
             self.setItem(i*2+1,m,item)
             if last_down is None:
                 # 第一个站，一定双向通过

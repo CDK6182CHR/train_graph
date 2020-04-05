@@ -75,7 +75,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.version = "V3.1.2"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
         self.date = '20200405'
-        self.release = 'R40'  # 发布时再改这个
+        self.release = 'R41'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -1322,7 +1322,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
 
             action = QtWidgets.QAction('标尺一览表',self)
             action.triggered.connect(self._ruler_table)
-            action.setShortcut('F3')  # 调试专用快捷键
+            action.setShortcut('Ctrl+7')
             menu.addAction(action)
 
         # 调整
@@ -1721,6 +1721,12 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             self.dockToolButtons.append(btn)
             btn.setToolTip('天窗编辑（Ctrl+数字1）\n编辑综合维修天窗、综合施工天窗的时间段及是否显示等。')
             grid.addWidget(btn, 0, 5, 2, 1)
+
+            btn = PEToolButton('标尺一览',QI(':/list.png'))
+            btn.setToolTip('标尺一览表（Ctrl+7）\n'
+                           '集中显示所有标尺的只读的数据表，以便对比。')
+            btn.clicked.connect(self._ruler_table)
+            grid.addWidget(btn,0,6,1,1)
 
             group.add_layout(grid)
 
