@@ -33,9 +33,14 @@ class RulerTable(QtWidgets.QTableWidget):
         rulers = list(self.graph.rulers())
         # self.horizontalHeader().hide()
         self.verticalHeader().hide()
-        self.setColumnCount(n*4+3)
-        m = n*2+1  # 中央列，即站名列的编号
+        self.setColumnCount(n*6+3)
+        m = n*3+1  # 中央列，即站名列的编号
         self.setRowCount(self.graph.stationCount()*2+1)
+
+        headers = ['里程','站名','里程']
+        s = ['区间','起停','均速']
+        headers = s*n+headers+s*n
+        self.setHorizontalHeaderLabels(headers)
 
         # 处理表头
         self.setItem(0,m,CTWI('站名'))
@@ -46,20 +51,22 @@ class RulerTable(QtWidgets.QTableWidget):
 
         # 合并方向表头
         if n:
-            self.setSpan(0,m+2,1,n*2)
+            self.setSpan(0,m+2,1,n*3)
             self.setItem(0,m+2,CTWI('下行'))
-            self.setSpan(0,0,1,n*2)
+            self.setSpan(0,0,1,n*3)
             self.setItem(0,0,CTWI('上行'))
 
         # 每个标尺，合并表头
         for t in range(n):
             i=t+1
-            self.setSpan(1,m+i*2,1,2)
-            self.setItem(1,m+i*2,CTWI(rulers[t].name()))
-            self.setSpan(1,m-i*2-1,1,2)
-            self.setItem(1,m-i*2-1,CTWI(rulers[t].name()))
-            for col in ((m+i*2+1, m-i*2)):
+            self.setSpan(1,m+i*3-1,1,3)
+            self.setItem(1,m+i*3-1,CTWI(rulers[t].name()))
+            self.setSpan(1,m-i*3-1,1,3)
+            self.setItem(1,m-i*3-1,CTWI(rulers[t].name()))
+            for col in ((m+i*3, m-i*3)):
                 self.setColumnWidth(col,60)
+            for col in ((m+i*3-1,m+i*3+1,m-i*3-1,m-i*3+1)):
+                self.setColumnWidth(col,80)
 
         # 每个站. 同时算出所有区间，并把区间数据放到里程那一列的data里面
         last_down, last_up = None,None
@@ -89,19 +96,19 @@ class RulerTable(QtWidgets.QTableWidget):
                 r2 = r1+c
 
                 for j,ruler in enumerate(rulers):
-                    col = m+2+j*2  # 标尺第一列所对应的全局列号
+                    col = m+2+j*3  # 标尺第一列所对应的全局列号
+                    self.setSpan(last_down_i * 2 + 2, col, 2*c, 1)
+                    self.setSpan(last_down_i * 2 + 2, col + 2, 2*c, 1)
                     if c > 1:
-                        self.setSpan(last_down_i*2+2,col,c,1)
-                        self.setSpan(last_down_i*2+2+c,col,c,1)
                         self.setSpan(last_down_i * 2 + 2, col+1, c, 1)
                         self.setSpan(last_down_i * 2 + 2 + c, col+1, c, 1)
+
                     node = ruler.getInfo(zm0,zm)
                     if node is None:
                         continue
                     self.setItem(r1,col,CTWI(Train.sec2strmin(node['interval'])))
                     item = CTWI(Line.speedStr(mile,node['interval']))
-                    item.setForeground(Qt.darkGray)
-                    self.setItem(r2,col,item)
+                    self.setItem(r1,col+2,item)
                     self.setItem(r1,col+1,CTWI(Train.sec2strmin(node['start'])))
                     self.setItem(r2,col+1,CTWI(Train.sec2strmin(node['stop'])))
 
@@ -117,19 +124,19 @@ class RulerTable(QtWidgets.QTableWidget):
                 r1 = last_up_i * 2 + 2  # 区间数据第一行的写入地方
                 r2 = r1 + c
                 for j,ruler in enumerate(rulers):
-                    col = m-3-j*2  # 标尺第一列所对应的全局列号
+                    col = m-4-j*3  # 标尺第一列所对应的全局列号
+                    self.setSpan(last_up_i * 2 + 2, col, c*2, 1)
+                    self.setSpan(last_up_i * 2 + 2, col + 2, c*2, 1)
                     if c > 1:
-                        self.setSpan(last_up_i*2+2,col,c,1)
-                        self.setSpan(last_up_i*2+2+c,col,c,1)
                         self.setSpan(last_up_i * 2 + 2, col+1, c, 1)
                         self.setSpan(last_up_i * 2 + 2 + c, col+1, c, 1)
+
                     node = ruler.getInfo(zm,zm0)
                     if node is None:
                         continue
                     self.setItem(r1,col,CTWI(Train.sec2strmin(node['interval'])))
                     item = CTWI(Line.speedStr(mile, node['interval']))
-                    item.setForeground(Qt.darkGray)
-                    self.setItem(r2, col, item)
+                    self.setItem(r1, col+2, item)
                     self.setItem(r1,col+1,CTWI(Train.sec2strmin(node['stop'])))
                     self.setItem(r2,col+1,CTWI(Train.sec2strmin(node['start'])))
 
