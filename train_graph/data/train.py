@@ -1746,8 +1746,10 @@ class Train():
     def __repr__(self):
         return f"Train object at <0x{id(self):X}> {self.fullCheci()}  {self.sfz}->{self.zdz}"
 
-    def __hash__(self):
-        return hash(self.fullCheci())
+    # 2020年6月8日删除：hash不可以对车次做，直接用默认的id()就好。
+    # 如果用车次做，则导致车次总是无法修改。
+    # def __hash__(self):
+    #     return hash(self.fullCheci())
 
 
 class StationMap:

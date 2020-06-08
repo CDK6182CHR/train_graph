@@ -59,6 +59,8 @@ class TrainFilter(QtCore.QObject):
         layout = QtWidgets.QVBoxLayout()
         flayout = QtWidgets.QFormLayout()
 
+        self.graph.updateTypeList()
+
         typeCheck = QtWidgets.QCheckBox('列车类型')
         self.typeCheck = typeCheck
         typeCheck.setChecked(self.useType)

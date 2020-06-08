@@ -2047,6 +2047,7 @@ class Graph:
         众数模式下，如果能删除一个数据（最少的一个数据与次少的数量不一致），则不适用伪逆。
         :returns ((interval, start, stop), 各类型使用数据的报告)
         """
+        from copy import deepcopy
         modes = {}
         used = {}
         for tp, count_dct in data.items():
@@ -2061,6 +2062,22 @@ class Graph:
             if ls[0][1] != ls[1][1]:
                 del modes[ls[0][0]]
                 used[ls[0][0]] = (used[ls[0][0]][0],used[ls[0][0]][1],False)
+            else:
+                # 选择计算结果最小的那一个
+                i = 1
+                while i<len(ls) and ls[i][1] == ls[0][1]:
+                    i += 1
+                # i标记最后一个相同的
+                res_list = []
+                for t in range(i):
+                    # 尝试剔除掉这个，然后算一个结果出来
+                    modes_cpy = deepcopy(modes)
+                    del modes_cpy[ls[t][0]]
+                    res_list.append((self.__computeIntervalRuler(modes_cpy,defaultStart,defaultStop,prec),t))
+                res,n = min(res_list)
+                del modes[ls[n][0]]
+                used[ls[n][0]] = (used[ls[n][0]][0],used[ls[n][0]][1],False)
+                return res,used
         return self.__computeIntervalRuler(modes,defaultStart,defaultStop,prec),used
 
     def __intervalRulerMean(self, data:Dict[int,Dict[int,int]], defaultStart:int,
@@ -2228,6 +2245,13 @@ class Graph:
                           f"Sheet: {ws.name}, row: {row+1}"+repr(e))
                     fail+=1
         return suc,fail,new
+
+    def updateTypeList(self):
+        lst = []
+        self.typeList.clear()
+        for train in self.trains():
+            lst.append(train.trainType())
+        self.typeList.extend(set(lst))
 
 if __name__ == '__main__':
     graph = Graph()

@@ -4,6 +4,7 @@ Excel风格展示本线的所有标尺。
 from PyQt5 import QtWidgets,QtGui,QtCore
 from PyQt5.QtCore import Qt
 from .data import *
+from .pyETRCExceptions import *
 
 TWI = QtWidgets.QTableWidgetItem
 
@@ -35,7 +36,7 @@ class RulerTable(QtWidgets.QTableWidget):
         self.verticalHeader().hide()
         self.setColumnCount(n*6+3)
         m = n*3+1  # 中央列，即站名列的编号
-        self.setRowCount(self.graph.stationCount()*2+1)
+        self.setRowCount(self.graph.stationCount()*2+2)
 
         headers = ['里程','站名','里程']
         s = ['区间','起停','均速']
@@ -146,6 +147,26 @@ class RulerTable(QtWidgets.QTableWidget):
             if st_dict['direction'] & Line.UpVia:
                 last_up = st_dict
                 last_up_i = i
+
+        # 最后一行，合计
+        r = self.rowCount()-1
+        self.setItem(r,m,CTWI('合计'))
+        self.setItem(r,m+1,CTWI(f"{self.graph.lineLength():.3f}"))
+        self.setItem(r,m-1,CTWI(f"{self.graph.counterLength():.3f}"))
+        for i,ruler in enumerate(self.graph.rulers()):
+            c1 = m+3*i+2  # 下行通通时分位置
+            c2 = m-3*i-4
+            for d,c in ((True, c1), (False,c2)):
+                try:
+                    sec = ruler.totalTime(d)
+                    total = Train.sec2strmin(sec)
+                except RulerNotCompleteError:
+                    sec = 0
+                    total = 'NA'
+                l = self.graph.lineLength() if d else self.graph.counterLength()
+                speed_str = Line.speedStr(l,sec)
+                self.setItem(r,c,CTWI(total))
+                self.setItem(r,c+2,CTWI(speed_str))
 
 
     def setData(self):

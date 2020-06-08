@@ -116,7 +116,7 @@ class RulerWidget(QtWidgets.QTabWidget):
 
         btnOk.clicked.connect(lambda: self._apply_ruler_change(widget))
         btnCancel.clicked.connect(lambda: self._discard_ruler_change(widget))
-        btnDel.clicked.connect(lambda: self._del_ruler(ruler))
+        btnDel.clicked.connect(self._del_ruler)
 
         hlayout = QtWidgets.QHBoxLayout()
         hlayout.addWidget(btnOk)
@@ -420,11 +420,14 @@ class RulerWidget(QtWidgets.QTabWidget):
         #第一重parent是stackedWidget，第二重才是tabWidget
         self.updateRulerTabs()
 
-    def _del_ruler(self, ruler: Ruler):
-        new = False
+    def _del_ruler(self):
+        """
+        2020.06.08重构：不再通过ruler参数定位，而是直接用当前显示的tab。
+        """
+        tab = self.currentWidget()
+        ruler:Ruler = tab.ruler
         line:Line = ruler.line()
-        if line.isNewRuler(ruler):
-            new = True
+        new = line.isNewRuler(ruler)
 
         if not self.qustion("是否确认删除当前标尺？"):
             return
