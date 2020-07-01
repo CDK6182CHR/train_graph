@@ -174,7 +174,7 @@ class StationTimetable(QtWidgets.QDialog):
             ws.write(0, i, s)
 
         for row in range(tableWidget.rowCount()):
-            for col in range(12):
+            for col in range(13):
                 ws.write(row + 1, col, tableWidget.item(row, col).text())
         wb.save(filename)
         self._dout("时刻表导出成功！")

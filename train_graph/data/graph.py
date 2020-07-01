@@ -254,11 +254,16 @@ class Graph:
 
         self.line.loadLine(info["line"])
         self._circuits = []
-        for c in info.get('circuits', []):
-            self._circuits.append(Circuit(self, origin=c))
         for dict_train in info["trains"]:
             newtrain = Train(self, origin=dict_train)
             self._trains.append(newtrain)
+
+        # 2020.07.01：调整顺序。必须先初始化好map，再读交路。
+        self.setFullCheciMap()
+        self.setSingleCheciMap()
+
+        for c in info.get('circuits', []):
+            self._circuits.append(Circuit(self, origin=c))
 
         self._config = info.get("config", {})
         if not isinstance(self._config, dict):
@@ -274,8 +279,6 @@ class Graph:
             pass
 
         fp.close()
-        self.setFullCheciMap()
-        self.setSingleCheciMap()
 
     def version(self) -> str:
         return self._version
@@ -475,6 +478,7 @@ class Graph:
         根据车次查找Train对象。如果full_only，则仅根据全车次查找；否则返回单车次匹配的第一个结果。
         若不存在，返回None。
         2019.02.03删除线性算法。
+        注意：调用之前必须保证fullCheciMap已经初始化！
         """
         t = self.fullCheciMap.get(checi, None)
         if t is not None:
