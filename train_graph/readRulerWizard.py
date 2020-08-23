@@ -361,6 +361,12 @@ class ReadRulerWizard(QtWidgets.QWizard):
 
         form.addRow('离群数据筛选', v)
 
+        spinCutCount = QtWidgets.QSpinBox()
+        self.spinCutCount = spinCutCount
+        spinCutCount.setRange(1,1000)
+        spinCutCount.setToolTip('有效数据数量少于此设置项的起停数据类（四种之一）将被忽略。')
+        form.addRow('最低类数据量',spinCutCount)
+
         pg.setLayout(form)
         self.addPage(pg)
 
@@ -417,7 +423,8 @@ class ReadRulerWizard(QtWidgets.QWizard):
             self.spinStart.value(),self.spinStop.value(),
             self.spinCutSigma.value() if self.spinCutSigma.isEnabled() else None,
             self.spinCutSec.value() if self.spinCutSec.isEnabled() else None,
-            self.comboPrec.currentData(Qt.UserRole)
+            self.comboPrec.currentData(Qt.UserRole),
+            self.spinCutCount.value()
         )
         # from pprint import pprint as printf
         # print("ft:")

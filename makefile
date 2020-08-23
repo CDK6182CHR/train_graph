@@ -1,5 +1,7 @@
 # 构建pyETRC发行版
 
+NUITKA = python3 -m nuitka
+
 MAIN_SCRIPT = main.py
 LOCAL_OUT = main.exe
 WIN64_OUT = main.dist/main.exe
@@ -31,12 +33,12 @@ egg: $(EGG_OUT)
 # 本地调试版本
 $(LOCAL_OUT) : $(SOURCE)
 	echo building pyETRC local debug version
-	python -m nuitka $(LOCAL_FLAGS) $(MAIN_SCRIPT)
+	$(NUITKA) $(LOCAL_FLAGS) $(MAIN_SCRIPT)
 	
 # win64发行版
 $(WIN64_OUT) : $(SOURCE)
 	echo building pyETRC win64 release version
-	python -m nuitka $(WIN64_FLAGS) $(MAIN_SCRIPT)
+	$(NUITKA) $(WIN64_FLAGS) $(MAIN_SCRIPT)
 
 
 # egg版，直接在目标目录构建

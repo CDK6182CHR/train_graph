@@ -1971,7 +1971,8 @@ class Graph:
                              different:bool, useAverage:bool,
                              defaultStart:int, defaultStop:int,
                              cutSigma:int=None, cutSeconds:int=None,
-                             prec:int=1
+                             prec:int=1,
+                             cutCount:int=1,
                              )->(Dict[Tuple[str,str],Tuple[int,int,int]],
                                  Dict[Tuple[str, str], Dict[Train, Tuple[int, int]]],
                                  Dict[Tuple[str, str], Dict[int, Dict[int, int]]],
@@ -1987,8 +1988,9 @@ class Graph:
         :param cutSeconds 用平均数计算时，去除与平均数相差超过此数值的数据。
         如果同时设置，cutSeconds优先（计算量小一些）。
         :param prec 结果保留精度，单位为秒。众数时，如果最多的有多个数，也要取平均数到这个精度。
+        :param cutCount 最低采纳的数据类。用于解决只有1条数据的异常数据类污染整个数据集问题。
         :returns (标尺数据，列车数据打表, FT数据打表, 最终采用数据表)
-        最终彩信数据三元组：[各区间、类型的采信数据，数据量，是否代入]
+        最终采信数据三元组：[各区间、类型的采信数据，数据量，是否代入]
         """
         intSet = set(intervals)  # 用集合实现速查。对车次的每个站名，必须映射到本线，通过stationDictByName
 
@@ -2029,9 +2031,9 @@ class Graph:
             if useAverage:
                 res[(fazhan,daozhan)],used[(fazhan,daozhan)] = self.__intervalRulerMean(int_data_trans,
                                                                                         defaultStart,
-                                                               defaultStop,prec,cutSigma,cutSeconds)
+                                                               defaultStop,prec,cutSigma,cutSeconds,cutCount)
             else:  # 众数模式
-                res[(fazhan,daozhan)],used[(fazhan,daozhan)] = self.__intervalRulerMode(int_data_trans,defaultStart,defaultStop,prec)
+                res[(fazhan,daozhan)],used[(fazhan,daozhan)] = self.__intervalRulerMode(int_data_trans,defaultStart,defaultStop,prec,cutCount)
         return res, data, ft, used
 
     def __intervalFt(self,dct:Dict[Train,Tuple[int,int]])->Dict[int,Dict[int,int]]:
@@ -2045,20 +2047,26 @@ class Graph:
         return res
 
     def __intervalRulerMode(self, data:Dict[int,Dict[int,int]], defaultStart:int,
-                            defaultStop:int,prec:int)->(int,int,int,Dict[int,Tuple[int,int,bool]]):
+                            defaultStop:int,prec:int,cutCount:int,
+                            )->(int,int,int,Dict[int,Tuple[int,int,bool]]):
         """
         众数模式计算给定区间的标尺。
         众数模式下，如果能删除一个数据（最少的一个数据与次少的数量不一致），则不适用伪逆。
         :returns ((interval, start, stop), 各类型使用数据的报告)
         """
         from copy import deepcopy
-        modes = {}
+        modes = {}  # int->int  类型及其众数
         used = {}
-        for tp, count_dct in data.items():
+        for tp, count_dct in data.items():  # count_dict: int->int  数据及其计数
             # 保证count_dct不是空的
             lst = list(sorted(count_dct.items(),key=lambda x:(x[1],-x[0]),reverse=True))
             modes[tp] = lst[0][0]  # 相同时，取快的那个
             used[tp] = (lst[0][0], lst[0][1], True)
+        # 2020.08.23添加  删除小于指定有效数据量的数据类
+        for tp,(val,cnt,_) in used.copy().items():
+            if cnt < cutCount:
+                del modes[tp]
+                used[tp] = (val,cnt,False)
         if len(modes) == 4:
             # 先找出每一类的第一个数据及其出现次数
             ls = list(sorted(list(map(lambda x:(x[0],max(x[1].values())),data.items())),
@@ -2087,7 +2095,8 @@ class Graph:
     def __intervalRulerMean(self, data:Dict[int,Dict[int,int]], defaultStart:int,
                             defaultStop:int,prec:int,
                             cutSigma:int=None,
-                            cutSeconds:int=None)->(Tuple[int,int,int],Dict[int,Tuple[int,int,bool]]):
+                            cutSeconds:int=None,cutCount:int=None
+                            )->(Tuple[int,int,int],Dict[int,Tuple[int,int,bool]]):
         """
         平均数模式计算给定区间的标尺。
         """
@@ -2134,6 +2143,13 @@ class Graph:
             ave,_ = moment(lst)
             means[tp] = ave
             used[tp] = (ave, sum(count_dct.values()), True)
+
+        # 2020.08.23新增 清洗完数据后，最后检查数据量是否符合要求。
+        for tp,(ave,cnt,_) in used.copy().items():
+            if cnt < cutCount:
+                del means[tp]
+                used[tp] = (ave, cnt, False)
+
         return self.__computeIntervalRuler(means,defaultStart,defaultStop,prec), used
 
     @staticmethod
