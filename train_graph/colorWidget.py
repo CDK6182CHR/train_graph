@@ -168,7 +168,7 @@ class ColorWidget(QtWidgets.QDialog):
     RepaintGraph = QtCore.pyqtSignal()
     def apply_color(self):
         repaint = False
-        rawDict = self.graph.UIConfigData()
+        rawDict = self.UIDict
         UIDict = {}
         if self.gridBtn.text() != rawDict["grid_color"]:
             UIDict["grid_color"] = self.gridBtn.text()

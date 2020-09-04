@@ -773,6 +773,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 if status != TrainItem.Invalid:
                     if item.station_count >= 2:
                         # 暂不确定是否要完全封杀station_count<2的车次
+                        # 2020.09.01注：这个封杀好像没起到作用
                         train.addItem(item)
                         # 铺画完毕后，item.start/endStation参数被补齐。
                         if item.down is not None:
@@ -791,8 +792,6 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                         # 如果下一段的运行线不存在，而上一段的被以Reversed方向终止，则需要补上终止标签。
                         # 2019.11.18添加，解决杭深线D6315问题。
                         lastItemDict = train.lastItemInfo()
-                        if train.fullCheci() == 'D6318/5':
-                            print(f"D6318/5 {status} ")
                         if status == TrainItem.Pass and lastItemDict is not None\
                                 and not lastItemDict['show_end_label']:
                             print(f"返回添加上一级标签：车次{train.fullCheci()}")

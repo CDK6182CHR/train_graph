@@ -14,6 +14,11 @@ class CTWI(QtWidgets.QTableWidgetItem):
         super(CTWI, self).__init__(*args)
         self.setTextAlignment(Qt.AlignCenter)
 
+    def highlight(self,n:int)->'CTWI':
+        if n % 2 == 0:
+            self.setBackground(QtGui.QBrush(QtGui.QColor('#f5f5f5')))
+        return self
+
 
 class RulerTable(QtWidgets.QTableWidget):
     def __init__(self, graph:Graph, parent=None):
@@ -107,11 +112,11 @@ class RulerTable(QtWidgets.QTableWidget):
                     node = ruler.getInfo(zm0,zm)
                     if node is None:
                         continue
-                    self.setItem(r1,col,CTWI(Train.sec2strmin(node['interval'])))
-                    item = CTWI(Line.speedStr(mile,node['interval']))
+                    self.setItem(r1,col,CTWI(Train.sec2strmin(node['interval'])).highlight(j))
+                    item = CTWI(Line.speedStr(mile,node['interval'])).highlight(j)
                     self.setItem(r1,col+2,item)
-                    self.setItem(r1,col+1,CTWI(Train.sec2strmin(node['start'])))
-                    self.setItem(r2,col+1,CTWI(Train.sec2strmin(node['stop'])))
+                    self.setItem(r1,col+1,CTWI(Train.sec2strmin(node['start'])).highlight(j))
+                    self.setItem(r2,col+1,CTWI(Train.sec2strmin(node['stop'])).highlight(j))
 
             if st_dict['direction'] & Line.UpVia:
                 c = i - last_up_i
@@ -135,11 +140,11 @@ class RulerTable(QtWidgets.QTableWidget):
                     node = ruler.getInfo(zm,zm0)
                     if node is None:
                         continue
-                    self.setItem(r1,col,CTWI(Train.sec2strmin(node['interval'])))
+                    self.setItem(r1,col,CTWI(Train.sec2strmin(node['interval'])).highlight(j))
                     item = CTWI(Line.speedStr(mile, node['interval']))
-                    self.setItem(r1, col+2, item)
-                    self.setItem(r1,col+1,CTWI(Train.sec2strmin(node['stop'])))
-                    self.setItem(r2,col+1,CTWI(Train.sec2strmin(node['start'])))
+                    self.setItem(r1, col+2, item.highlight(j))
+                    self.setItem(r1,col+1,CTWI(Train.sec2strmin(node['stop'])).highlight(j))
+                    self.setItem(r2,col+1,CTWI(Train.sec2strmin(node['start'])).highlight(j))
 
             if st_dict['direction'] & Line.DownVia:
                 last_down = st_dict
