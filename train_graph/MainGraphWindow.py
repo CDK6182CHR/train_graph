@@ -75,7 +75,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.version = "V3.2.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
         self.date = '20200928'
-        self.release = 'R43'  # 发布时再改这个
+        self.release = 'R44'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
