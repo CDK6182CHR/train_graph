@@ -141,8 +141,14 @@ class ConfigWidget(QtWidgets.QWidget):
         check = QtWidgets.QCheckBox()
         check.setChecked(self.UIDict.setdefault("auto_paint",True))
         layout.addRow("自动铺画",check)
-        spin.setToolTip("若关闭，当运行图发生变更时不会自动铺画，只有手动选择刷新（F5）或者铺画运行图（shitf+F5）时才会重新铺画运行图。建议当运行图较大时关闭。")
+        check.setToolTip("若关闭，当运行图发生变更时不会自动铺画，只有手动选择刷新（F5）或者铺画运行图（shitf+F5）时才会重新铺画运行图。建议当运行图较大时关闭。")
         self.autoPaintCheck = check
+
+        check = QtWidgets.QCheckBox()
+        check.setChecked(self.UIDict.setdefault('avoid_cover',True))
+        layout.addRow('标签自动偏移',check)
+        check.setToolTip('当同一站的始发终到标签发生重叠时，自动调整标签高度。')
+        self.avoidCoverCheck = check
 
         self.initGridDialog()
         btnGrid = QtWidgets.QPushButton("设置")
@@ -213,6 +219,7 @@ class ConfigWidget(QtWidgets.QWidget):
         self.validWidthSpin.setValue(UIDict.setdefault('valid_width',3))
         self.maxPassSpin.setValue(UIDict.setdefault("max_passed_stations",3))
         self.autoPaintCheck.setChecked(UIDict.setdefault('auto_paint',True))
+        self.avoidCoverCheck.setChecked(UIDict.setdefault('avoid_cover',True))
         if not self.system:
             self.noteEdit.setPlainText(self.graph.markdown())
         self.setGridDialogData()
@@ -301,6 +308,18 @@ class ConfigWidget(QtWidgets.QWidget):
         flayout.addRow('结束标签高度',spin)
 
         spin = QtWidgets.QSpinBox(self)
+        self.baseHeightSpin = spin
+        spin.setRange(1, 1000)
+        spin.setValue(UIDict.setdefault('base_label_height', 15))
+        flayout.addRow('基准标签高度', spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        self.stepHeightSpin = spin
+        spin.setRange(1,1000)
+        spin.setValue(UIDict.setdefault('step_label_height', 15))
+        flayout.addRow('标签层级高度', spin)
+
+        spin = QtWidgets.QSpinBox(self)
         self.tableRowSpin = spin
         spin.setRange(15,60)
         spin.setValue(UIDict.setdefault('table_row_height',30))
@@ -326,6 +345,8 @@ class ConfigWidget(QtWidgets.QWidget):
         self.startLabelSpin.setValue(UIDict['start_label_height'])
         self.endLabelSpin.setValue(UIDict['end_label_height'])
         self.tableRowSpin.setValue(UIDict['table_row_height'])
+        self.baseHeightSpin.setValue(UIDict['base_label_height'])
+        self.stepHeightSpin.setValue(UIDict['step_label_height'])
 
 
     def _applyConfig(self):
@@ -378,6 +399,9 @@ class ConfigWidget(QtWidgets.QWidget):
         if self.maxPassSpin.value() != UIDict['max_passed_stations']:
             UIDict['max_passed_stations'] = self.maxPassSpin.value()
             repaint = True
+        if self.avoidCoverCheck.isChecked() != UIDict['avoid_cover']:
+            UIDict['avoid_cover'] = self.avoidCoverCheck.isChecked()
+            repaint = True
         repaint = repaint or self._applyGridDialogConfig()
         if not self.system:
             self.graph.setMarkdown(self.noteEdit.toPlainText())
@@ -408,6 +432,12 @@ class ConfigWidget(QtWidgets.QWidget):
             repaint = True
         if self.endLabelSpin.value() != UIDict['end_label_height']:
             UIDict['end_label_height'] = self.endLabelSpin.value()
+            repaint = True
+        if self.baseHeightSpin.value() != UIDict['base_label_height']:
+            UIDict['base_label_height'] = self.baseHeightSpin.value()
+            repaint = True
+        if self.stepHeightSpin.value() != UIDict['step_label_height']:
+            UIDict['step_label_height'] = self.stepHeightSpin.value()
             repaint = True
         UIDict['table_row_height'] = self.tableRowSpin.value()
         repaint = repaint or self.graph.setMargin(

@@ -10,6 +10,9 @@ from PyQt5.QtCore import Qt
 from .data.graph import Graph
 from .data.train import Train
 from datetime import datetime,timedelta
+from typing import List, Dict, Tuple
+import bisect
+
 
 class TrainItem(QtWidgets.QGraphicsItem):
     # 标记数字所在方向的常量
@@ -32,7 +35,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.graph = graph
         self.startStation = start
         self.endStation = end
-        self.graphWidget = graphWidget
+        self.graphWidget = graphWidget  # type:'GraphicsWidget'
+        # 注意：引用语义，不得赋值
+        self.labelSpans = graphWidget.labelSpans  # type:Dict[Tuple[float, bool],List[Tuple[float, int, int]]]
         self.showFullCheci=showFullCheci
         self.validWidth = validWidth
         self.down = down
@@ -64,6 +69,10 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.maxPassed = graph.UIConfigData().setdefault("max_passed_stations",3)
 
         self.color = self._trainColor()
+
+        self.startLabelHeight = 0
+        self.endLabelHeight = 0
+
 
     def setLine(self,start:int=0,end:int=-1,showStartLabel=True,showEndLabel = True)->(int,int):
         """
@@ -373,6 +382,58 @@ class TrainItem(QtWidgets.QGraphicsItem):
         endAtThis = self.endAtThis
         self._setEndItem(end_point,brush,checi,self.down,endAtThis)
 
+    def _determineStartLabelHeight(self, start_point:QtCore.QPointF, down:bool):
+        """
+        2020.09.28新增。决定开始标签高度。
+        如果启用重叠避免，则需要查找近邻计算高度，同时维护数据；
+        如果不启用，直接返回配置项。
+        """
+        if not self.graph.UIConfigData()['avoid_cover']:
+            return self.graph.UIConfigData()['start_label_height']
+        # 启用重叠避免的情况
+        thres = 100  # 左右超过这个范围，就不再搜
+        lst = self.labelSpans.setdefault((start_point.y(), down), [])
+        a = bisect.bisect_left(lst, (start_point.x()-thres, ))
+        b = bisect.bisect_right(lst, (start_point.x()+thres, ))
+        w = self.spanItemWidth  # 当前标签宽度
+        h = self.graph.UIConfigData()['base_label_height']
+        occupied_heights = []
+        for i in range(a, b):
+            x, hi, wi = lst[i]
+            if abs(start_point.x()-x) < (wi+w)/2:
+                # 确定冲突
+                occupied_heights.append(hi)
+        while h in occupied_heights:
+            h += self.graph.UIConfigData()['step_label_height']
+        bisect.insort(lst, (start_point.x(), h, w))
+        return h
+
+    def _determineEndLabelHeight(self, end_point:QtCore.QPointF, down:bool):
+        """
+        2020.09.28新增。决定开始标签高度。
+        如果启用重叠避免，则需要查找近邻计算高度，同时维护数据；
+        如果不启用，直接返回配置项。
+        """
+        if not self.graph.UIConfigData()['avoid_cover']:
+            return self.graph.UIConfigData()['end_label_height']
+        # 启用重叠避免的情况
+        thres = 100  # 左右超过这个范围，就不再搜
+        lst = self.labelSpans.setdefault((end_point.y(), not down), [])
+        a = bisect.bisect_left(lst, (end_point.x()-thres, ))
+        b = bisect.bisect_right(lst, (end_point.x()+thres, ))
+        w = self.spanItemWidth  # 当前标签宽度
+        h = self.graph.UIConfigData()['base_label_height']
+        occupied_heights = []
+        for i in range(a, b):
+            x, hi, wi = lst[i]
+            if abs(end_point.x()-x) < (wi+w)/2:
+                # 确定冲突
+                occupied_heights.append(hi)
+        while h in occupied_heights:
+            h += self.graph.UIConfigData()['step_label_height']
+        bisect.insort(lst, (end_point.x(), h, w))
+        return h
+
     def _setEndItem(self, end_point:QtCore.QPointF, brush:QtGui.QBrush,
                     checi:str, down:bool, endAtThis:bool)->QtGui.QPainterPath:
         """
@@ -384,19 +445,21 @@ class TrainItem(QtWidgets.QGraphicsItem):
         w,h = self.spanItemWidth,self.spanItemHeight
         endLabel = QtGui.QPainterPath()
         self.endLabelText = endLabelText
-        end_height = self.graph.UIConfigData()['end_label_height']
+        eh = self._determineEndLabelHeight(end_point, down)
+        beh = self.graph.UIConfigData()['end_label_height']
+        self.endLabelHeight = eh
         if endAtThis:
             if down:
                 endLabel.moveTo(end_point)
                 curPoint = QtCore.QPointF(end_point.x(),end_point.y())
-                curPoint.setY(curPoint.y()+end_height/2)
+                curPoint.setY(curPoint.y()+eh-beh/2)
                 endLabel.lineTo(curPoint)
-                poly = QtGui.QPolygonF((QtCore.QPointF(curPoint.x()-end_height/3,curPoint.y()),
-                                QtCore.QPointF(curPoint.x()+end_height/3,curPoint.y()),
-                                QtCore.QPointF(curPoint.x(),curPoint.y()+end_height/2),
-                                QtCore.QPointF(curPoint.x() - end_height / 3, curPoint.y())))
+                poly = QtGui.QPolygonF((QtCore.QPointF(curPoint.x()-beh/3,curPoint.y()),
+                                QtCore.QPointF(curPoint.x()+beh/3,curPoint.y()),
+                                QtCore.QPointF(curPoint.x(),curPoint.y()+beh/2),
+                                QtCore.QPointF(curPoint.x() - beh / 3, curPoint.y())))
                 endLabel.addPolygon(poly)
-                curPoint.setY(end_point.y()+end_height)
+                curPoint.setY(end_point.y()+eh)
                 curPoint.setX(curPoint.x()-w/2)
                 endLabel.moveTo(curPoint)
                 endLabelText.setX(curPoint.x())
@@ -407,14 +470,14 @@ class TrainItem(QtWidgets.QGraphicsItem):
             else:
                 endLabel.moveTo(end_point)
                 curPoint = QtCore.QPointF(end_point)
-                curPoint.setY(end_point.y()-end_height/2)
+                curPoint.setY(end_point.y()-eh+beh/2)
                 endLabel.lineTo(curPoint)
-                curPoint.setY(end_point.y()-end_height)
+                curPoint.setY(end_point.y()-eh)
                 endLabel.moveTo(curPoint)
                 poly = QtGui.QPolygonF((
                     curPoint,
-                    QtCore.QPointF(curPoint.x()-end_height/3,curPoint.y()+end_height/2),
-                    QtCore.QPointF(curPoint.x()+end_height/3,curPoint.y()+end_height/2),
+                    QtCore.QPointF(curPoint.x()-beh/3,curPoint.y()+beh/2),
+                    QtCore.QPointF(curPoint.x()+beh/3,curPoint.y()+beh/2),
                     curPoint
                 ))
                 endLabel.addPolygon(poly)
@@ -428,7 +491,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             if down:
                 endLabel.moveTo(end_point)
                 curPoint = QtCore.QPointF(end_point)
-                curPoint.setY(curPoint.y()+h)
+                curPoint.setY(curPoint.y()+eh)
                 endLabel.lineTo(curPoint)
                 endLabelText.setPos(curPoint)
                 curPoint.setX(curPoint.x()+w+h)
@@ -439,7 +502,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             else:
                 endLabel.moveTo(end_point)
                 curPoint = QtCore.QPointF(end_point)
-                curPoint.setY(curPoint.y()-h)
+                curPoint.setY(curPoint.y()-eh)
                 endLabel.lineTo(curPoint)
                 endLabelText.setX(curPoint.x())
                 endLabelText.setY(curPoint.y()-h)
@@ -457,7 +520,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
         label.moveTo(start_point)
         startLabelText = self._setStartEndLabelText(checi,brush)
         self.startLabelText = startLabelText
-        start_height = self.graph.UIConfigData()['start_label_height']
+        # start_height = self.graph.UIConfigData()['start_label_height']
+        start_height = self._determineStartLabelHeight(start_point, down)
+        self.startLabelHeight = start_height
         w,h = self.spanItemWidth,self.spanItemHeight
         if startAtThis:
             if down:
@@ -737,12 +802,12 @@ class TrainItem(QtWidgets.QGraphicsItem):
             x_append = self.spanItemWidth / 2 if self.startAtThis else self.spanItemWidth
             if self.down:
                 Rect = QtCore.QRectF(startPoint.x()-x_append,
-                                              startPoint.y()-self.spanItemHeight-UIDict['start_label_height'],
+                                              startPoint.y()-self.spanItemHeight-self.startLabelHeight,
                                               self.spanItemWidth,
                                               self.spanItemHeight)
             else:
                 Rect = QtCore.QRectF(startPoint.x() - x_append,
-                                              startPoint.y()+UIDict['start_label_height'],
+                                              startPoint.y()+self.startLabelHeight,
                                               self.spanItemWidth,
                                               self.spanItemHeight)
             self.tempRect = QtWidgets.QGraphicsRectItem(Rect,self)
@@ -765,13 +830,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
             x_append = self.spanItemWidth/2 if self.endAtThis else 0
             if self.down:
                 rect = QtCore.QRectF(endPoint.x()-x_append,
-                                     endPoint.y()+UIDict['end_label_height'],
+                                     endPoint.y()+self.endLabelHeight,
                                      self.spanItemWidth,
                                      self.spanItemHeight
                 )
             else:
                 rect = QtCore.QRectF(endPoint.x() - x_append,
-                                     endPoint.y() - UIDict['end_label_height'] - self.spanItemHeight,
+                                     endPoint.y() - self.endLabelHeight - self.spanItemHeight,
                                      self.spanItemWidth,
                                      self.spanItemHeight
                                      )

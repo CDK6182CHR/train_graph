@@ -12,6 +12,7 @@ copyright (c) mxy 2018
 import cgitb
 import traceback
 from .pyETRCExceptions import *
+from typing import Dict, List, Tuple
 
 cgitb.enable(format='text')
 
@@ -72,6 +73,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         self.selectedTrain = None
+
+        # 各个站始发终到标签的高度及宽度。Tuple[横坐标，高度，宽度]
+        # Key: 站名，方向。True->标签在上；False->标签在下
+        self.labelSpans = {}  # type:Dict[Tuple[float, bool],List[Tuple[float, int, int]]]
 
         self.setGraph(self.graph)
         self.setMouseTracking(True)

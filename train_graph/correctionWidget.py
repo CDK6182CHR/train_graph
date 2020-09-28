@@ -60,14 +60,18 @@ class CorrectionWidget(QtWidgets.QDialog):
         btnSelectAll = QtWidgets.QPushButton('全选')
         btnSelectNone = QtWidgets.QPushButton('全不选')
         btnSelectFlip = QtWidgets.QPushButton('反选')
+        btnSelectBatch = QtWidgets.QPushButton('批选')
+        btnSelectBatch.setToolTip('勾选所有当前“选中”的行。\n此处“选中”是指：在表格中拖动选择区域。')
         hlayout.addWidget(btnSelectAll)
         hlayout.addWidget(btnSelectNone)
         hlayout.addWidget(btnSelectFlip)
+        hlayout.addWidget(btnSelectBatch)
         vlayout.addLayout(hlayout)
 
         btnSelectAll.clicked.connect(self._select_all)
         btnSelectNone.clicked.connect(self._select_none)
         btnSelectFlip.clicked.connect(self._select_flip)
+        btnSelectBatch.clicked.connect(self._select_batch)
 
         tableWidget = QtWidgets.QTableWidget()
         tableWidget.setColumnCount(7)
@@ -269,6 +273,14 @@ class CorrectionWidget(QtWidgets.QDialog):
                 item.setCheckState(Qt.Unchecked)
             else:
                 item.setCheckState(Qt.Checked)
+
+    def _select_batch(self):
+        rows = set()
+        for item in self.tableWidget.selectedItems():
+            rows.add(item.row())
+        for r in rows:
+            item = self.tableWidget.item(r, 0)
+            item.setCheckState(Qt.Checked)
 
     def _restore(self):
         self.train.coverData(self.originTrain)

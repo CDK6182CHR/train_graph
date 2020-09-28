@@ -89,6 +89,10 @@ class Graph:
             "link_line_height": 10,
             "show_time_mark": 1,  # 显示详细停点。0-不显示，1-仅显示选中车次，2-显示所有车次
             "max_passed_stations": 3,  # 至多跨越站数。超过这个数将被分成两段运行图。
+            "avoid_cover":True,  # 自动偏移标签避免重叠
+            "base_label_height":15,  # 基准标签高度，启用自动偏移时有效
+            "step_label_height":18,  # 每一次自动偏移的标签高度
+            "end_label_checi":True,  # 结束标签是否要显示车次
             "default_colors": {"快速": "#FF0000",
                                "特快": "#0000FF",
                                "直达特快": "#FF00FF",
