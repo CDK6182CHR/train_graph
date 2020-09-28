@@ -186,6 +186,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self._setHLines(UIDict, gridColor, width, height)
         self._setVLines(UIDict, gridColor, height, width, hour_count)
 
+        self.labelSpans.clear()
+
         if self.parent():
             progressDialog = QtWidgets.QProgressDialog()
             progressDialog.setRange(0, self.graph.trainCount())

@@ -150,6 +150,11 @@ class ConfigWidget(QtWidgets.QWidget):
         check.setToolTip('当同一站的始发终到标签发生重叠时，自动调整标签高度。')
         self.avoidCoverCheck = check
 
+        check = QtWidgets.QCheckBox()
+        check.setChecked(self.UIDict['end_label_checi'])
+        layout.addRow('结束标签车次',check)
+        self.endCheciCheck = check
+
         self.initGridDialog()
         btnGrid = QtWidgets.QPushButton("设置")
         btnGrid.setMaximumWidth(120)
@@ -220,6 +225,7 @@ class ConfigWidget(QtWidgets.QWidget):
         self.maxPassSpin.setValue(UIDict.setdefault("max_passed_stations",3))
         self.autoPaintCheck.setChecked(UIDict.setdefault('auto_paint',True))
         self.avoidCoverCheck.setChecked(UIDict.setdefault('avoid_cover',True))
+        self.endCheciCheck.setChecked(UIDict['end_label_checi'])
         if not self.system:
             self.noteEdit.setPlainText(self.graph.markdown())
         self.setGridDialogData()
@@ -401,6 +407,9 @@ class ConfigWidget(QtWidgets.QWidget):
             repaint = True
         if self.avoidCoverCheck.isChecked() != UIDict['avoid_cover']:
             UIDict['avoid_cover'] = self.avoidCoverCheck.isChecked()
+            repaint = True
+        if self.endCheciCheck.isChecked() != UIDict['end_label_checi']:
+            UIDict['end_label_checi'] = self.endCheciCheck.isChecked()
             repaint = True
         repaint = repaint or self._applyGridDialogConfig()
         if not self.system:

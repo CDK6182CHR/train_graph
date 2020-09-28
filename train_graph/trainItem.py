@@ -441,12 +441,16 @@ class TrainItem(QtWidgets.QGraphicsItem):
         同时设定spanItemHeight和~width两个attribute。
         """
         # 终点标签
+        if not self.graph.UIConfigData()['end_label_checi']:
+            checi = ' '
         endLabelText = self._setStartEndLabelText(checi,brush)
+        if not self.graph.UIConfigData()['end_label_checi'] and endAtThis:
+            self.spanItemWidth = 0
         w,h = self.spanItemWidth,self.spanItemHeight
         endLabel = QtGui.QPainterPath()
         self.endLabelText = endLabelText
         eh = self._determineEndLabelHeight(end_point, down)
-        beh = self.graph.UIConfigData()['end_label_height']
+        beh = self.graph.UIConfigData()['base_label_height']
         self.endLabelHeight = eh
         if endAtThis:
             if down:
@@ -828,22 +832,23 @@ class TrainItem(QtWidgets.QGraphicsItem):
             brush = QtGui.QBrush(pen.color())
             endPoint = self.endPoint
             x_append = self.spanItemWidth/2 if self.endAtThis else 0
-            if self.down:
-                rect = QtCore.QRectF(endPoint.x()-x_append,
-                                     endPoint.y()+self.endLabelHeight,
-                                     self.spanItemWidth,
-                                     self.spanItemHeight
-                )
-            else:
-                rect = QtCore.QRectF(endPoint.x() - x_append,
-                                     endPoint.y() - self.endLabelHeight - self.spanItemHeight,
-                                     self.spanItemWidth,
-                                     self.spanItemHeight
-                                     )
-            self.tempRect2 = QtWidgets.QGraphicsRectItem(rect,self)
-            self.tempRect2.setPen(rectPen)
-            self.tempRect2.setBrush(brush)
-            self.tempRect2.setZValue(0.5)
+            if self.graph.UIConfigData()['end_label_checi']:
+                if self.down:
+                    rect = QtCore.QRectF(endPoint.x()-x_append,
+                                         endPoint.y()+self.endLabelHeight,
+                                         self.spanItemWidth,
+                                         self.spanItemHeight
+                    )
+                else:
+                    rect = QtCore.QRectF(endPoint.x() - x_append,
+                                         endPoint.y() - self.endLabelHeight - self.spanItemHeight,
+                                         self.spanItemWidth,
+                                         self.spanItemHeight
+                                         )
+                self.tempRect2 = QtWidgets.QGraphicsRectItem(rect,self)
+                self.tempRect2.setPen(rectPen)
+                self.tempRect2.setBrush(brush)
+                self.tempRect2.setZValue(0.5)
             self.endLabelText.setZValue(1)
             self.endLabelText.setBrush(Qt.white)
 
@@ -903,7 +908,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 endlabel.setZValue(0)
                 self.endLabelText.setZValue(0)
                 self.endLabelText.setBrush(pathPen.color())
-                self.graphWidget.scene.removeItem(self.tempRect2)
+                if self.graph.UIConfigData()['end_label_checi']:
+                    self.graphWidget.scene.removeItem(self.tempRect2)
 
         self.tempRect = None
         self.tempRect2 = None
