@@ -37,7 +37,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.endStation = end
         self.graphWidget = graphWidget  # type:'GraphicsWidget'
         # 注意：引用语义，不得赋值
-        self.labelSpans = graphWidget.labelSpans  # type:Dict[Tuple[float, bool],List[Tuple[float, int, int]]]
+        self.labelSpans = graphWidget.labelSpans  # type:Dict[Tuple[float, bool],List[Tuple[float, int, int, int]]]
         self.showFullCheci=showFullCheci
         self.validWidth = validWidth
         self.down = down
@@ -145,22 +145,30 @@ class TrainItem(QtWidgets.QGraphicsItem):
         span_width = UIDict["margins"]["right"]-UIDict["margins"]["label_width"]
         font = QtGui.QFont()
 
-        if self.spanItemWidth is None:
-            self._setStartEndLabelText(checi,brush)
-        if self.spanItemWidth > span_width:
-            stretch = int(100 * span_width / self.spanItemWidth)
-            font.setStretch(stretch)
+        stretch = 100
         for y in span_left:
-            textItem = QtWidgets.QGraphicsSimpleTextItem(checi, self)
-            textItem.setBrush(brush)
+            if self.spanItemWidth is None:
+                textItem = self._setStartEndLabelText(checi, brush)
+                if self.spanItemWidth > span_width:
+                    stretch = int(100 * span_width / self.spanItemWidth)
+                    font.setStretch(stretch)
+            else:
+                textItem = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+                textItem.setBrush(brush)
             textItem.setFont(font)
             textItem.setX(self.graphWidget.margins["left"] - textItem.boundingRect().width())
             textItem.setY(y - self.spanItemHeight / 2)
             self.spanItems.append(textItem)
 
         for y in span_right:
-            textItem = QtWidgets.QGraphicsSimpleTextItem(checi, self)
-            textItem.setBrush(brush)
+            if self.spanItemWidth is None:
+                textItem = self._setStartEndLabelText(checi, brush)
+                if self.spanItemWidth > span_width:
+                    stretch = int(100 * span_width / self.spanItemWidth)
+                    font.setStretch(stretch)
+            else:
+                textItem = QtWidgets.QGraphicsSimpleTextItem(checi, self)
+                textItem.setBrush(brush)
             textItem.setX(self.graphWidget.margins["left"] + width)
             textItem.setFont(font)
             textItem.setY(y - 10)
@@ -373,16 +381,17 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.spanItemHeight = endLabelText.boundingRect().height()
         return endLabelText
 
-    def addEndItem(self):
-        pathItem:QtWidgets.QGraphicsPathItem = self.pathItem
-        path:QtGui.QPainterPath = pathItem.path()
-        end_point:QtCore.QPointF = path.currentPosition()
-        brush:QtGui.QBrush = QtGui.QBrush(self._trainColor())
-        checi = self.train.fullCheci() if self.showFullCheci else self.train.getCheci(self.down)
-        endAtThis = self.endAtThis
-        self._setEndItem(end_point,brush,checi,self.down,endAtThis)
+    # def addEndItem(self):
+    #     pathItem:QtWidgets.QGraphicsPathItem = self.pathItem
+    #     path:QtGui.QPainterPath = pathItem.path()
+    #     end_point:QtCore.QPointF = path.currentPosition()
+    #     brush:QtGui.QBrush = QtGui.QBrush(self._trainColor())
+    #     checi = self.train.fullCheci() if self.showFullCheci else self.train.getCheci(self.down)
+    #     endAtThis = self.endAtThis
+    #     self._setEndItem(end_point,brush,checi,self.down,endAtThis)
 
-    def _determineStartLabelHeight(self, start_point:QtCore.QPointF, down:bool):
+    def _determineStartLabelHeight(self, start_point:QtCore.QPointF, down:bool,
+                                   startAtThis:bool):
         """
         2020.09.28新增。决定开始标签高度。
         如果启用重叠避免，则需要查找近邻计算高度，同时维护数据；
@@ -396,19 +405,25 @@ class TrainItem(QtWidgets.QGraphicsItem):
         a = bisect.bisect_left(lst, (start_point.x()-thres, ))
         b = bisect.bisect_right(lst, (start_point.x()+thres, ))
         w = self.spanItemWidth  # 当前标签宽度
+        h0 = self.spanItemWidth
+        if startAtThis:
+            wl, wr = w/2,w/2
+        else:
+            wl, wr = w, 0
         h = self.graph.UIConfigData()['base_label_height']
         occupied_heights = []
         for i in range(a, b):
-            x, hi, wi = lst[i]
-            if abs(start_point.x()-x) < (wi+w)/2:
+            x, hi, wli, wri = lst[i]
+            if 0<start_point.x()-x<wri+wl or 0<x-start_point.x()<wli+wr:
                 # 确定冲突
                 occupied_heights.append(hi)
         while h in occupied_heights:
             h += self.graph.UIConfigData()['step_label_height']
-        bisect.insort(lst, (start_point.x(), h, w))
+        bisect.insort(lst, (start_point.x(), h, wl, wr))
         return h
 
-    def _determineEndLabelHeight(self, end_point:QtCore.QPointF, down:bool):
+    def _determineEndLabelHeight(self, end_point:QtCore.QPointF, down:bool,
+                                 endAtThis:bool):
         """
         2020.09.28新增。决定开始标签高度。
         如果启用重叠避免，则需要查找近邻计算高度，同时维护数据；
@@ -422,16 +437,23 @@ class TrainItem(QtWidgets.QGraphicsItem):
         a = bisect.bisect_left(lst, (end_point.x()-thres, ))
         b = bisect.bisect_right(lst, (end_point.x()+thres, ))
         w = self.spanItemWidth  # 当前标签宽度
+        h0 = self.spanItemHeight
+        if endAtThis:
+            wl, wr = w/2, w/2
+        else:
+            wl, wr = 0, w
         h = self.graph.UIConfigData()['base_label_height']
+        if not self.graph.UIConfigData()['end_label_checi']:
+            return h
         occupied_heights = []
         for i in range(a, b):
-            x, hi, wi = lst[i]
-            if abs(end_point.x()-x) < (wi+w)/2:
+            x, hi, wli, wri = lst[i]
+            if 0 < end_point.x()-x < wri+wl or 0<x-end_point.x()<wli+wr:
                 # 确定冲突
                 occupied_heights.append(hi)
         while h in occupied_heights:
             h += self.graph.UIConfigData()['step_label_height']
-        bisect.insort(lst, (end_point.x(), h, w))
+        bisect.insort(lst, (end_point.x(), h, wl, wr))
         return h
 
     def _setEndItem(self, end_point:QtCore.QPointF, brush:QtGui.QBrush,
@@ -449,7 +471,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         w,h = self.spanItemWidth,self.spanItemHeight
         endLabel = QtGui.QPainterPath()
         self.endLabelText = endLabelText
-        eh = self._determineEndLabelHeight(end_point, down)
+        eh = self._determineEndLabelHeight(end_point, down, endAtThis)
         beh = self.graph.UIConfigData()['base_label_height']
         self.endLabelHeight = eh
         if endAtThis:
@@ -525,7 +547,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         startLabelText = self._setStartEndLabelText(checi,brush)
         self.startLabelText = startLabelText
         # start_height = self.graph.UIConfigData()['start_label_height']
-        start_height = self._determineStartLabelHeight(start_point, down)
+        start_height = self._determineStartLabelHeight(start_point, down, startAtThis)
         self.startLabelHeight = start_height
         w,h = self.spanItemWidth,self.spanItemHeight
         if startAtThis:
@@ -903,8 +925,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 self.graphWidget.scene.removeItem(self.tempRect)
 
             if endlabel is not None:
-                endlabel.setPen(pathPen)
                 pathPen.setWidth(1)
+                endlabel.setPen(pathPen)
                 endlabel.setZValue(0)
                 self.endLabelText.setZValue(0)
                 self.endLabelText.setBrush(pathPen.color())

@@ -74,9 +74,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         self.selectedTrain = None
 
-        # 各个站始发终到标签的高度及宽度。Tuple[横坐标，高度，宽度]
+        # 各个站始发终到标签的高度及宽度。Tuple[横坐标，高度，左宽度，右宽度]
         # Key: 站名，方向。True->标签在上；False->标签在下
-        self.labelSpans = {}  # type:Dict[Tuple[float, bool],List[Tuple[float, int, int]]]
+        self.labelSpans = {}  # type:Dict[Tuple[float, bool],List[Tuple[float, int, int, int]]]
 
         self.setGraph(self.graph)
         self.setMouseTracking(True)

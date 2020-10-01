@@ -72,9 +72,9 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         super().__init__()
         start = time.time()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V3.2.0"
+        self.version = "V3.2.1"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20200928'
+        self.date = '20201001'
         self.release = 'R44'  # 发布时再改这个
         self._system = None
         self.updating = True
@@ -1680,7 +1680,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             self.dockToolButtons.append(btn)
 
             btn = PEToolButton('数据库', QI(':/database.png'),large=True)
-            # btn.clicked.connect(self._view_line_data)
+            btn.clicked.connect(self._view_line_data)
             btn.setToolTip('线路数据库（Ctrl+H）\n查看、管理和导入系统线路数据库。')
 
             m = QM()
@@ -2265,7 +2265,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         """
         另存为
         """
-        filename,ok = QtWidgets.QFileDialog.getSaveFileName(self, "选择文件", directory=self.graph.lineName() + '.pyetgr',
+        filename,ok = QtWidgets.QFileDialog.getSaveFileName(self, "另存为...", directory=self.graph.lineName() + '.pyetgr',
                                                          filter='pyETRC运行图文件(*.pyetgr;*.json)\n所有文件(*.*)')
         if not ok:
             return
