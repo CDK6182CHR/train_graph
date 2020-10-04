@@ -11,7 +11,7 @@
 from Timetable_new.checi3 import Checi
 from datetime import datetime, timedelta
 from Timetable_new.utility import judge_type, stationEqual, strToTime
-import re, bisect
+import re, bisect, warnings
 from typing import Iterable, Union
 from .circuit import Circuit
 from ..pyETRCExceptions import *
@@ -1404,7 +1404,14 @@ class Train():
             return self._carriageCircuit
         elif self._carriageCircuitName is None:
             return None
-        return self.graph.circuitByName(self._carriageCircuitName)
+        print("carriageCircuit existed: ",self.fullCheci(), self._carriageCircuitName)
+        # 2020.10.04  找不到标尺不报错，而是删除。不确定这个设置。
+        try:
+            return self.graph.circuitByName(self._carriageCircuitName)
+        except CircuitNotFoundError as e:
+            warnings.warn(f'Unexpected {repr(e)}, reset circuit to None', RuntimeWarning)
+            self._carriageCircuitName = None
+            return None
 
     def setCarriageCircuit(self, circuit: Circuit):
         if circuit is None:

@@ -850,7 +850,17 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             # 这里需要遍历检查items，是因为防止ctrl+R操作中的train未添加进来，尝试删除引发错误。暂未找到更合适方案。
             # if item in self.scene.items():
             # if item.scene() is self.scene:
+            item:TrainItem
             self.scene.removeItem(item)
+            for x in (item.endLabelInfo, item.startLabelInfo):
+                if x is not None:
+                    try:
+                        y, info = x
+                        self.labelSpans.get(y).remove(info)
+                    except Exception as e:
+                        print("GraphicWidget::delTrainLine: error while deleting label info: ",
+                              repr(e), x)
+
         train.clearItems()
 
     def repaintTrainLine(self, train):
@@ -869,15 +879,14 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.marginItemGroups["up"].setY(scenepoint.y())
         try:
             self.nowItem.setY(scenepoint.y())
+            point = QtCore.QPoint(0, self.height())
+            scenepoint = self.mapToScene(point)
+            self.marginItemGroups["down"].setY(scenepoint.y() - self.scene.height() - 27)
         except RuntimeError:
             # 可能报错：Wrapped C++ class have been deleted.
             # 怀疑是打开新运行图时nowItem已经被析构，然后由引起resize或者类似问题。
             print("Wrapped C++ class NowItem has been deleted.")
             pass
-
-        point = QtCore.QPoint(0, self.height())
-        scenepoint = self.mapToScene(point)
-        self.marginItemGroups["down"].setY(scenepoint.y() - self.scene.height() - 27)
 
     def _resetDistanceAxis(self):
         point = QtCore.QPoint(0, 0)
@@ -885,12 +894,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.marginItemGroups["left"].setX(scenepoint.x())
         try:
             self.nowItem.setX(scenepoint.x())
+            point = QtCore.QPoint(self.width(), 0)
+            scenepoint = self.mapToScene(point)
+            self.marginItemGroups["right"].setX(scenepoint.x() - self.scene.width() - 20)
         except RuntimeError:
             pass
-
-        point = QtCore.QPoint(self.width(), 0)
-        scenepoint = self.mapToScene(point)
-        self.marginItemGroups["right"].setX(scenepoint.x() - self.scene.width() - 20)
 
     def stationPosCalculate(self, zm: str, sj: datetime)->QtCore.QPoint:
         """

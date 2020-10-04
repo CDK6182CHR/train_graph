@@ -73,6 +73,10 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.startLabelHeight = 0
         self.endLabelHeight = 0
 
+        # 用于标签自动调整高度时的信息。后半数据结构同打表的 (y, [x, h, wl, wr])
+        self.startLabelInfo = None  # type: Tuple[float, Tuple[float, int, int, int]]
+        self.endLabelInfo = None  # type: Tuple[float, Tuple[float, int, int, int]]
+
 
     def setLine(self,start:int=0,end:int=-1,showStartLabel=True,showEndLabel = True)->(int,int):
         """
@@ -381,6 +385,17 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.spanItemHeight = endLabelText.boundingRect().height()
         return endLabelText
 
+    def _setEmptyEndLabelText(self,brush)->QtWidgets.QGraphicsSimpleTextItem:
+        """
+        生成空白的终点标签。如果已经设置过spanItemWidth则不设置；否则设置成空白值。
+        """
+        endLabelText = QtWidgets.QGraphicsSimpleTextItem(' ', self)
+        endLabelText.setBrush(brush)
+        if self.spanItemWidth is None:
+            self.spanItemWidth = endLabelText.boundingRect().width()
+            self.spanItemHeight = endLabelText.boundingRect().height()
+        return endLabelText
+
     # def addEndItem(self):
     #     pathItem:QtWidgets.QGraphicsPathItem = self.pathItem
     #     path:QtGui.QPainterPath = pathItem.path()
@@ -419,7 +434,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 occupied_heights.append(hi)
         while h in occupied_heights:
             h += self.graph.UIConfigData()['step_label_height']
-        bisect.insort(lst, (start_point.x(), h, wl, wr))
+        tpl = (start_point.x(), h, wl, wr)
+        bisect.insort(lst, tpl)
+        self.startLabelInfo = ((start_point.y(), down), tpl)
         return h
 
     def _determineEndLabelHeight(self, end_point:QtCore.QPointF, down:bool,
@@ -453,7 +470,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 occupied_heights.append(hi)
         while h in occupied_heights:
             h += self.graph.UIConfigData()['step_label_height']
-        bisect.insort(lst, (end_point.x(), h, wl, wr))
+        tpl = (end_point.x(), h, wl, wr)
+        bisect.insort(lst, tpl)
+        self.endLabelInfo = ((end_point.y(), not down), tpl)
         return h
 
     def _setEndItem(self, end_point:QtCore.QPointF, brush:QtGui.QBrush,
@@ -464,11 +483,11 @@ class TrainItem(QtWidgets.QGraphicsItem):
         """
         # 终点标签
         if not self.graph.UIConfigData()['end_label_checi']:
-            checi = ' '
-        endLabelText = self._setStartEndLabelText(checi,brush)
-        if not self.graph.UIConfigData()['end_label_checi'] and endAtThis:
-            self.spanItemWidth = 0
-        w,h = self.spanItemWidth,self.spanItemHeight
+            endLabelText = self._setEmptyEndLabelText(brush)
+            w,h = 0, self.spanItemHeight
+        else:
+            endLabelText = self._setStartEndLabelText(checi,brush)
+            w,h = self.spanItemWidth,self.spanItemHeight
         endLabel = QtGui.QPainterPath()
         self.endLabelText = endLabelText
         eh = self._determineEndLabelHeight(end_point, down, endAtThis)

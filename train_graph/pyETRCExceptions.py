@@ -26,11 +26,12 @@ class RulerNotCompleteError(Exception):
         return f"区间{self.start}-{self.end}没有标尺数据，无法按标尺排图"
 
 class CircuitNotFoundError(Exception):
-    def __init__(self,name):
+    def __init__(self,name, checi=None):
         self.name = name
+        self.checi = checi
 
     def __str__(self):
-        return f"根据名称找不到交路：{self.name}"
+        return f"根据名称找不到交路：{self.name}, 由车次{self.checi}调起"
 
 class CircuitExistedError(Exception):
     def __init__(self,name):
