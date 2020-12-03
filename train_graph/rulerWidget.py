@@ -5,6 +5,7 @@
 from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 from .data.line import Line,Ruler
+from .utility import PECelledTable, PECellWidget, CellWidgetFactory
 
 class RulerWidget(QtWidgets.QTabWidget):
     okClicked = QtCore.pyqtSignal()
@@ -80,7 +81,7 @@ class RulerWidget(QtWidgets.QTabWidget):
         check = QtWidgets.QCheckBox()
         check.setChecked(ruler.different())
         flayout.addRow("上下行分设", check)
-        check.toggled.connect(lambda x: self._ruler_different_changed(ruler, x, tableWidget))
+        check.toggled.connect(lambda x: self._ruler_different_changed(widget, x))
         widget.check = check
 
         vlayout.addLayout(flayout)
@@ -102,7 +103,7 @@ class RulerWidget(QtWidgets.QTabWidget):
 
             vlayout.addLayout(hlayout)
 
-        tableWidget = QtWidgets.QTableWidget()
+        tableWidget = PECelledTable()
         tableWidget.setEditTriggers(tableWidget.NoEditTriggers)
         widget.tableWidget = tableWidget
 
@@ -183,6 +184,13 @@ class RulerWidget(QtWidgets.QTabWidget):
     def _addRulerRow(self, fazhan, daozhan, blocker
                      , node: dict, tableWidget: QtWidgets.QTableWidget,
                      mile,now_line):
+        """
+        2020.12.03：修改mile的传递方式。
+        将mile存在距离那一列的UserData里。
+        原有的直接用lambda传递mile的方式是错误的；当打开新的运行图时，只更新了内容，没更新槽函数，
+        导致打开新的运行图后，这里存储的里程实际上还是老里程。
+        同时修订：不再使用lambda连接槽函数。把行号直接放到spin里面，作为动态属性。
+        """
         # print("RulerWidget::addRulerRow",fazhan,blocker,daozhan)
         tableWidget.setRowHeight(now_line, self.main.graph.UIConfigData()['table_row_height']
             if self.main is not None else 30)
@@ -198,31 +206,29 @@ class RulerWidget(QtWidgets.QTabWidget):
             minute = int(node["interval"] / 60)
             second = node["interval"] % 60
 
-        spinMin = QtWidgets.QSpinBox()
+        spinMin = CellWidgetFactory.new(QtWidgets.QSpinBox)  # type: QtWidgets.QSpinBox
         spinMin.setRange(0, 300)
         spinMin.setValue(minute)
         spinMin.setMinimumSize(1,1)
+        spinMin.row = now_line
 
-        spinSec = QtWidgets.QSpinBox()
+        spinSec = CellWidgetFactory.new(QtWidgets.QSpinBox)  # type:QtWidgets.QSpinBox
         spinSec.setRange(0, 60)
         spinSec.setSingleStep(10)
         spinSec.setValue(second)
         spinSec.setMinimumSize(1,1)
+        spinSec.row = now_line
 
-        spinMin.valueChanged.connect(lambda: self._ruler_interval_changed(
-            now_line, tableWidget, mile
-        ))
-        spinSec.valueChanged.connect(lambda: self._ruler_interval_changed(
-            now_line, tableWidget, mile
-        ))
+        spinMin.valueChanged.connect(lambda :self._ruler_interval_changed(tableWidget))
+        spinSec.valueChanged.connect(lambda: self._ruler_interval_changed(tableWidget))
 
         tableWidget.setCellWidget(now_line, 1, spinMin)
         tableWidget.setCellWidget(now_line, 2, spinSec)
 
-        spinStart = QtWidgets.QSpinBox()
+        spinStart = CellWidgetFactory.new(QtWidgets.QSpinBox)  # type:QtWidgets.QSpinBox
         spinStart.setRange(0, 300)
         spinStart.setSingleStep(10)
-        spinStop = QtWidgets.QSpinBox()
+        spinStop = CellWidgetFactory.new(QtWidgets.QSpinBox)  # type:QtWidgets.QSpinBox
         spinStop.setRange(0, 300)
         spinStop.setSingleStep(10)
         spinStart.setMinimumSize(1,1)
@@ -241,7 +247,9 @@ class RulerWidget(QtWidgets.QTabWidget):
         tableWidget.setCellWidget(now_line, 3, spinStart)
         tableWidget.setCellWidget(now_line, 4, spinStop)
 
-        tableWidget.setItem(now_line, 5, QtWidgets.QTableWidgetItem(f"{mile:.3f}"))
+        item = QtWidgets.QTableWidgetItem(f"{mile:.3f}")
+        item.setData(Qt.UserRole,mile)
+        tableWidget.setItem(now_line, 5, item)
 
         item = QtWidgets.QTableWidgetItem(Line.speedStr(mile,minute*60+second))
         tableWidget.setItem(now_line, 6, item)
@@ -334,12 +342,15 @@ class RulerWidget(QtWidgets.QTabWidget):
         tableWidget.cellWidget(row,3).setValue(info.get("start",0))
         tableWidget.cellWidget(row,4).setValue(info.get("stop",0))
         tableWidget.item(row,5).setText(f"{mile:.3f}")
+        tableWidget.item(row,5).setData(Qt.UserRole, mile)
         tableWidget.item(row,6).setText(Line.speedStr(mile,int_sec))
 
     #slots
-    def _ruler_different_changed(self, ruler: Ruler, checked: bool, tableWidget):
+    def _ruler_different_changed(self, widget: QtWidgets.QWidget, checked: bool):
         if self.updating:
             return
+        ruler = widget.ruler
+        tableWidget = widget.tableWidget
         if checked == False:
             if self.line.isSplited():
                 self._derr("本线存在上下行分设站，不能设置上下行一致的标尺！")
@@ -560,10 +571,15 @@ class RulerWidget(QtWidgets.QTabWidget):
         self._setRulerTable(tableWidget, ruler)
         dialog.close()
 
-    def _ruler_interval_changed(self, now_line: int, tableWidget: QtWidgets.QTableWidget,
-                                mile: float):
+    def _ruler_interval_changed(self, tableWidget: QtWidgets.QTableWidget):
+        """
+        2020.12.03修订：从sender获取需要的信息。
+        """
         if self.updating:
             return
+        s:QtWidgets.QDoubleSpinBox = self.sender()
+        now_line = s.row
+        mile = tableWidget.item(now_line,5).data(Qt.UserRole)
         # 重新计算均速
         spinMin = tableWidget.cellWidget(now_line, 1)
         spinSec = tableWidget.cellWidget(now_line, 2)
