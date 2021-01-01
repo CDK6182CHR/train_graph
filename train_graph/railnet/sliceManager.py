@@ -73,6 +73,30 @@ class SliceManager(QtWidgets.QWidget):
         label.setWordWrap(True)
         vlayout.addWidget(label)
 
+        chlayout = QtWidgets.QHBoxLayout()
+        chk = QtWidgets.QCheckBox()
+        self.checkWithRuler = chk
+        chk.setChecked(False)
+        chlayout.addWidget(chk)
+        label = QtWidgets.QLabel('同时导出区间数不少于')
+        chlayout.addWidget(label)
+        sp = QtWidgets.QSpinBox()
+        chk.toggled.connect(sp.setEnabled)
+        sp.setRange(0,1000)
+        sp.setValue(10)
+        self.spinRulerCount = sp
+        sp.setEnabled(False)
+        chlayout.addWidget(sp)
+
+        label = QtWidgets.QLabel('的标尺')
+        chlayout.addWidget(label)
+
+        vlayout.addLayout(chlayout)
+
+        chk = QtWidgets.QCheckBox('切片包含数据库中所有车次')
+        self.checkAllTrains = chk
+        vlayout.addWidget(chk)
+
         tw = PEControlledTable()  # type:QtWidgets.QTableWidget
         tw.setColumnCount(1)
         tw.setHorizontalHeaderLabels(['站名'])
@@ -82,7 +106,12 @@ class SliceManager(QtWidgets.QWidget):
         vlayout.addWidget(tw)
         btn = QtWidgets.QPushButton('预览')
         btn.clicked.connect(self._preview)
-        vlayout.addWidget(btn)
+        chlayout = QtWidgets.QHBoxLayout()
+        chlayout.addWidget(btn)
+        btn1 = QtWidgets.QPushButton('强制生成')
+        btn1.clicked.connect(self._force_generate_line)
+        chlayout.addWidget(btn1)
+        vlayout.addLayout(chlayout)
         hlayout.addLayout(vlayout)
 
         vlayout = QtWidgets.QVBoxLayout()
@@ -141,7 +170,8 @@ class SliceManager(QtWidgets.QWidget):
             if isinstance(it,QtWidgets.QTableWidgetItem):
                 via.append(it.text())
         try:
-            line = self.net.outLine(via,withRuler=True)  # todo 暂时不导出标尺
+            line = self.net.outLine(via,withRuler=self.checkWithRuler.isChecked(),
+                                    minRulerCount=self.spinRulerCount.value())
         except Exception as e:
             QtWidgets.QMessageBox.warning(self,'错误','无效经由：\n'+repr(e))
         else:
@@ -149,6 +179,24 @@ class SliceManager(QtWidgets.QWidget):
             self.lineWidget.setLine(line)
             self.lineWidget.setData()
             self.currentVia = via   # 当前经由表
+
+    def _force_generate_line(self):
+        """
+        2021.01.01
+        依据经由表强制生成新线路（不考虑里程）。
+        """
+        tw = self.viaTable
+        line = Line()
+        via = []
+        for r in range(tw.rowCount()):
+            s = tw.item(r,0).text()
+            line.addStation_by_info(s,r*10)
+            via.append(s)
+        print("force generate: via",via,line)
+        self.line = line
+        self.lineWidget.setLine(line)
+        self.lineWidget.setData()
+        self.currentVia = via  # 当前经由表
 
     def addNewSlice(self,via:List[str]):
         """
@@ -172,7 +220,7 @@ class SliceManager(QtWidgets.QWidget):
         if not self.line.stations:
             QtWidgets.QMessageBox.warning(self,'错误','请先生成有效的站表！')
             return
-        graph = self.graphdb.subGraph(self.line)
+        graph = self.graphdb.subGraph(self.line,self.checkAllTrains.isChecked())
         for c in self.graphdb.circuits():
             graph.addCircuit(c)  # 暴力方法：加入所有交路数据
 

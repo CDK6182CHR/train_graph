@@ -20,6 +20,7 @@ class RulerTabWidget(QtWidgets.QWidget):
         self.line = self.ruler.line()
         self.main = main
         self.tabname = ''
+        self.updating = False
         self.initUI()
 
     def initUI(self):

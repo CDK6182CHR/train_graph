@@ -1949,7 +1949,7 @@ class Graph:
         print("Graph::diffWith()历时", tm2 - tm1)
         return result
 
-    def subGraph(self,line:Line):
+    def subGraph(self,line:Line,withAllTrains=False):
         """
         给出指定line下的子图。
         """
@@ -1961,7 +1961,7 @@ class Graph:
             c.coverBaseData(circuit)
             graph.addCircuit(c)
         for train in self.trains():
-            if train.isLocalTrain(graph):
+            if withAllTrains or train.isLocalTrain(graph):
                 circuit = train.carriageCircuit()
                 if circuit is not None:
                     train.setCarriageCircuit(graph.circuitByName(circuit.name()))
