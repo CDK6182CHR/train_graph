@@ -59,6 +59,7 @@ class TrainManager(QtWidgets.QWidget):
         无需确认。
         """
         try:
+            self.graphdb.clearAll()
             self.graphdb.loadGraph(filename)
         except Exception as e:
             QtWidgets.QMessageBox.warning(self,'错误','不能识别文件:\n'+str(e))

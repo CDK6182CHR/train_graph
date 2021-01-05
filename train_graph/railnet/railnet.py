@@ -5,6 +5,7 @@
 列车运行图数据库系统基础数据类，基于networkX.digraph格式，按照OO要求进行封装。
 有向边数据格式：dict
 dict{
+    "name":str,  //线路名称。2021.01.02新增
     "length":float, //区间距离
     "down":bool,//本区间是否属于下行区间
     "rulers": dict<dict>{
@@ -69,6 +70,7 @@ class RailNet:
         """
         2020.02.02新增，
         从pyETRC线路文件中读取数据。
+        2021.01.02：新增线路名称作为数据之一。但暂时只作为附加数据（不作为合并条件等）
         """
         last_st_dict = None
         # 下行
@@ -80,6 +82,7 @@ class RailNet:
                 continue
             # 添加下行边数据
             dct_down = {
+                "name":line.name,
                 "length":abs(st_dict['licheng']-last_st_dict['licheng']),
                 "down":True,
                 "rulers":{},
@@ -103,6 +106,7 @@ class RailNet:
             if not st_dict['direction'] & Line.UpVia:
                 continue
             dct_up = {
+                "name":line.name,
                 "length":line.gapBetween(last_st_dict['zhanming'],st_dict['zhanming']),
                 "down":True,
                 "rulers":{},

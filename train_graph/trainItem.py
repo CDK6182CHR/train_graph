@@ -4,12 +4,12 @@
 目前设置为不可变，初始化时绘制，其后不可改变，只能重画。但做好抽象，允许扩展。
 数据来源于graph对象。GraphWidget只用来计算位置，不可直接往图上画。
 """
-from PyQt5 import QtWidgets,QtCore,QtGui
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 
 from .data.graph import Graph
 from .data.train import Train
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 from typing import List, Dict, Tuple
 import bisect
 
@@ -26,9 +26,10 @@ class TrainItem(QtWidgets.QGraphicsItem):
     Invalid = -1  # 运行线无效
     Setted = 2  # 用户设置终止
     Reversed = 3  # 因上下行翻转终止
-    def __init__(self,train:Train,graph:Graph,graphWidget,start=None,end=None,down=None,
-                 validWidth = 1,
-                 showFullCheci=False,markMode=1,
+
+    def __init__(self, train: Train, graph: Graph, graphWidget, start=None, end=None, down=None,
+                 validWidth=1,
+                 showFullCheci=False, markMode=1,
                  parent=None):
         super().__init__(parent)
         self.train = train
@@ -38,7 +39,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.graphWidget = graphWidget  # type:'GraphicsWidget'
         # 注意：引用语义，不得赋值
         self.labelSpans = graphWidget.labelSpans  # type:Dict[Tuple[float, bool],List[Tuple[float, int, int, int]]]
-        self.showFullCheci=showFullCheci
+        self.showFullCheci = showFullCheci
         self.validWidth = validWidth
         self.down = down
         self.markMode = markMode
@@ -60,13 +61,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.startAtThis = True
         self.endAtThis = False
 
-        self.spanItemWidth=None
-        self.spanItemHeight=None
-        self.startPoint=None
-        self.endPoint=None
+        self.spanItemWidth = None
+        self.spanItemHeight = None
+        self.startPoint = None
+        self.endPoint = None
         # self.labelItemWidth=None
         # self.labelItemHeight=None
-        self.maxPassed = graph.UIConfigData().setdefault("max_passed_stations",3)
+        self.maxPassed = graph.UIConfigData().setdefault("max_passed_stations", 3)
 
         self.color = self._trainColor()
 
@@ -77,8 +78,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.startLabelInfo = None  # type: Tuple[float, Tuple[float, int, int, int]]
         self.endLabelInfo = None  # type: Tuple[float, Tuple[float, int, int, int]]
 
-
-    def setLine(self,start:int=0,end:int=-1,showStartLabel=True,showEndLabel = True)->(int,int):
+    def setLine(self, start: int = 0, end: int = -1, showStartLabel=True, showEndLabel=True) -> (int, int):
         """
         2019.02.11新增逻辑：绘图过程中记录下每个车站的y_value。
         返回铺画结束的标号。如果有特殊情况，返回-1.
@@ -90,7 +90,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.start_index = start
         if not self.train.isShow():
             # 若设置为不显示，忽略此命令
-            return -1,self.Invalid
+            return -1, self.Invalid
         train = self.train
         station_count = 0  # 本线站点数
 
@@ -107,46 +107,46 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 self.graphWidget.margins['right']
 
         # 绘制主要部分pathItem
-        path,start_point,end_point,end,status = self._setPathItem(span_left,span_right,False,start)
+        path, start_point, end_point, end, status = self._setPathItem(span_left, span_right, False, start)
         down = self.down
 
         expand_path = None
         if self.validWidth > 1:
-            expand_path,_,_,_,_ = self._setPathItem([],[],False,start,valid_only=True)
+            expand_path, _, _, _, _ = self._setPathItem([], [], False, start, valid_only=True)
 
         station_count = self.station_count
         if station_count < 2:
             # print("station count < 2")
-            return end,status
+            return end, status
 
         if start_point is None:
             print(train.fullCheci())
-            return end,status
+            return end, status
         else:
             self.startPoint = start_point
 
         # train.setIsDown(down)
-        checi = train.fullCheci() if self.showFullCheci else train.getCheci(down) # todo 修改逻辑
+        checi = train.fullCheci() if self.showFullCheci else train.getCheci(down)  # todo 修改逻辑
 
         brush = QtGui.QBrush(pen.color())
         # 终点标签
         # 绘制终点标签的条件是：自动计算Item且不是由转向终止的，或者用户指定。
         if showEndLabel and (end_setted or status != self.Reversed):
-            endLabel = self._setEndItem(end_point,brush,checi,down,self.endAtThis)
+            endLabel = self._setEndItem(end_point, brush, checi, down, self.endAtThis)
             endLabelItem = QtWidgets.QGraphicsPathItem(endLabel, self)
             endLabelItem.setPen(labelPen)
             self.endLabelItem = endLabelItem
 
         # 起点标签
         if showStartLabel:
-            label = self._setStartItem(start_point,brush,checi,down,self.startAtThis)
+            label = self._setStartItem(start_point, brush, checi, down, self.startAtThis)
             labelItem = QtWidgets.QGraphicsPathItem(label, self)
             labelItem.setPen(labelPen)
             self.startLabelItem = labelItem
 
         # 跨界点标签
         UIDict = self.graph.UIConfigData()
-        span_width = UIDict["margins"]["right"]-UIDict["margins"]["label_width"]
+        span_width = UIDict["margins"]["right"] - UIDict["margins"]["label_width"]
         font = QtGui.QFont()
 
         stretch = 100
@@ -187,8 +187,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
         pen.setCapStyle(Qt.SquareCap)
         if expand_path is not None:
             outexpand = stroker.createStroke(expand_path)
-            expandItem = QtWidgets.QGraphicsPathItem(outexpand,self)
-            expandPen = QtGui.QPen(Qt.transparent,pen.width()*self.validWidth)
+            expandItem = QtWidgets.QGraphicsPathItem(outexpand, self)
+            expandPen = QtGui.QPen(Qt.transparent, pen.width() * self.validWidth)
             expandItem.setPen(expandPen)
             expandItem.setZValue(-1)
             self.expandItem = expandItem
@@ -196,10 +196,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
         pathItem.setPen(pen)
         self.pathItem = pathItem
         self.addLinkLine()
-        return end,status
+        return end, status
 
-
-    def isDownInterval(self,last_point,this_point)->bool:
+    def isDownInterval(self, last_point, this_point) -> bool:
         """
         判定上下行区间。
         """
@@ -208,10 +207,10 @@ class TrainItem(QtWidgets.QGraphicsItem):
         return False
 
     def _setPathItem(self,
-            span_left:list,span_right:list,
-            mark_only:bool,
-            startIndex:int,*,valid_only=False
-        )->(QtGui.QPainterPath,QtCore.QRectF,QtCore.QRectF,int,int):
+                     span_left: list, span_right: list,
+                     mark_only: bool,
+                     startIndex: int, *, valid_only=False
+                     ) -> (QtGui.QPainterPath, QtCore.QRectF, QtCore.QRectF, int, int):
         """
         从setLine中抽离出来的绘制pathItem函数。返回：path,start_point,end_point, endIndex, status（终止原因）
         """
@@ -222,7 +221,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         last_point = None
         last_ddpoint = None
         start_point = None
-        start_dd,start_cf = None,None
+        start_dd, start_cf = None, None
         last_station = None
         passedCount = 0
         started = False if self.startStation is not None else True
@@ -230,13 +229,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
         curIndex = -1
         last_loop_station = None
         end_point = None
-        for index,dct in enumerate(train.stationDicts(startIndex)):
+        for index, dct in enumerate(train.stationDicts(startIndex)):
             curIndex = index + startIndex  # 标记当前处理对象在时刻表中的index
             # 计算并添加运行线，上下行判断
-            station, ddsj, cfsj = dct["zhanming"],dct["ddsj"],dct["cfsj"]
+            station, ddsj, cfsj = dct["zhanming"], dct["ddsj"], dct["cfsj"]
             ddpoint = self.graphWidget.stationPosCalculate(station, ddsj)
             cfpoint = self.graphWidget.stationPosCalculate(station, cfsj)
-            stopped = (ddsj!=cfsj)
+            stopped = (ddsj != cfsj)
 
             if not started:
                 if station == self.startStation:
@@ -260,7 +259,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 # 取消贪心策略，设置为不通过的站一律不画
                 continue
 
-            train.setTrainStationYValue(dct,ddpoint.y())
+            train.setTrainStationYValue(dct, ddpoint.y())
 
             station_count += 1
             last_station = station
@@ -269,7 +268,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 # 第一个站
                 self.startAtThis = train.isSfz(station)
                 self.startStation = station
-                start_dd,start_cf = ddsj,cfsj
+                start_dd, start_cf = ddsj, cfsj
                 path.moveTo(ddpoint)
                 start_point = ddpoint
                 last_loop_station = station
@@ -277,61 +276,61 @@ class TrainItem(QtWidgets.QGraphicsItem):
             else:
                 # path.lineTo(ddpoint)
                 # 上下行判别
-                newDown = self.isDownInterval(last_point,ddpoint)
+                newDown = self.isDownInterval(last_point, ddpoint)
                 if down is None:
                     down = newDown
                 elif down != newDown and self.endStation is None:
                     # 行别变化，终止铺画
                     status = self.Reversed
-                    print("行别变化",down,newDown,station,self.train.fullCheci(),curIndex,station_count)
+                    print("行别变化", down, newDown, station, self.train.fullCheci(), curIndex, station_count)
                     curIndex -= 1
                     last_station = last_loop_station
                     # 注意：保持last_station是上一个。
                     break
                 if last_loop_station is not None:
                     # 当down是None时这里的判断引起问题. 故把这一块移动到上下行判断之后去。
-                    passed_stations_left = self.graph.passedStationCount(last_loop_station,station,down)
+                    passed_stations_left = self.graph.passedStationCount(last_loop_station, station, down)
                     passedCount += passed_stations_left  # 叠加此区间内的【车次时刻表】和【本线站表】不重合的数量
                     if passedCount > self.maxPassed and self.endStation is None:
                         status = self.Pass
                         last_station = last_loop_station
                         end_point = last_point
                         # print("passedCount > maxPassed line238",self.train.fullCheci(),station)
-                        print(passed_stations_left,last_loop_station,station,down)
+                        print(passed_stations_left, last_loop_station, station, down)
                         break
                 if not mark_only:
                     self._incline_line(path, last_point, ddpoint, span_left, span_right)
             if not mark_only:
                 self._H_line(path, ddpoint, cfpoint, span_left, span_right,
-                         self.graph.UIConfigData()["show_line_in_station"])
+                             self.graph.UIConfigData()["show_line_in_station"])
             if self.markTime:
                 # 标记停点。precondition: for station_count>=2, down is whether True or False, i.e. not None
                 if station_count == 1:
                     last_point = cfpoint
                     last_ddpoint = ddpoint
-                    last_ddsj,last_cfsj = ddsj,cfsj
+                    last_ddsj, last_cfsj = ddsj, cfsj
                     continue
                 # 2019.06.29算法调整：改为每次循环铺画上一轮的，循环结束再铺画最后一轮的。
                 # elif station_count == 2:
                 #     先补画第一个站的
-                    # first_stopped = (last_point != start_point)
-                    # if first_stopped and down:
-                    #     self.addTimeMark(start_point,start_dd,self.NE)
-                    #     self.addTimeMark(last_point,start_cf,self.SW)
-                    # elif first_stopped and not down:
-                    #     self.addTimeMark(start_point,start_dd,self.SE)
-                    #     self.addTimeMark(last_point,start_cf,self.NW)
-                    # elif not first_stopped and not down:
-                    #     self.addTimeMark(last_point,start_dd,self.NW)
-                    # else:
-                    #     self.addTimeMark(last_point,start_dd,self.SW)
+                # first_stopped = (last_point != start_point)
+                # if first_stopped and down:
+                #     self.addTimeMark(start_point,start_dd,self.NE)
+                #     self.addTimeMark(last_point,start_cf,self.SW)
+                # elif first_stopped and not down:
+                #     self.addTimeMark(start_point,start_dd,self.SE)
+                #     self.addTimeMark(last_point,start_cf,self.NW)
+                # elif not first_stopped and not down:
+                #     self.addTimeMark(last_point,start_dd,self.NW)
+                # else:
+                #     self.addTimeMark(last_point,start_dd,self.SW)
                 last_stopped = (last_ddsj != last_cfsj)
                 if last_stopped:
-                    self._addTimeMarkFromData(last_stopped,down,True,last_ddsj,last_ddpoint)
-                self._addTimeMarkFromData(last_stopped,down,False,last_cfsj,last_point)
+                    self._addTimeMarkFromData(last_stopped, down, True, last_ddsj, last_ddpoint)
+                self._addTimeMarkFromData(last_stopped, down, False, last_cfsj, last_point)
             last_point = cfpoint
             last_ddpoint = ddpoint
-            last_ddsj,last_cfsj = ddsj,cfsj
+            last_ddsj, last_cfsj = ddsj, cfsj
             last_loop_station = station
             if self.endStation is not None and self.endStation == station:
                 status = self.Setted
@@ -342,12 +341,12 @@ class TrainItem(QtWidgets.QGraphicsItem):
         if self.endStation is not None:
             # 添加最后一次循环的标注
             if self.markTime:
-                last_stopped = (last_ddsj!=last_cfsj)
+                last_stopped = (last_ddsj != last_cfsj)
                 if last_stopped:
-                    self._addTimeMarkFromData(True,down,True,last_ddsj,last_ddpoint)
-                    self._addTimeMarkFromData(False,down,False,last_cfsj,last_point)
+                    self._addTimeMarkFromData(True, down, True, last_ddsj, last_ddpoint)
+                    self._addTimeMarkFromData(False, down, False, last_cfsj, last_point)
                 else:
-                    self._addTimeMarkFromData(False,down,True,last_ddsj,last_ddpoint)
+                    self._addTimeMarkFromData(False, down, True, last_ddsj, last_ddpoint)
         if status is None:
             status = self.End
         if end_point is None:
@@ -358,24 +357,23 @@ class TrainItem(QtWidgets.QGraphicsItem):
             self.endPoint = end_point
         self.down = down
         self.station_count = station_count
-        return path,start_point,end_point,curIndex,status
+        return path, start_point, end_point, curIndex, status
 
-    def _addTimeMarkFromData(self,stopped:bool,down:bool,asArriveTime:bool,sj:datetime,point:QtCore.QPoint):
+    def _addTimeMarkFromData(self, stopped: bool, down: bool, asArriveTime: bool, sj: datetime, point: QtCore.QPoint):
         """
         2019.06.29新增，对addTimeMark进一步封装，减少冗余调用。
         主函数中调用的是这个函数。取消对addTimeMark的直接调用。
         """
         if down and asArriveTime:
-            self.addTimeMark(point,sj,self.NE)
+            self.addTimeMark(point, sj, self.NE)
         elif down and not asArriveTime:
-            self.addTimeMark(point,sj,self.SW)
+            self.addTimeMark(point, sj, self.SW)
         elif not down and not asArriveTime:
-            self.addTimeMark(point,sj,self.NW)
-        else: # not down and asArriveTime
-            self.addTimeMark(point,sj,self.SE)
+            self.addTimeMark(point, sj, self.NW)
+        else:  # not down and asArriveTime
+            self.addTimeMark(point, sj, self.SE)
 
-
-    def _setStartEndLabelText(self,checi,brush)->QtWidgets.QGraphicsSimpleTextItem:
+    def _setStartEndLabelText(self, checi, brush) -> QtWidgets.QGraphicsSimpleTextItem:
         """
         生成一个simpleTextItem，并设置好self.spanItemWidth等。
         """
@@ -385,7 +383,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.spanItemHeight = endLabelText.boundingRect().height()
         return endLabelText
 
-    def _setEmptyEndLabelText(self,brush)->QtWidgets.QGraphicsSimpleTextItem:
+    def _setEmptyEndLabelText(self, brush) -> QtWidgets.QGraphicsSimpleTextItem:
         """
         生成空白的终点标签。如果已经设置过spanItemWidth则不设置；否则设置成空白值。
         """
@@ -405,8 +403,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
     #     endAtThis = self.endAtThis
     #     self._setEndItem(end_point,brush,checi,self.down,endAtThis)
 
-    def _determineStartLabelHeight(self, start_point:QtCore.QPointF, down:bool,
-                                   startAtThis:bool):
+    def _determineStartLabelHeight(self, start_point: QtCore.QPointF, down: bool,
+                                   startAtThis: bool):
         """
         2020.09.28新增。决定开始标签高度。
         如果启用重叠避免，则需要查找近邻计算高度，同时维护数据；
@@ -417,19 +415,19 @@ class TrainItem(QtWidgets.QGraphicsItem):
         # 启用重叠避免的情况
         thres = 100  # 左右超过这个范围，就不再搜
         lst = self.labelSpans.setdefault((start_point.y(), down), [])
-        a = bisect.bisect_left(lst, (start_point.x()-thres, ))
-        b = bisect.bisect_right(lst, (start_point.x()+thres, ))
+        a = bisect.bisect_left(lst, (start_point.x() - thres,))
+        b = bisect.bisect_right(lst, (start_point.x() + thres,))
         w = self.spanItemWidth  # 当前标签宽度
         h0 = self.spanItemWidth
         if startAtThis:
-            wl, wr = w/2,w/2
+            wl, wr = w / 2, w / 2
         else:
             wl, wr = w, 0
         h = self.graph.UIConfigData()['base_label_height']
         occupied_heights = []
         for i in range(a, b):
             x, hi, wli, wri = lst[i]
-            if 0<start_point.x()-x<wri+wl or 0<x-start_point.x()<wli+wr:
+            if 0 <= start_point.x() - x < wri + wl or 0 <= x - start_point.x() < wli + wr:
                 # 确定冲突
                 occupied_heights.append(hi)
         while h in occupied_heights:
@@ -439,8 +437,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.startLabelInfo = ((start_point.y(), down), tpl)
         return h
 
-    def _determineEndLabelHeight(self, end_point:QtCore.QPointF, down:bool,
-                                 endAtThis:bool):
+    def _determineEndLabelHeight(self, end_point: QtCore.QPointF, down: bool,
+                                 endAtThis: bool):
         """
         2020.09.28新增。决定开始标签高度。
         如果启用重叠避免，则需要查找近邻计算高度，同时维护数据；
@@ -451,12 +449,12 @@ class TrainItem(QtWidgets.QGraphicsItem):
         # 启用重叠避免的情况
         thres = 100  # 左右超过这个范围，就不再搜
         lst = self.labelSpans.setdefault((end_point.y(), not down), [])
-        a = bisect.bisect_left(lst, (end_point.x()-thres, ))
-        b = bisect.bisect_right(lst, (end_point.x()+thres, ))
+        a = bisect.bisect_left(lst, (end_point.x() - thres,))
+        b = bisect.bisect_right(lst, (end_point.x() + thres,))
         w = self.spanItemWidth  # 当前标签宽度
         h0 = self.spanItemHeight
         if endAtThis:
-            wl, wr = w/2, w/2
+            wl, wr = w / 2, w / 2
         else:
             wl, wr = 0, w
         h = self.graph.UIConfigData()['base_label_height']
@@ -465,7 +463,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         occupied_heights = []
         for i in range(a, b):
             x, hi, wli, wri = lst[i]
-            if 0 < end_point.x()-x < wri+wl or 0<x-end_point.x()<wli+wr:
+            if 0 <= end_point.x() - x < wri + wl or 0 <= x - end_point.x() < wli + wr:
                 # 确定冲突
                 occupied_heights.append(hi)
         while h in occupied_heights:
@@ -475,8 +473,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.endLabelInfo = ((end_point.y(), not down), tpl)
         return h
 
-    def _setEndItem(self, end_point:QtCore.QPointF, brush:QtGui.QBrush,
-                    checi:str, down:bool, endAtThis:bool)->QtGui.QPainterPath:
+    def _setEndItem(self, end_point: QtCore.QPointF, brush: QtGui.QBrush,
+                    checi: str, down: bool, endAtThis: bool) -> QtGui.QPainterPath:
         """
         绘制终点标签。
         同时设定spanItemHeight和~width两个attribute。
@@ -484,10 +482,10 @@ class TrainItem(QtWidgets.QGraphicsItem):
         # 终点标签
         if not self.graph.UIConfigData()['end_label_checi']:
             endLabelText = self._setEmptyEndLabelText(brush)
-            w,h = 0, self.spanItemHeight
+            w, h = 0, self.spanItemHeight
         else:
-            endLabelText = self._setStartEndLabelText(checi,brush)
-            w,h = self.spanItemWidth,self.spanItemHeight
+            endLabelText = self._setStartEndLabelText(checi, brush)
+            w, h = self.spanItemWidth, self.spanItemHeight
         endLabel = QtGui.QPainterPath()
         self.endLabelText = endLabelText
         eh = self._determineEndLabelHeight(end_point, down, endAtThis)
@@ -496,79 +494,79 @@ class TrainItem(QtWidgets.QGraphicsItem):
         if endAtThis:
             if down:
                 endLabel.moveTo(end_point)
-                curPoint = QtCore.QPointF(end_point.x(),end_point.y())
-                curPoint.setY(curPoint.y()+eh-beh/2)
+                curPoint = QtCore.QPointF(end_point.x(), end_point.y())
+                curPoint.setY(curPoint.y() + eh - beh / 2)
                 endLabel.lineTo(curPoint)
-                poly = QtGui.QPolygonF((QtCore.QPointF(curPoint.x()-beh/3,curPoint.y()),
-                                QtCore.QPointF(curPoint.x()+beh/3,curPoint.y()),
-                                QtCore.QPointF(curPoint.x(),curPoint.y()+beh/2),
-                                QtCore.QPointF(curPoint.x() - beh / 3, curPoint.y())))
+                poly = QtGui.QPolygonF((QtCore.QPointF(curPoint.x() - beh / 3, curPoint.y()),
+                                        QtCore.QPointF(curPoint.x() + beh / 3, curPoint.y()),
+                                        QtCore.QPointF(curPoint.x(), curPoint.y() + beh / 2),
+                                        QtCore.QPointF(curPoint.x() - beh / 3, curPoint.y())))
                 endLabel.addPolygon(poly)
-                curPoint.setY(end_point.y()+eh)
-                curPoint.setX(curPoint.x()-w/2)
+                curPoint.setY(end_point.y() + eh)
+                curPoint.setX(curPoint.x() - w / 2)
                 endLabel.moveTo(curPoint)
                 endLabelText.setX(curPoint.x())
                 endLabelText.setY(curPoint.y())
-                curPoint.setX(curPoint.x()+w)
+                curPoint.setX(curPoint.x() + w)
                 endLabel.lineTo(curPoint)
 
             else:
                 endLabel.moveTo(end_point)
                 curPoint = QtCore.QPointF(end_point)
-                curPoint.setY(end_point.y()-eh+beh/2)
+                curPoint.setY(end_point.y() - eh + beh / 2)
                 endLabel.lineTo(curPoint)
-                curPoint.setY(end_point.y()-eh)
+                curPoint.setY(end_point.y() - eh)
                 endLabel.moveTo(curPoint)
                 poly = QtGui.QPolygonF((
                     curPoint,
-                    QtCore.QPointF(curPoint.x()-beh/3,curPoint.y()+beh/2),
-                    QtCore.QPointF(curPoint.x()+beh/3,curPoint.y()+beh/2),
+                    QtCore.QPointF(curPoint.x() - beh / 3, curPoint.y() + beh / 2),
+                    QtCore.QPointF(curPoint.x() + beh / 3, curPoint.y() + beh / 2),
                     curPoint
                 ))
                 endLabel.addPolygon(poly)
-                curPoint.setX(curPoint.x()-w/2)
+                curPoint.setX(curPoint.x() - w / 2)
                 endLabel.moveTo(curPoint)
                 endLabelText.setX(curPoint.x())
-                endLabelText.setY(curPoint.y()-h)
-                curPoint.setX(curPoint.x()+w)
+                endLabelText.setY(curPoint.y() - h)
+                curPoint.setX(curPoint.x() + w)
                 endLabel.lineTo(curPoint)
-        else: # not endAtThis
+        else:  # not endAtThis
             if down:
                 endLabel.moveTo(end_point)
                 curPoint = QtCore.QPointF(end_point)
-                curPoint.setY(curPoint.y()+eh)
+                curPoint.setY(curPoint.y() + eh)
                 endLabel.lineTo(curPoint)
                 endLabelText.setPos(curPoint)
-                curPoint.setX(curPoint.x()+w+h)
+                curPoint.setX(curPoint.x() + w + h)
                 endLabel.lineTo(curPoint)
-                curPoint.setX(curPoint.x()-h)
-                curPoint.setY(curPoint.y()+h)
+                curPoint.setX(curPoint.x() - h)
+                curPoint.setY(curPoint.y() + h)
                 endLabel.lineTo(curPoint)
             else:
                 endLabel.moveTo(end_point)
                 curPoint = QtCore.QPointF(end_point)
-                curPoint.setY(curPoint.y()-eh)
+                curPoint.setY(curPoint.y() - eh)
                 endLabel.lineTo(curPoint)
                 endLabelText.setX(curPoint.x())
-                endLabelText.setY(curPoint.y()-h)
-                curPoint.setX(curPoint.x()+w+h)
+                endLabelText.setY(curPoint.y() - h)
+                curPoint.setX(curPoint.x() + w + h)
                 endLabel.lineTo(curPoint)
-                curPoint.setX(curPoint.x()-h)
-                curPoint.setY(curPoint.y()-h)
+                curPoint.setX(curPoint.x() - h)
+                curPoint.setY(curPoint.y() - h)
                 endLabel.lineTo(curPoint)
 
         return endLabel
 
     def _setStartItem(self, start_point: QtCore.QPointF, brush: QtGui.QBrush,
-                    checi: str, down: bool, startAtThis: bool) -> QtGui.QPainterPath:
+                      checi: str, down: bool, startAtThis: bool) -> QtGui.QPainterPath:
         label = QtGui.QPainterPath()
         label.moveTo(start_point)
-        startLabelText = self._setStartEndLabelText(checi,brush)
+        startLabelText = self._setStartEndLabelText(checi, brush)
         self.startLabelText = startLabelText
         # start_height = self.graph.UIConfigData()['start_label_height']
         start_height = self._determineStartLabelHeight(start_point, down, startAtThis)
         self.startLabelHeight = start_height
-        w,h = self.spanItemWidth,self.spanItemHeight
+        w, h = self.spanItemWidth, self.spanItemHeight
         if startAtThis:
             if down:
                 label.moveTo(start_point)
@@ -600,25 +598,25 @@ class TrainItem(QtWidgets.QGraphicsItem):
             if down:
                 label.moveTo(start_point)
                 curPoint = QtCore.QPointF(start_point)
-                curPoint.setY(curPoint.y()-start_height)
+                curPoint.setY(curPoint.y() - start_height)
                 label.lineTo(curPoint)
-                curPoint.setX(curPoint.x()-w)
+                curPoint.setX(curPoint.x() - w)
                 label.lineTo(curPoint)
                 startLabelText.setX(curPoint.x())
-                startLabelText.setY(curPoint.y()-h)
-                curPoint.setX(curPoint.x()-h)
-                curPoint.setY(curPoint.y()-h)
+                startLabelText.setY(curPoint.y() - h)
+                curPoint.setX(curPoint.x() - h)
+                curPoint.setY(curPoint.y() - h)
                 label.lineTo(curPoint)
             else:
                 label.moveTo(start_point)
                 curPoint = QtCore.QPointF(start_point)
-                curPoint.setY(curPoint.y()+start_height)
+                curPoint.setY(curPoint.y() + start_height)
                 label.lineTo(curPoint)
-                curPoint.setX(curPoint.x()-w)
+                curPoint.setX(curPoint.x() - w)
                 label.lineTo(curPoint)
                 startLabelText.setPos(curPoint)
-                curPoint.setX(curPoint.x()-h)
-                curPoint.setY(curPoint.y()+h)
+                curPoint.setX(curPoint.x() - h)
+                curPoint.setY(curPoint.y() + h)
                 label.lineTo(curPoint)
 
         return label
@@ -634,7 +632,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         color = QtGui.QColor(color_str)
         return color
 
-    def _trainPen(self)->QtGui.QPen:
+    def _trainPen(self) -> QtGui.QPen:
         """
         Decide QPen used to draw path.
         """
@@ -650,12 +648,12 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 width = self.graph.UIConfigData()["default_huoche_width"]
             # train.setUI(width=width)
 
-        return QtGui.QPen(color,width)
+        return QtGui.QPen(color, width)
 
-    def _incline_line(self,path:QtGui.QPainterPath,point1:QtCore.QPoint,
-                      point2:QtCore.QPoint,span_left:list,span_right:list):
-        #绘制站间的斜线
-        #TODO 暂未考虑直接跨过无定义区域的情况
+    def _incline_line(self, path: QtGui.QPainterPath, point1: QtCore.QPoint,
+                      point2: QtCore.QPoint, span_left: list, span_right: list):
+        # 绘制站间的斜线
+        # TODO 暂未考虑直接跨过无定义区域的情况
         width = self.graphWidget.scene.width() - \
                 self.graphWidget.margins["left"] - self.graphWidget.margins["right"]
         if point1.inRange and point2.inRange:
@@ -663,20 +661,20 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 path.lineTo(point2)
             else:
                 # 跨界运行线
-                dx = point2.x()-point1.x()+width
-                dy = point2.y()-point1.y()
-                ax = width+self.graphWidget.margins["left"]-point1.x()
-                h = ax*dy/dx
-                span_right.append(point1.y()+h)
-                span_left.append(point1.y()+h)
-                path.lineTo(self.graphWidget.margins["left"]+width,point1.y()+h)
-                path.moveTo(self.graphWidget.margins["left"],point1.y()+h)
+                dx = point2.x() - point1.x() + width
+                dy = point2.y() - point1.y()
+                ax = width + self.graphWidget.margins["left"] - point1.x()
+                h = ax * dy / dx
+                span_right.append(point1.y() + h)
+                span_left.append(point1.y() + h)
+                path.lineTo(self.graphWidget.margins["left"] + width, point1.y() + h)
+                path.moveTo(self.graphWidget.margins["left"], point1.y() + h)
                 path.lineTo(point2)
         elif not point1.inRange and not point2.inRange:
             return
 
         elif point1.inRange:
-            #右侧点越界
+            # 右侧点越界
             dx = point2.x() - point1.x() + width
             dy = point2.y() - point1.y()
             ax = width + self.graphWidget.margins["left"] - point1.x()
@@ -685,7 +683,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             path.lineTo(self.graphWidget.margins["left"] + width, point1.y() + h)
 
         else:
-            #左侧点越界
+            # 左侧点越界
             dx = point2.x() - point1.x() + width
             dy = point2.y() - point1.y()
             ax = width + self.graphWidget.margins["left"] - point1.x()
@@ -694,13 +692,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
             path.moveTo(self.graphWidget.margins["left"], point1.y() + h)
             path.lineTo(point2)
 
-    def _H_line(self,path:QtGui.QPainterPath,point1:QtCore.QPoint,
-                point2:QtCore.QPoint,span_left:list,span_right:list,show:bool):
-        #绘制站内水平线
+    def _H_line(self, path: QtGui.QPainterPath, point1: QtCore.QPoint,
+                point2: QtCore.QPoint, span_left: list, span_right: list, show: bool):
+        # 绘制站内水平线
         width = self.graphWidget.scene.width() - self.graphWidget.margins["left"] \
                 - self.graphWidget.margins["right"]
         if point1.inRange and point2.inRange:
-            #都在范围内，直接画
+            # 都在范围内，直接画
             if point1.x() <= point2.x():
                 if show:
                     path.lineTo(point2)
@@ -710,51 +708,51 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 span_left.append(point1.y())
                 span_right.append(point1.y())
                 if show:
-                    path.lineTo(width+self.graphWidget.margins["left"],point2.y())
-                    path.moveTo(self.graphWidget.margins["left"],point2.y())
+                    path.lineTo(width + self.graphWidget.margins["left"], point2.y())
+                    path.moveTo(self.graphWidget.margins["left"], point2.y())
                     path.lineTo(point2)
                 else:
                     path.moveTo(point2)
         elif not point1.inRange and not point2.inRange:
             return
         elif point1.inRange:
-            #右侧点跨界
+            # 右侧点跨界
             span_right.append(point1.y())
             if show:
-                path.lineTo(width+self.graphWidget.margins["left"],point1.y())
+                path.lineTo(width + self.graphWidget.margins["left"], point1.y())
             else:
                 path.moveTo(width + self.graphWidget.margins["left"], point1.y())
         elif point2.inRange:
             span_left.append(point1.y())
             if show:
-                path.moveTo(self.graphWidget.margins["left"],point1.y())
+                path.moveTo(self.graphWidget.margins["left"], point1.y())
                 path.lineTo(point2)
             else:
                 path.moveTo(point2)
 
-    def addTimeMark(self,point:QtCore.QPoint,tm:datetime,dir_:int):
+    def addTimeMark(self, point: QtCore.QPoint, tm: datetime, dir_: int):
         """
         给一个点增加精确时刻标注。
         """
         d = tm.minute
         if tm.second >= 30:
             d += 1
-        d %=10
-        item = QtWidgets.QGraphicsSimpleTextItem(str(d),self)
-        h,w = item.boundingRect().height(),item.boundingRect().width()
-        x_off,y_off = 0*w,0*h
+        d %= 10
+        item = QtWidgets.QGraphicsSimpleTextItem(str(d), self)
+        h, w = item.boundingRect().height(), item.boundingRect().width()
+        x_off, y_off = 0 * w, 0 * h
         if dir_ == self.SW:
-            item.setX(point.x()-w+x_off)
-            item.setY(point.y()-y_off)
+            item.setX(point.x() - w + x_off)
+            item.setY(point.y() - y_off)
         elif dir_ == self.SE:
-            item.setX(point.x()-x_off)
-            item.setY(point.y()-y_off)
+            item.setX(point.x() - x_off)
+            item.setY(point.y() - y_off)
         elif dir_ == self.NW:
-            item.setX(point.x()-w+x_off)
-            item.setY(point.y()-h+y_off)
-        else: # NE
-            item.setX(point.x()-x_off)
-            item.setY(point.y()-h+y_off)
+            item.setX(point.x() - w + x_off)
+            item.setY(point.y() - h + y_off)
+        else:  # NE
+            item.setX(point.x() - x_off)
+            item.setY(point.y() - h + y_off)
         # item.setDefaultTextColor(self.color)
         item.setBrush(QtGui.QBrush(self.color))
         self.markLabels.append(item)
@@ -768,29 +766,29 @@ class TrainItem(QtWidgets.QGraphicsItem):
         circuit = self.train.carriageCircuit()
         if circuit is None:
             return
-        preTrain,preTime = circuit.preorderLinked(self.train)
+        preTrain, preTime = circuit.preorderLinked(self.train)
         if preTime is None:
             return
-        startTime = self.train.timetable[0]['ddsj'] # preTime非None已经保证本车次的始发时间是有效的，放心引用
+        startTime = self.train.timetable[0]['ddsj']  # preTime非None已经保证本车次的始发时间是有效的，放心引用
         station = self.train.sfz
-        prePoint = self.graphWidget.stationPosCalculate(station,preTime)
-        thisPoint = self.graphWidget.stationPosCalculate(station,startTime)
+        prePoint = self.graphWidget.stationPosCalculate(station, preTime)
+        thisPoint = self.graphWidget.stationPosCalculate(station, startTime)
 
         pen = self._trainPen()
         pen.setWidth(1)
         pen.setStyle(Qt.DashLine)
         # pen.setDashOffset(0.5)
         if prePoint.x() <= thisPoint.x():
-            line = QtWidgets.QGraphicsLineItem(prePoint.x(),prePoint.y(),thisPoint.x(),thisPoint.y(),parent=self)
+            line = QtWidgets.QGraphicsLineItem(prePoint.x(), prePoint.y(), thisPoint.x(), thisPoint.y(), parent=self)
             self.linkItem1 = line
             line.setPen(pen)
         else:
             maxX = self.graphWidget.scene.width() - self.graphWidget.margins['right']
             minX = self.graphWidget.margins['left']
-            line1 = QtWidgets.QGraphicsLineItem(prePoint.x(),prePoint.y(),maxX,prePoint.y(),self)
+            line1 = QtWidgets.QGraphicsLineItem(prePoint.x(), prePoint.y(), maxX, prePoint.y(), self)
             line1.setPen(pen)
             self.linkItem1 = line1
-            line2 = QtWidgets.QGraphicsLineItem(minX,thisPoint.y(),thisPoint.x(),thisPoint.y(),self)
+            line2 = QtWidgets.QGraphicsLineItem(minX, thisPoint.y(), thisPoint.x(), thisPoint.y(), self)
             line2.setPen(pen)
             self.linkItem2 = line2
 
@@ -805,8 +803,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             self.linkItem2.setParent(None)
             self.linkItem2 = None
 
-
-    def select(self,highLightLink=False):
+    def select(self, highLightLink=False):
         """
         封装选中本车次的所有操作，主要是运行线加粗。
         """
@@ -819,22 +816,22 @@ class TrainItem(QtWidgets.QGraphicsItem):
         path = self.pathItem
         label = self.startLabelItem
 
-        #path:QtWidgets.QGraphicsPathItem
-        #label:QtWidgets.QGraphicsPathItem
+        # path:QtWidgets.QGraphicsPathItem
+        # label:QtWidgets.QGraphicsPathItem
 
         if path is None:
             return
 
-        #运行线加粗显示
+        # 运行线加粗显示
         pen = path.pen()
-        pen.setWidth(pen.width()+1)
+        pen.setWidth(pen.width() + 1)
         path.setPen(pen)
         path.setZValue(1)
 
         brush = QtGui.QBrush(pen.color())
         UIDict = self.graph.UIConfigData()
 
-        #标签突出显示
+        # 标签突出显示
         rectPen = QtGui.QPen(pen.color())
         rectPen.setWidth(0.5)
         pen.setWidth(2)
@@ -846,23 +843,22 @@ class TrainItem(QtWidgets.QGraphicsItem):
             startPoint = self.startPoint
             x_append = self.spanItemWidth / 2 if self.startAtThis else self.spanItemWidth
             if self.down:
-                Rect = QtCore.QRectF(startPoint.x()-x_append,
-                                              startPoint.y()-self.spanItemHeight-self.startLabelHeight,
-                                              self.spanItemWidth,
-                                              self.spanItemHeight)
+                Rect = QtCore.QRectF(startPoint.x() - x_append,
+                                     startPoint.y() - self.spanItemHeight - self.startLabelHeight,
+                                     self.spanItemWidth,
+                                     self.spanItemHeight)
             else:
                 Rect = QtCore.QRectF(startPoint.x() - x_append,
-                                              startPoint.y()+self.startLabelHeight,
-                                              self.spanItemWidth,
-                                              self.spanItemHeight)
-            self.tempRect = QtWidgets.QGraphicsRectItem(Rect,self)
+                                     startPoint.y() + self.startLabelHeight,
+                                     self.spanItemWidth,
+                                     self.spanItemHeight)
+            self.tempRect = QtWidgets.QGraphicsRectItem(Rect, self)
 
             self.tempRect.setPen(rectPen)
             self.tempRect.setBrush(brush)
             self.tempRect.setZValue(0.5)
             self.startLabelText.setZValue(1)
             self.startLabelText.setBrush(Qt.white)
-
 
         # 终点标签突出显示
         label = self.endLabelItem
@@ -872,21 +868,21 @@ class TrainItem(QtWidgets.QGraphicsItem):
             label.setPen(pen)
             brush = QtGui.QBrush(pen.color())
             endPoint = self.endPoint
-            x_append = self.spanItemWidth/2 if self.endAtThis else 0
+            x_append = self.spanItemWidth / 2 if self.endAtThis else 0
             if self.graph.UIConfigData()['end_label_checi']:
                 if self.down:
-                    rect = QtCore.QRectF(endPoint.x()-x_append,
-                                         endPoint.y()+self.endLabelHeight,
+                    rect = QtCore.QRectF(endPoint.x() - x_append,
+                                         endPoint.y() + self.endLabelHeight,
                                          self.spanItemWidth,
                                          self.spanItemHeight
-                    )
+                                         )
                 else:
                     rect = QtCore.QRectF(endPoint.x() - x_append,
                                          endPoint.y() - self.endLabelHeight - self.spanItemHeight,
                                          self.spanItemWidth,
                                          self.spanItemHeight
                                          )
-                self.tempRect2 = QtWidgets.QGraphicsRectItem(rect,self)
+                self.tempRect2 = QtWidgets.QGraphicsRectItem(rect, self)
                 self.tempRect2.setPen(rectPen)
                 self.tempRect2.setBrush(brush)
                 self.tempRect2.setZValue(0.5)
@@ -910,7 +906,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     it.setVisible(True)
             else:
                 self.graph.line.enableNumberMap()
-                self._setPathItem([],[],startIndex=self.start_index,mark_only=True)
+                self._setPathItem([], [], startIndex=self.start_index, mark_only=True)
                 self.graph.line.disableNumberMap()
 
         pen.setStyle(Qt.DashLine)
@@ -921,7 +917,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 self.linkItem2.setPen(pen)
         self.isHighlighted = True
 
-    def unSelect(self,containLink=False):
+    def unSelect(self, containLink=False):
         if not self.isHighlighted:
             return
         train = self.train
@@ -978,7 +974,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
         self.isHighlighted = False
 
-    def setColor(self,color:QtGui.QColor=None):
+    def setColor(self, color: QtGui.QColor = None):
         if color is self.color:
             return
         if color is None:
@@ -986,13 +982,13 @@ class TrainItem(QtWidgets.QGraphicsItem):
         for sub in self.validItems(containSpan=True):
             if sub is None:
                 continue
-            if isinstance(sub,QtWidgets.QGraphicsPathItem):
-                pen:QtGui.QPen = sub.pen()
+            if isinstance(sub, QtWidgets.QGraphicsPathItem):
+                pen: QtGui.QPen = sub.pen()
                 pen.setColor(color)
                 sub.setPen(pen)
-            elif isinstance(sub,QtWidgets.QGraphicsSimpleTextItem):
+            elif isinstance(sub, QtWidgets.QGraphicsSimpleTextItem):
                 sub.setBrush(QtGui.QBrush(color))
-            elif isinstance(sub,QtWidgets.QGraphicsTextItem):
+            elif isinstance(sub, QtWidgets.QGraphicsTextItem):
                 sub.setDefaultTextColor(color)
         self.color = color
 
@@ -1001,7 +997,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         2019.02.27添加，由trainWidget批量修改调用。已知train对象数据已经修改好，更新item的颜色和宽度。
         """
         self.setColor()
-        pen:QtGui.QPen = self._trainPen()
+        pen: QtGui.QPen = self._trainPen()
         self.pathItem.setPen(pen)
 
     def paint(self, QPainter, QStyleOptionGraphicsItem, widget=None):
@@ -1038,8 +1034,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         try:
             return self.pathItem.boundingRect()
         except:
-            return QtCore.QRectF(0,0,0,0)
-
+            return QtCore.QRectF(0, 0, 0, 0)
 
     def contains(self, point):
         """
@@ -1050,13 +1045,12 @@ class TrainItem(QtWidgets.QGraphicsItem):
         #         return True
         return False
 
-
-    def validItems(self,containSpan=True,containExpand=False,containMark=True,containLink=False):
+    def validItems(self, containSpan=True, containExpand=False, containMark=True, containLink=False):
         """
         依次给出自身的所有非None子item
         """
-        valids = [self.pathItem,self.startLabelItem,self.endLabelItem,
-                  self.startLabelText,self.endLabelText]
+        valids = [self.pathItem, self.startLabelItem, self.endLabelItem,
+                  self.startLabelText, self.endLabelText]
         if containSpan:
             valids += self.spanItems
         if containExpand:
@@ -1064,7 +1058,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         if containMark:
             valids += self.markLabels
         if containLink:
-            valids.extend((self.linkItem1,self.linkItem2))
+            valids.extend((self.linkItem1, self.linkItem2))
         for sub in valids:
             if sub is not None:
                 yield sub
