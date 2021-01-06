@@ -1704,7 +1704,8 @@ class Graph:
             train.updateLocalFirst(self)
             train.updateLocalLast(self)
 
-    def setMargin(self, ruler_label, mile_label, station_label, left_and_right, top_and_bottom, system=False) -> bool:
+    def setMargin(self, ruler_label, mile_label, station_label, left_and_right,
+                  top, bottom, system=False) -> bool:
         """
         1.4版本修改
         用户设置页边距。注意参数含义与本系统内部使用的不同。返回是否变化。
@@ -1715,8 +1716,8 @@ class Graph:
             "left_white": left_white,
             "right_white": right_white,
             "left": ruler_label + mile_label + station_label + left_and_right + left_white,
-            "up": top_and_bottom,
-            "down": top_and_bottom,
+            "up": top,
+            "down": bottom,
             "right": left_and_right + station_label + right_white,
             "label_width": station_label,
             "mile_label_width": mile_label,

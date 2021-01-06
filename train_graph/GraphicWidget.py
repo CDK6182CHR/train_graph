@@ -756,10 +756,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             # 若设置为不显示，忽略此命令
             # print("addTrainLine:not show train",train.fullCheci())
             return
-        try:
-            self.graph.UIConfigData()["showFullCheci"]
-        except KeyError:
-            self.graph.UIConfigData()["showFullCheci"] = False
+        self.graph.UIConfigData().setdefault('showFullCheci',False)
 
         if train.autoItem():
             start = 0

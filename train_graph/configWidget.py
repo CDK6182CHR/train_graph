@@ -290,10 +290,18 @@ class ConfigWidget(QtWidgets.QWidget):
         flayout.addRow('站名栏宽度', spin)
 
         spin = QtWidgets.QSpinBox(self)
-        self.topBottomLabelSpin = spin
+        spin.setSingleStep(10)
+        self.topLabelSpin = spin
         spin.setRange(20, 200)
         spin.setValue(UIDict['margins']['up'])
-        flayout.addRow('上下边距', spin)
+        flayout.addRow('上边距', spin)
+
+        spin = QtWidgets.QSpinBox(self)
+        spin.setSingleStep(10)
+        self.bottomLabelSpin = spin
+        spin.setRange(20, 200)
+        spin.setValue(UIDict['margins']['down'])
+        flayout.addRow('下边距', spin)
 
         spin = QtWidgets.QSpinBox(self)
         self.leftRightLabelSpin = spin
@@ -346,7 +354,8 @@ class ConfigWidget(QtWidgets.QWidget):
         self.rulerLabelSpin.setValue(UIDict['margins']['ruler_label_width'])
         self.mileLabelSpin.setValue(UIDict['margins']['mile_label_width'])
         self.stationLabelSpin.setValue(UIDict['margins']['label_width'])
-        self.topBottomLabelSpin.setValue(UIDict['margins']['up'])
+        self.topLabelSpin.setValue(UIDict['margins']['up'])
+        self.bottomLabelSpin.setValue(UIDict['margins']['down'])
         self.leftRightLabelSpin.setValue(UIDict['margins']['right']-UIDict['margins']['right_white']-UIDict['margins']['label_width'])
         self.startLabelSpin.setValue(UIDict['start_label_height'])
         self.endLabelSpin.setValue(UIDict['end_label_height'])
@@ -454,7 +463,8 @@ class ConfigWidget(QtWidgets.QWidget):
             self.mileLabelSpin.value(),
             self.stationLabelSpin.value(),
             self.leftRightLabelSpin.value(),
-            self.topBottomLabelSpin.value(),
+            self.topLabelSpin.value(),
+            self.bottomLabelSpin.value(),
             system=self.system
         )
         return repaint

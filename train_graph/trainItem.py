@@ -36,6 +36,9 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.graph = graph
         self.startStation = start
         self.endStation = end
+        # 2021.01.06新增：endStation is None 在非首次调用setPathItem时不能作为是否设了终止站的判据。
+        # 因此增加一个显式的判据。
+        self.endStationGiven = (end is not None)
         self.graphWidget = graphWidget  # type:'GraphicsWidget'
         # 注意：引用语义，不得赋值
         self.labelSpans = graphWidget.labelSpans  # type:Dict[Tuple[float, bool],List[Tuple[float, int, int, int]]]
@@ -112,6 +115,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
         expand_path = None
         if self.validWidth > 1:
+            # 2021.01.06：这个调用改了关键的valid_width信息。
             expand_path, _, _, _, _ = self._setPathItem([], [], False, start, valid_only=True)
 
         station_count = self.station_count
@@ -245,7 +249,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
             if ddpoint is None or cfpoint is None:
                 if start_point is not None:
                     passedCount += 1  # 这是列车区间跑到别的区段上的站点数
-                if passedCount > self.maxPassed and self.endStation is None:
+                if passedCount > self.maxPassed and not self.endStationGiven:
                     status = self.Pass
                     last_station = last_loop_station
                     end_point = last_point
@@ -279,7 +283,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 newDown = self.isDownInterval(last_point, ddpoint)
                 if down is None:
                     down = newDown
-                elif down != newDown and self.endStation is None:
+                elif down != newDown and not self.endStationGiven:
                     # 行别变化，终止铺画
                     status = self.Reversed
                     print("行别变化", down, newDown, station, self.train.fullCheci(), curIndex, station_count)
@@ -291,7 +295,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                     # 当down是None时这里的判断引起问题. 故把这一块移动到上下行判断之后去。
                     passed_stations_left = self.graph.passedStationCount(last_loop_station, station, down)
                     passedCount += passed_stations_left  # 叠加此区间内的【车次时刻表】和【本线站表】不重合的数量
-                    if passedCount > self.maxPassed and self.endStation is None:
+                    if passedCount > self.maxPassed and not self.endStationGiven:
                         status = self.Pass
                         last_station = last_loop_station
                         end_point = last_point
@@ -332,13 +336,19 @@ class TrainItem(QtWidgets.QGraphicsItem):
             last_ddpoint = ddpoint
             last_ddsj, last_cfsj = ddsj, cfsj
             last_loop_station = station
-            if self.endStation is not None and self.endStation == station:
+            if self.endStationGiven and self.endStation == station:
                 status = self.Setted
                 last_station = station
                 break
 
-        self.endStation = last_station
-        if self.endStation is not None:
+        # 2021.01.06：这里有问题。
+        # 当第二次运行设置valid时，endStation已经被设置，相关行为已经被改变，
+        # 再改这个会造成不一致结果。
+        if not mark_only and not valid_only:
+            self.endStation = last_station
+
+        # 2021.01.06：这个是指是否有站被铺画。改成last_station减少歧义。
+        if last_station is not None:
             # 添加最后一次循环的标注
             if self.markTime:
                 last_stopped = (last_ddsj != last_cfsj)
@@ -355,8 +365,8 @@ class TrainItem(QtWidgets.QGraphicsItem):
             self.endAtThis = train.isZdz(last_station)
         if not mark_only and not valid_only:
             self.endPoint = end_point
-        self.down = down
-        self.station_count = station_count
+            self.down = down
+            self.station_count = station_count
         return path, start_point, end_point, curIndex, status
 
     def _addTimeMarkFromData(self, stopped: bool, down: bool, asArriveTime: bool, sj: datetime, point: QtCore.QPoint):
