@@ -511,6 +511,9 @@ class rulerPainter(QtWidgets.QWidget):
         # if new:
         #     self.graphWindow.ensureVisible(self.train.getItem())
 
+    def refresh(self):
+        self.graphWindow.addTrainLine(self.train)
+
     def _setEndStation(self,row:int):
         """
         设置row行为终到站。

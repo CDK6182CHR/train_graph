@@ -757,6 +757,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             # print("addTrainLine:not show train",train.fullCheci())
             return
         self.graph.UIConfigData().setdefault('showFullCheci',False)
+        train.clearItems()
 
         if train.autoItem():
             start = 0

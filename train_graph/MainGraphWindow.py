@@ -250,26 +250,21 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         """
         self.statusOut('停靠面板刷新开始')
         self.trainWidget.setData()
-        self.statusOut('车次面板刷新完毕')
         self.configWidget.setData()
-        self.statusOut('设置面板刷新完毕')
         self.lineWidget.setData()
-        self.statusOut('线路面板刷新完毕')
         self.rulerWidget.setData()
-        self.statusOut('标尺面板刷新完毕')
         self.typeWidget._setTypeList()
-        self.statusOut('类型面板刷新完毕')
         self.currentWidget.setData(None)
-        self.statusOut('当前车次面板刷新完毕')
         self.sysWidget.setData()
-        self.statusOut('默认面板刷新完毕')
         self.forbidWidget.setData()
         self.circuitWidget.setData()
         self.trainInfoWidget.setData()
         self.trainTimetableWidget.setData(None)
         self.interactiveTimetableWidget.setData()
         self._refreshSelectedTrainCombo()
-        self.statusOut('所有停靠面板刷新完毕')
+        if self.rulerPainter is not None:
+            self.rulerPainter.refresh()
+        self.statusOut('停靠面板刷新完毕')
 
     def _shortcut_action_triggered(self,action:QtWidgets.QAction):
         """
@@ -2409,7 +2404,13 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
         dock.setFloating(True)
         dock.resize(700, 800)
-        painter.WindowClosed.connect(lambda:self.removeDockWidget(dock))
+        self.rulerPainterDock = dock
+        painter.WindowClosed.connect(self._ruler_paint_cleanup)
+
+    def _ruler_paint_cleanup(self):
+        self.removeDockWidget(self.rulerPainterDock)
+        self.rulerPainter = None
+        self.rulerPainterDock = None
 
     def _change_train_interval(self):
         """
