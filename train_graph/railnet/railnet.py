@@ -241,7 +241,7 @@ class RailNet:
         """
         返回指定站名是否存在于图中。
         """
-        return self._digraph.adj.get(name,'None') is not None
+        return self._digraph.adj.get(name,None) is not None
 
     def adjStations(self, name:str)->dict:
         """
@@ -251,7 +251,7 @@ class RailNet:
         """
         return self._digraph.adj.get(name)
 
-    def getLine(self, first,second,lineName)->Line:
+    def getLine(self, first,second,lineName,firstAdj:float,down:bool)->Line:
         """
         2021.01.14 由两个给定的站，用类似DFS的方法找到整条线的数据。
         【注意】暂定只考虑了下行。
@@ -262,24 +262,26 @@ class RailNet:
         """
         line = Line(lineName)
         passed = {first,second}
-        line.addStation_by_info(second, 0)
+        line.addStation_by_info(first, 0)
+        line.setStationViaDirection(first,Line.DownVia)
+        line.addStation_by_info(second, firstAdj)
         line.setStationViaDirection(second,Line.DownVia)
-        self._get_line_rec(second,passed,line)
+        self._get_line_rec(second,passed,line,down)
         linerev = Line(lineName)
         end = line.lastStationName()
         linerev.addStation_by_info(end,0)
         linerev.setStationViaDirection(end,Line.DownVia)
         # 以最多超出下行10个站来搜索反向的线路
         passed = {end}
-        self._get_rev_line_rec(end,passed,linerev,second,max_cnt=line.stationCount()+10)
-        if linerev.lastStationName() != second:
+        self._get_rev_line_rec(end,passed,linerev,first,max_cnt=line.stationCount()+10)
+        if linerev.lastStationName() != first:
             # 说明反向的搜索并没有收敛，也就是所给second不是双向通过站。
             while not line.stationExisted(linerev.lastStationName()):
                 linerev.delStation(linerev.lastStationName())
         line.mergeCounter(linerev)
         return line
 
-    def _get_line_rec(self,start:str, passed:set, line:Line):
+    def _get_line_rec(self,start:str, passed:set, line:Line, down:bool):
         """
         递归DFS查找线路。暂时只考虑单方向
         :param start: 已经包含在line中，且确定存在。
@@ -289,11 +291,11 @@ class RailNet:
         :return:
         """
         for nd,ed in self._digraph.adj[start].items():
-            if ed['name'] == line.name and nd not in passed:
+            if ed['name'] == line.name and nd not in passed and ed['down'] == down:
                 line.addStation_by_info(nd,line.lineLength()+ed['length'])
                 line.setStationViaDirection(nd,Line.DownVia)
                 passed.add(nd)
-                self._get_line_rec(nd,passed,line)
+                self._get_line_rec(nd,passed,line,down)
                 return
 
     def _get_rev_line_rec(self, start:str, passed:set, line:Line, end:str, max_cnt:int):

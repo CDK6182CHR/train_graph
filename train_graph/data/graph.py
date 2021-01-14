@@ -1030,31 +1030,7 @@ class Graph:
                     self.addTrain(train_append)
 
         # 线路连接
-        if former:
-            for station in self.stationDicts():
-                station["licheng"] += graph.lineLength()
-
-            for st in reversed(graph.line.stations):
-                if not self.stationExisted(st["zhanming"]):
-                    self.line.addStation_by_origin(st, index=0)
-        else:
-            length = self.lineLength()
-            for st in graph.stationDicts():
-                st["licheng"] += length
-                if not self.stationExisted(st["zhanming"]):
-                    self.line.addStation_by_origin(st)
-
-        # 标尺的处理，直接复制过来就好
-        for ruler in graph.rulers():
-            thisruler = self.line.rulerByName(ruler.name())
-            if thisruler is not None:
-                thisruler._nodes.extend(ruler._nodes)
-            else:
-                self.addRuler(ruler)
-
-        # 天窗处理，直接附加
-        self.line.forbid._nodes.extend(graph.line.forbid._nodes)
-        self.line.forbid2._nodes.extend(graph.line.forbid2._nodes)
+        self.line.jointLine(graph.line,former,reverse)
 
     def resetAllItems(self):
         for train in self.trains():

@@ -146,6 +146,12 @@ class SliceManager(QtWidgets.QWidget):
             lw.takeItem(0)
             self.SliceDeleted.emit(0)
 
+    def setPreviewLine(self, line:Line, via:list):
+        self.line = line
+        self.lineWidget.setLine(line)
+        self.lineWidget.setData()
+        self.currentVia = via  # 当前经由表
+
     # slots
     def _del(self):
         id = self.sliceListWidget.currentRow()

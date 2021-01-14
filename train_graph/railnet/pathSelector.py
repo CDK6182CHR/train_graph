@@ -16,6 +16,7 @@ TW = QtWidgets.QTableWidget
 TWI = QtWidgets.QTableWidgetItem
 
 class PathSelector(QtWidgets.QWidget):
+    lineGenerated = QtCore.pyqtSignal(Line,list)
     def __init__(self,graphdb:Graph,lineLib:LineLib,net:RailNet,parent=None):
         super(PathSelector, self).__init__(parent)
         self.graphdb = graphdb
@@ -68,7 +69,7 @@ class PathSelector(QtWidgets.QWidget):
         tw.setColumnCount(5)
         tw.setHorizontalHeaderLabels(['站名','里程','对里程','选择方式','线名'])
         tw.setEditTriggers(TW.NoEditTriggers)
-        for i,s in enumerate((100,80,80,80,80)):
+        for i,s in enumerate((100,80,80,80,160)):
             tw.setColumnWidth(i,s)
         vlayout.addWidget(tw)
 
@@ -195,6 +196,8 @@ class PathSelector(QtWidgets.QWidget):
         tw.setItem(row,3,TWI(method))
         tw.setItem(row,4,TWI(lineName))
 
+        self._select_last_changed()
+
     def updateAdjTable(self):
         """
         0. 设置提示站名
@@ -219,7 +222,9 @@ class PathSelector(QtWidgets.QWidget):
                 it.setData(Qt.UserRole,edrev)
                 tw.setItem(row,1,it)
 
-                tw.setItem(row,2,TWI('下行' if ed['down'] else '上行'))
+                it = TWI('下行' if ed['down'] else '上行')
+                it.setData(Qt.UserRole,ed['down'])
+                tw.setItem(row,2,it)
 
                 it = TWI(f'{ed["length"]:.3f}')
                 it.setData(Qt.UserRole,ed['length'])
@@ -244,11 +249,11 @@ class PathSelector(QtWidgets.QWidget):
         self.lineNameEdit.setText('')
         self.tableLine.setRowCount(0)
 
-    def setLineTable(self, adjStation:str, lineName:str):
+    def setLineTable(self, adjStation:str, lineName:str, firstAdj:float, down:bool):
         """
         更新当前线路的表。
         """
-        line = self.net.getLine(self.lastSelected(),adjStation,lineName)
+        line = self.net.getLine(self.lastSelected(),adjStation,lineName,firstAdj,down)
         self.lineNameEdit.setText(lineName)
         # ['站名','里程','对里程','单向']
         tw = self.tableLine
@@ -261,6 +266,7 @@ class PathSelector(QtWidgets.QWidget):
             ctr_str = '' if st.get('counter') is None else f'{st["counter"]:.3f}'
             tw.setItem(row,2,TWI(ctr_str))
             tw.setItem(row,3,TWI(Line.DirMap[st['direction']]))
+        self.currentLine = line
 
     # slots
     def _add_station_fast(self):
@@ -306,22 +312,58 @@ class PathSelector(QtWidgets.QWidget):
         self.updateAdjTable()
 
     def _generate_line(self):
-        pass
+        tw = self.tableSelected
+        if tw.rowCount() < 2:
+            return
+        line = tw.item(1,0).data(Qt.UserRole)
+        line = line.slice(0,line.stationCount())  # 复制
+        via = [tw.item(0,0).text(),tw.item(1,0).text()]
+        for row in range(2,tw.rowCount()):
+            line.jointLine(tw.item(row,0).data(Qt.UserRole),False,False)
+            via.append(tw.item(row,0).text())
+        if not self.checkWithRuler.isChecked():
+            line.rulers.clear()
+        else:
+            line.filtRuler(self.spinRulerCount.value())
+        self.lineGenerated.emit(line,via)
 
     def _adj_line_changed(self,row,col,row0,col0):
-        if row == row0:
-            return
         tw = self.tableAdj
         if 0<=row<self.tableAdj.rowCount():
-            self.setLineTable(tw.item(row,1).text(),tw.item(row,0).text())
+            self.setLineTable(tw.item(row,1).text(),tw.item(row,0).text(),
+                              tw.item(row,3).data(Qt.UserRole),tw.item(row,2).data(Qt.UserRole))
         else:
             self.clearLineTable()
 
     def _adj_add(self):
-        pass
+        """
+        从邻接表添加区间数据。
+        """
+        line = Line()
+        tw = self.tableAdj
+        row = tw.currentRow()
+        if not 0<=row<tw.rowCount():
+            return
+        line.addStation_by_info(self.lastSelected(),0,counter=0)
+        # ['线名','站名','方向','里程','对里程','标尺数','对标尺']
+        dir_ = Line.DownVia
+        if tw.item(row,1).data(Qt.UserRole) is not None:
+            dir_ |= Line.UpVia
+        line.addStation_by_info(
+            tw.item(row,1).text(),
+            tw.item(row,3).data(Qt.UserRole),
+            counter=tw.item(row,4).data(Qt.UserRole),
+            direction=dir_
+        )
+        self.addSelectStation(tw.item(row,1).text(),line,'邻站',tw.item(row,0).text())
 
     def _line_add(self):
-        pass
+        tw = self.tableLine
+        row = tw.currentRow()
+        if not 1<=row<tw.rowCount():
+            return
+        subline = self.currentLine.slice(0,row+1)
+        self.addSelectStation(tw.item(row,0).text(),subline,'邻线',subline.name)
 
     def question(self, note: str, default=True):
         flag = QtWidgets.QMessageBox.question(self, 'pyETRC路网管理模块', note,

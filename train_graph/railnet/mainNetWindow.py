@@ -54,6 +54,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
         self.sliceManager.SliceDeleted.connect(self._del_slice_graph)
         self.sliceManager.ShowSlice.connect(self._show_slice_graph)
         self.sliceManager.OutputSlice.connect(self._output_slice_graph)
+        self.pathSelector.lineGenerated.connect(self._preview_line_from_selector)
 
         self.setCentralWidget(self.centerWidget)
         self._initMenubar()
@@ -270,6 +271,10 @@ class MainNetWindow(QtWidgets.QMainWindow):
         id = self.tabIndexMap(index)
         w:MainGraphWindow = self.centerWidget.widget(id)
         w._saveGraphAs()
+
+    def _preview_line_from_selector(self,line:Line,via:list):
+        self.sliceManager.setPreviewLine(line,via)
+        self.centerWidget.setCurrentIndex(2)
 
     def _derr(self, note: str):
         # print("_derr")

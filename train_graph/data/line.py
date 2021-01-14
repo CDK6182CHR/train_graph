@@ -8,6 +8,7 @@ from .linestation import LineStation
 from typing import Union,List,Generator,Tuple
 from Timetable_new.utility import stationEqual
 from ..pyETRCExceptions import *
+from copy import deepcopy
 
 class Line():
     """
@@ -184,14 +185,14 @@ class Line():
         self.nameMap[origin["zhanming"]] = origin
         self.addFieldMap(origin['zhanming'])
 
-    def addStation_by_info(self,zhanming,licheng,dengji=4,index=-1,counter=None):
+    def addStation_by_info(self,zhanming,licheng,dengji=4,index=-1,counter=None,direction=0x3):
         info = LineStation({
             "zhanming":zhanming,
             "licheng":licheng,
             "dengji":dengji,
             "y_value":-1,
             "show":True,
-            "direction":0x3,
+            "direction":direction,
         })
         if counter is not None:
             info['counter']=counter
@@ -693,6 +694,64 @@ class Line():
                 for st_dict in self.stationDicts(i):
                     if st_dict.get('counter') is not None:
                         st_dict['counter'] += m0
+
+    def slice(self, start_index:int, end_index:int)->'Line':
+        """
+        产生切片线路。
+        :param start_index: 起始站下标（含）
+        :param end_index: 终止站下标（不含）
+        :return:
+        """
+        sub = Line(self.name)
+        sub.stations = deepcopy(self.stations[start_index:end_index])
+        sub.setNameMap()
+        sub.setNameMap()
+        sub.setFieldMap()
+        sub.verifyNotes()
+        sub.resetRulers()
+        return sub
+
+    def jointLine(self, line, former, reverse):
+        if former:
+            for station in self.stationDicts():
+                station["licheng"] += line.lineLength()
+                if station.get('counter') is not None:
+                    station['counter'] += line.counterLength()
+
+            for st in reversed(line.stations):
+                if not self.stationExisted(st["zhanming"]):
+                    self.addStation_by_origin(st, index=0)
+        else:
+            length = self.lineLength()
+            cnt = self.counterLength()
+            for st in line.stationDicts():
+                st["licheng"] += length
+                if st.get('counter') is not None:
+                    st['counter'] += cnt
+                if not self.stationExisted(st["zhanming"]):
+                    self.addStation_by_origin(st)
+
+        # 标尺的处理，直接复制过来就好
+        for ruler in line.rulers:
+            thisruler = self.rulerByName(ruler.name())
+            if thisruler is not None:
+                thisruler._nodes.extend(ruler._nodes)
+            else:
+                self.addRuler(ruler)
+
+        # 天窗处理，直接附加
+        self.forbid._nodes.extend(line.forbid._nodes)
+        self.forbid2._nodes.extend(line.forbid2._nodes)
+
+    def filtRuler(self,minCount:int):
+        """
+        删除小于指定站数的标尺。
+        :param minCount:
+        :return:
+        """
+        for ruler in self.rulers.copy():
+            if ruler.count() < minCount:
+                self.rulers.remove(ruler)
 
 
 
