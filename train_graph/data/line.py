@@ -719,12 +719,14 @@ class Line():
                     station['counter'] += line.counterLength()
 
             for st in reversed(line.stations):
+                st = st.copy()
                 if not self.stationExisted(st["zhanming"]):
                     self.addStation_by_origin(st, index=0)
         else:
             length = self.lineLength()
             cnt = self.counterLength()
             for st in line.stationDicts():
+                st = st.copy()
                 st["licheng"] += length
                 if st.get('counter') is not None:
                     st['counter'] += cnt

@@ -166,7 +166,9 @@ class Category(dict):
                 # 递归！
                 if not checker.nameExisted(name):
                     self[name]=Category(name)
-                    cnt+=self[name].merge(data)
+                    a,b=self[name].merge(checker,data)
+                    cnt+=a
+                    cntIgnore+=b
                 else:
                     cntIgnore+=category.lineCount()
         return cnt,cntIgnore
