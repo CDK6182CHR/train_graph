@@ -72,9 +72,9 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         super().__init__()
         start = time.time()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V3.2.4"
+        self.version = "V3.3.0"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20210106'
+        self.date = '20210114'
         self.release = 'R47'  # 发布时再改这个
         self._system = None
         self.updating = True

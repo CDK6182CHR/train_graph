@@ -16,6 +16,7 @@ from ..data import *
 from ..linedb.lineLibWidget import LineLibWidget
 from .trainManager import TrainManager
 from .sliceManager import SliceManager
+from .pathSelector import PathSelector
 from ..MainGraphWindow import MainGraphWindow
 from ..importTrainDialog import ImportTrainDialog
 import json
@@ -35,6 +36,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
         self.trainManager = TrainManager(self.graphdb)
         self.lineManager = LineLibWidget(fromPyetrc=False)
         self.sliceManager = SliceManager(self.graphdb,self.lineManager.lineLib)
+        self.pathSelector = PathSelector(self.graphdb,self.lineManager.lineLib,self.sliceManager.net)
 
         self.lineFile = self.lineManager.filename
         self.trainFile = ""
@@ -46,6 +48,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
         self.centerWidget.addTab(self.lineManager,'基线管理')
         self.centerWidget.addTab(self.trainManager,'车次管理')
         self.centerWidget.addTab(self.sliceManager,'切片管理')
+        self.centerWidget.addTab(self.pathSelector,'经由选择')
 
         self.sliceManager.SliceGraphAdded.connect(self._add_slice_graph)
         self.sliceManager.SliceDeleted.connect(self._del_slice_graph)
@@ -245,7 +248,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
 
     @staticmethod
     def tabIndexMap(id):
-        return id + 3
+        return id + 4
 
     # slots
     def _add_slice_graph(self,graph:Graph, name:str):

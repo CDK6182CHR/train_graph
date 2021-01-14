@@ -34,6 +34,13 @@ class Line():
     UpVia = 0x2
     BothVia = 0x3
 
+    DirMap = {
+        DownVia: '下行',
+        UpVia: '上行',
+        BothVia: '上下行',
+        NoVia: '不通过'
+    }
+
     def __init__(self,name='',origin=None):
         #默认情况下构造空对象。从文件读取时，用dict构造。
         self.nameMap = {}  # 站名查找表
@@ -637,5 +644,55 @@ class Line():
         if dct is None:
             return []
         return dct.get('tracks',[])
+
+    def mergeCounter(self, counter:'Line'):
+        """
+        2021.01.14
+        合并反向的线路信息，也即整合对里程和经由方向。
+        precondition:
+        1. counter的起点是当前线路的终点，但counter的终点未见得是当前线路起点。
+        2. counter中的“下行”是本线的“上行”。
+        3. 两边的各个站本来都设置的是Line.DownVia，即按照单向站处理的。
+        4. 两边的站序是差不多相同的。
+        :param counter: 当前线路的上行版本。const语义
+        :return:
+        """
+        i = 0  # 当前线路位置指针
+        j = counter.stationCount()-1  # 对线路的位置指针
+        while True:  # 暂时不写条件
+            if i >= self.stationCount() or j < 0:
+                break
+            si = self.stations[i]
+            sj = counter.stations[j]
+            if si['zhanming'] == sj['zhanming']:
+                # 两边刚好对上，情况最简单
+                si['direction'] |= Line.UpVia
+                si['counter'] = counter.lineLength()-sj['licheng']
+                i += 1
+                j -= 1
+            else:
+                if not self.stationExisted(sj['zhanming']):
+                    # 上行单向站, 做插入处理
+                    m = counter.lineLength()-sj['licheng']
+                    self.addStation_by_info(sj['zhanming'],m,index=i,counter=m)
+                    self.setStationViaDirection(sj['zhanming'],Line.UpVia)
+                    i += 1  # 注意：这里i的下标指向变了
+                    j -= 1
+                else:
+                    # not counter.stationExisted(si['zhanming'])
+                    # 以上两个条件都不成立的情况理论上不该存在
+                    # 下行单向站，这个很好处理
+                    i += 1
+        # [对里程]的修正：使得零点和正里程一样
+        if not Line.UpVia & self.stations[0]['direction']:
+            i = 0
+            while i < self.stationCount() and not self.stations[i]['direction'] & Line.UpVia:
+                i += 1
+            if i < self.stationCount():
+                m0 = self.stations[i]['licheng']
+                for st_dict in self.stationDicts(i):
+                    if st_dict.get('counter') is not None:
+                        st_dict['counter'] += m0
+
 
 

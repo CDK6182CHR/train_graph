@@ -99,6 +99,7 @@ class RailNet:
             last_st_dict = st_dict
 
         # 上行
+        last_st_dict = None
         for st_dict in reversed(line.stations):
             if last_st_dict is None:
                 last_st_dict = st_dict
@@ -108,7 +109,7 @@ class RailNet:
             dct_up = {
                 "name":line.name,
                 "length":line.gapBetween(last_st_dict['zhanming'],st_dict['zhanming']),
-                "down":True,
+                "down":False,
                 "rulers":{},
                 "forbid":line.forbid.getInfo(
                     last_st_dict['zhanming'],st_dict['zhanming']),
@@ -236,6 +237,83 @@ class RailNet:
             graph.save(filename)
         return graph
 
+    def stationExists(self, name:str)->bool:
+        """
+        返回指定站名是否存在于图中。
+        """
+        return self._digraph.adj.get(name,'None') is not None
+
+    def adjStations(self, name:str)->dict:
+        """
+        返回指定站的邻接站及边信息。对digraph相关人操作的封装。
+        :param name: 站名
+        :return:
+        """
+        return self._digraph.adj.get(name)
+
+    def getLine(self, first,second,lineName)->Line:
+        """
+        2021.01.14 由两个给定的站，用类似DFS的方法找到整条线的数据。
+        【注意】暂定只考虑了下行。
+        :param first: 首站站名。【不包含在返回值中】
+        :param second: 次站站名
+        :param lineName: 指定线路名称
+        :return:
+        """
+        line = Line(lineName)
+        passed = {first,second}
+        line.addStation_by_info(second, 0)
+        line.setStationViaDirection(second,Line.DownVia)
+        self._get_line_rec(second,passed,line)
+        linerev = Line(lineName)
+        end = line.lastStationName()
+        linerev.addStation_by_info(end,0)
+        linerev.setStationViaDirection(end,Line.DownVia)
+        # 以最多超出下行10个站来搜索反向的线路
+        passed = {end}
+        self._get_rev_line_rec(end,passed,linerev,second,max_cnt=line.stationCount()+10)
+        if linerev.lastStationName() != second:
+            # 说明反向的搜索并没有收敛，也就是所给second不是双向通过站。
+            while not line.stationExisted(linerev.lastStationName()):
+                linerev.delStation(linerev.lastStationName())
+        line.mergeCounter(linerev)
+        return line
+
+    def _get_line_rec(self,start:str, passed:set, line:Line):
+        """
+        递归DFS查找线路。暂时只考虑单方向
+        :param start: 已经包含在line中，且确定存在。
+        :param passed: 已选过的站，不能重复选择
+        :param line: 按传引用语义
+        :param max_cnt: 最大站数。
+        :return:
+        """
+        for nd,ed in self._digraph.adj[start].items():
+            if ed['name'] == line.name and nd not in passed:
+                line.addStation_by_info(nd,line.lineLength()+ed['length'])
+                line.setStationViaDirection(nd,Line.DownVia)
+                passed.add(nd)
+                self._get_line_rec(nd,passed,line)
+                return
+
+    def _get_rev_line_rec(self, start:str, passed:set, line:Line, end:str, max_cnt:int):
+        """
+        用相似的算法搜索反向的线路。返回【独立】的反向线路数据。
+        :param start: 反向线路起点（原终点）
+        :param passed: 已经搜过的站
+        :param line: 反向线路
+        :param end: 反向线路终点（原起点）
+        :param max_cnt: 最大站数
+        """
+        if start == end or line.stationCount() > max_cnt:
+            return
+        for nd,ed in self._digraph.adj[start].items():
+            if ed['name'] == line.name and nd not in passed:
+                line.addStation_by_info(nd,line.lineLength()+ed['length'])
+                line.setStationViaDirection(nd,Line.DownVia)
+                passed.add(nd)
+                self._get_rev_line_rec(nd,passed,line,end,max_cnt)
+                return
 
 
 
