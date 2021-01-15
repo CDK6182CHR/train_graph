@@ -273,7 +273,7 @@ class RailNet:
         linerev.setStationViaDirection(end,Line.DownVia)
         # 以最多超出下行10个站来搜索反向的线路
         passed = {end}
-        self._get_rev_line_rec(end,passed,linerev,first,max_cnt=line.stationCount()+10)
+        self._get_rev_line_rec(end,passed,linerev,first,max_cnt=line.stationCount()+10, down=not down)
         if linerev.lastStationName() != first:
             # 说明反向的搜索并没有收敛，也就是所给second不是双向通过站。
             while not line.stationExisted(linerev.lastStationName()):
@@ -298,7 +298,7 @@ class RailNet:
                 self._get_line_rec(nd,passed,line,down)
                 return
 
-    def _get_rev_line_rec(self, start:str, passed:set, line:Line, end:str, max_cnt:int):
+    def _get_rev_line_rec(self, start:str, passed:set, line:Line, end:str, max_cnt:int, down:bool):
         """
         用相似的算法搜索反向的线路。返回【独立】的反向线路数据。
         :param start: 反向线路起点（原终点）
@@ -310,11 +310,11 @@ class RailNet:
         if start == end or line.stationCount() > max_cnt:
             return
         for nd,ed in self._digraph.adj[start].items():
-            if ed['name'] == line.name and nd not in passed:
+            if ed['name'] == line.name and nd not in passed and ed['down'] == down:
                 line.addStation_by_info(nd,line.lineLength()+ed['length'])
                 line.setStationViaDirection(nd,Line.DownVia)
                 passed.add(nd)
-                self._get_rev_line_rec(nd,passed,line,end,max_cnt)
+                self._get_rev_line_rec(nd,passed,line,end,max_cnt,down)
                 return
 
 
