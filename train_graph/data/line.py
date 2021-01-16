@@ -711,6 +711,9 @@ class Line():
         sub.resetRulers()
         return sub
 
+    def copy(self):
+        return self.slice(0,self.stationCount())
+
     def jointLine(self, line, former, reverse):
         if former:
             for station in self.stationDicts():

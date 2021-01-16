@@ -412,9 +412,10 @@ class LineLibWidget(QtWidgets.QWidget):
             newGraph.save(filename)
 
     def _export_to_graph(self):
-        if not self.fromPyetrc:
-            QtWidgets.QMessageBox.warning(self,'提示','导出到运行图：此功能仅当在pyETRC主系统启动本维护窗口时有效！')
-            return
+        # 2021.01.16：取消这个。路网管理模块中，按照生成新切片处理。
+        # if not self.fromPyetrc:
+        #     QtWidgets.QMessageBox.warning(self,'提示','导出到运行图：此功能仅当在pyETRC主系统启动本维护窗口时有效！')
+        #     return
         line = self.treeWidget.currentLine()
         if line is None:
             QtWidgets.QMessageBox.warning(self,'提示','导出到运行图：请先在列表中选择一条线路再执行本操作！')

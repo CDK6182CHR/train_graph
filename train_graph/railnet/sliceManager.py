@@ -24,6 +24,7 @@ class SliceManager(QtWidgets.QWidget):
         self.net = RailNet()
         self.net.reset()
         self.slices = []  # type:List[Graph]
+        self.currentVia = []
         self.line = Line()
         self.initUI()
         self.net.loadLineLib(self.lineLib)
@@ -226,7 +227,16 @@ class SliceManager(QtWidgets.QWidget):
         if not self.line.stations:
             QtWidgets.QMessageBox.warning(self,'错误','请先生成有效的站表！')
             return
-        graph = self.graphdb.subGraph(self.line,self.checkAllTrains.isChecked())
+        self.add_slice()
+
+    def add_slice(self, line:Line=None):
+        """
+        2021.01.16新增，槽函数。
+        直接强制生成切片。
+        """
+        if line is not None:
+            self.line = line.copy()
+        graph = self.graphdb.subGraph(self.line, self.checkAllTrains.isChecked())
         for c in self.graphdb.circuits():
             graph.addCircuit(c)  # 暴力方法：加入所有交路数据
 
@@ -239,7 +249,7 @@ class SliceManager(QtWidgets.QWidget):
         item.setData(Qt.UserRole, self.currentVia)  # data中保存经由表数据。
         lw.addItem(item)
         self.SliceGraphAdded.emit(graph, name)
-        n = lw.count()-1
+        n = lw.count() - 1
         self.ShowSlice.emit(n)
         if n == 0:
             txt = "此操作将利用数据库的数据生成区段运行图。运行图将用完整的pyETRC" \
@@ -250,7 +260,7 @@ class SliceManager(QtWidgets.QWidget):
                   "但若[打开]其他运行图文件，则该窗口与数据库没有关系。" \
                   "但不建议这样操作。\n" \
                   "此提示每当添加第一个区段运行图时弹出。"
-            QtWidgets.QMessageBox.information(self,'提示',txt)
+            QtWidgets.QMessageBox.information(self, '提示', txt)
 
 
     def loadDigraph(self, filename:str):

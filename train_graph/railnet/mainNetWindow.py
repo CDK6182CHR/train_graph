@@ -40,6 +40,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
 
         self.lineFile = self.lineManager.filename
         self.trainFile = ""
+        self.gmlFile = ''  # 2021.01.16新增，有向图也作为状态信息
 
         self._initUI()
 
@@ -55,6 +56,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
         self.sliceManager.ShowSlice.connect(self._show_slice_graph)
         self.sliceManager.OutputSlice.connect(self._output_slice_graph)
         self.pathSelector.lineGenerated.connect(self._preview_line_from_selector)
+        self.lineManager.ExportLineToGraph.connect(self.sliceManager.add_slice)
 
         self.setCentralWidget(self.centerWidget)
         self._initMenubar()
@@ -140,7 +142,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
             self._saveTrainFile()
         elif btn==QM.Cancel or btn == QM.NoButton:
             return
-        filename,ok = QtWidgets.QFileDialog.getOpenFileName(self,'打开基线文件',
+        filename,ok = QtWidgets.QFileDialog.getOpenFileName(self,'打开车次数据库文件',
                     filter = 'pyETRC车次数据库文件(*.pyetdb)\n'
                              'pyETRC列车运行图文件(*.pyetgr;*.json)\n'
                              'ETRC列车运行图文件(*.trc)\n'
@@ -173,7 +175,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
     def _updateTitle(self):
         self.lineFile = self.lineManager.filename
         self.trainFile = self.graphdb.filename
-        self.title = f"{self.name}  {self.lineFile}  {self.trainFile}"
+        self.title = f"{self.name}  {self.lineFile}  {self.trainFile}  {self.gmlFile}"
         self.setWindowTitle(self.title)
 
     def _readDigraphFile(self):
@@ -183,10 +185,12 @@ class MainNetWindow(QtWidgets.QMainWindow):
         if not ok:
             return
         self.sliceManager.loadDigraph(filename)
+        self.gmlFile = filename
 
     def _loadLibToGraph(self):
         self.sliceManager.net.reset()
         self.sliceManager.net.loadLineLib(self.sliceManager.lineLib)
+        self.gmlFile = ''
 
     def _importTrain(self):
         dialog = ImportTrainDialog(self.graphdb)
@@ -205,7 +209,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
         elif b == QM.Cancel or b == QM.NoButton:
             return
         filename, ok = QtWidgets.QFileDialog.getOpenFileName(self, '保存工作区配置',
-                                                             filter='pyETRC网络模块工作区配置文件(*.pnconf)\n'
+                                                        filter='pyETRC网络模块工作区配置文件(*.pnconf)\n'
                                                                     'JSON文件(*.json)\n'
                                                                     '"所有文件(*)')
         if not ok:
@@ -220,6 +224,9 @@ class MainNetWindow(QtWidgets.QMainWindow):
     def _loadConfig(self,dct:dict):
         self.trainManager.openFile(dct["trainFile"])
         self.lineManager.loadFile(dct["lineFile"])
+        self.gmlFile = dct.get('gmlFile','')
+        if self.gmlFile:
+            self.sliceManager.loadDigraph(self.gmlFile)
         self.sliceManager.clearAllSlices()
         for via in dct['slices']:
             self.sliceManager.addNewSlice(via)
@@ -235,6 +242,7 @@ class MainNetWindow(QtWidgets.QMainWindow):
         dct = {
             "trainFile":self.trainFile,
             "lineFile":self.lineFile,
+            "gmlFile":self.gmlFile,
             "slices":[],  # List[List]  所有切片经由表
         }
         lw = self.sliceManager.sliceListWidget

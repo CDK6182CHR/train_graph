@@ -134,7 +134,8 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
                 t.setItem(item0)
 
     def updateParentItemCount(self,item:QtWidgets.QTreeWidgetItem,dx=1):
-        item = item.parent()
+        # 2021.01.16：解决删除线路后计数没有及时更新的问题。
+        # item = item.parent()
         while isinstance(item,QtWidgets.QTreeWidgetItem):
             if item.type()==0:
                 try:
@@ -440,7 +441,7 @@ class LineTreeWidget(QtWidgets.QTreeWidget):
             parent.removeChild(item)
         else:
             self.takeTopLevelItem(self.indexOfTopLevelItem(item))
-        self.updateParentItemCount(item, -1)
+        self.updateParentItemCount(parent, -1)
 
     # slots
     def _show_item(self):
