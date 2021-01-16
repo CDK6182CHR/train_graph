@@ -299,6 +299,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                         status = self.Pass
                         last_station = last_loop_station
                         end_point = last_point
+                        station_count -= 1  # 2021.01.16新增。这种情况下，这个站并没有铺画，要减掉
                         # print("passedCount > maxPassed line238",self.train.fullCheci(),station)
                         print(passed_stations_left, last_loop_station, station, down)
                         break
