@@ -1404,7 +1404,7 @@ class Train():
             return self._carriageCircuit
         elif self._carriageCircuitName is None:
             return None
-        print("carriageCircuit existed: ",self.fullCheci(), self._carriageCircuitName)
+        # print("carriageCircuit existed: ",self.fullCheci(), self._carriageCircuitName)
         # 2020.10.04  找不到标尺不报错，而是删除。不确定这个设置。
         try:
             return self.graph.circuitByName(self._carriageCircuitName)

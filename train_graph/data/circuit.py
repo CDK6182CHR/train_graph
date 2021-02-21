@@ -452,7 +452,7 @@ class Circuit:
                     reports.append(f"[warning]车次不存在: {checi}")
                 else:
                     cir = train.carriageCircuit()
-                    if cir is not None:
+                    if cir is not None and cir is not self:
                         reports.append(f"[warning]车次{train}已经属于交路: {cir}")
                     else:
                         reports.append(f'[info]将车次{train}识别为实体车次')
