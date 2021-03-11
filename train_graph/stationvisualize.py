@@ -640,7 +640,7 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
         rectItem: QtWidgets.QGraphicsRectItem = self.scene.addRect(dd_x, start_y, width, self.row_height)
         rectItem.setBrush(QtGui.QBrush(color))
 
-        text = f"{train.fullCheci()} {train.stationDownStr(self.station_name,self.graph)} "
+        text = f"{train.fullCheci()} {Train.downStr(train_dict['down'])} "
         if train_dict['type'] == self.Pass:
             text += f"通过  {(train_dict['ddsj']).strftime('%H:%M:%S')}"
         elif train_dict['type'] == self.Departure:
@@ -653,9 +653,9 @@ class StationGraphWidget(QtWidgets.QGraphicsView):
             # 接续
             text = f"交路接续 {train.fullCheci()} {ddsj.strftime('%H:%M:%S')} — {cfsj.strftime('%H:%M:%S')}"
         if self._manual and train_dict.get("track"):
-            text = '[图定] '+text
+            text = '[图定股道] '+text
         else:
-            text = '[推定] '+text
+            text = '[推定股道] '+text
         text += f" {train_dict['station_name']}"
         rectItem.setToolTip(text)
 

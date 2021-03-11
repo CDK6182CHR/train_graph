@@ -12,11 +12,10 @@ from Timetable_new.checi3 import Checi
 from datetime import datetime, timedelta
 from Timetable_new.utility import judge_type, stationEqual, strToTime
 import re, bisect, warnings
-from typing import Iterable, Union
 from .circuit import Circuit
 from ..pyETRCExceptions import *
 from enum import Enum
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple, Iterable
 from .trainstation import TrainStation
 
 import cgitb
@@ -509,6 +508,47 @@ class Train():
             return False
         return None
 
+    def stationDownByIndex(self, idx: int, graph=None) -> bool:
+        """
+        2021.03.11
+        与stationDown一致，但按照索引找。
+        破坏封装性，换准确性。
+        """
+        if graph is None:
+            graph = self.graph
+        station = self.stationNameByIndex(idx)
+        if idx == -1:
+            return None
+        y = graph.stationYValue(station)
+        if y == -1:
+            return None
+        # 先向左查找
+        leftY = -1
+        i = idx
+        while i > 0:
+            i -= 1
+            leftY = graph.stationYValue(self.stationNameByIndex(i))
+            if leftY != -1:
+                break
+        if leftY != -1:
+            if leftY < y:
+                return True
+            return False
+
+        # 如果左边没有了，向右查找
+        i = idx
+        rightY = -1
+        while i < len(self.timetable) - 1:
+            i += 1
+            rightY = graph.stationYValue(self.stationNameByIndex(i))
+            if rightY != -1:
+                break
+        if rightY != -1:
+            if y < rightY:
+                return True
+            return False
+        return None
+
     def reverseAllItemDown(self):
         """
         2.0新增，转置所有item的上下行。
@@ -651,6 +691,15 @@ class Train():
         if self.lastDown() is True:
             return '下行'
         elif self.lastDown() is False:
+            return '上行'
+        else:
+            return '未知'
+
+    @staticmethod
+    def downStr(d):
+        if d is True:
+            return '下行'
+        elif d is False:
             return '上行'
         else:
             return '未知'
@@ -920,11 +969,22 @@ class Train():
     def stationDict(self, name, strict=False) -> TrainStation:
         """
         线性算法
+        2021.03.11批注：这里假定了车次只经过车站至多一次。
         """
         for st in self.timetable:
             if stationEqual(st["zhanming"], name, strict):
                 return st
         return None
+
+    def stationAllDicts(self, name, strict=False)->Iterable[Tuple[int,TrainStation]]:
+        """
+        2021.03.11新增
+        参照stationDict()
+        但返回经过的每一个的信息
+        """
+        for i,st in enumerate(self.timetable):
+            if stationEqual(st['zhanming'],name,strict):
+                yield i,st
 
     def stationBusiness(self, dct: TrainStation) -> bool:
         """

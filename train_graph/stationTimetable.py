@@ -119,7 +119,7 @@ class StationTimetable(QtWidgets.QDialog):
 
             tableWidget.setItem(row, 5, QtWidgets.QTableWidgetItem(stop_text))
 
-            down = train.stationDown(station_name, self.graph)
+            down = node['down']
             text = '下行' if down is True else ('上行' if down is False else '未知')
             item = QtWidgets.QTableWidgetItem(text)
             tableWidget.setItem(row, 6, item)

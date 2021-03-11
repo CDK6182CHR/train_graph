@@ -809,6 +809,7 @@ class Graph:
     def stationTimeTable(self, name: str):
         """
         返回车站的图定时刻表
+        2021.03.11：不再限制每个车次只经过车站一次。
         list<dict>
         dict{
             "station_name":str,
@@ -821,18 +822,16 @@ class Graph:
         """
         timeTable = []
         for train in self.trains():
-            st_dict = train.stationDict(name)
-            if st_dict is None:
-                continue
-            else:
+            for idx,st_dict in train.stationAllDicts(name):
                 node = {
                     "ddsj": st_dict["ddsj"],
                     "cfsj": st_dict["cfsj"],
                     "station_name": st_dict["zhanming"],
-                    "down": train.stationDown(st_dict['zhanming'], self),
+                    "down": train.stationDownByIndex(idx, self),
                     "note": st_dict.get("note", ''),
                     "train": train,
-                    "track":st_dict.get("track",None),
+                    "track":st_dict.get("track", None),
+                    "timetable_index":idx,  # 2021.03.11添加备用
                 }
                 timeTable.append(node)
 
