@@ -101,6 +101,14 @@ class ConfigWidget(QtWidgets.QWidget):
         layout.addRow(label9, spin9)
         self.vertical_lines_per_hour_spin = spin9
 
+        spin = QtWidgets.QSpinBox()
+        spin.setSingleStep(10)
+        spin.setRange(1,10000)
+        spin.setValue(self.UIDict["minute_mark_gap_pix"])
+        layout.addRow('分钟标记间隔', spin)
+        spin.setToolTip('设置时间轴上分钟标记的最小间隔，单位为像素。')
+        self.minute_mark_gap_spin = spin
+
         if not self.system:
             label10 = QtWidgets.QLabel("纵坐标标尺")
             combo = QtWidgets.QComboBox()
@@ -216,6 +224,7 @@ class ConfigWidget(QtWidgets.QWidget):
         self.seconds_per_pix_y_spin.setValue(UIDict["seconds_per_pix_y"])
         self.pixes_per_km_spin.setValue(UIDict["pixes_per_km"])
         self.bold_line_level_spin.setValue(UIDict["bold_line_level"])
+        self.minute_mark_gap_spin.setValue(UIDict['minute_mark_gap_pix'])
         self.vertical_lines_per_hour_spin.setValue(60 / (UIDict["minutes_per_vertical_line"]) - 1)
         if not self.system:
             self.setOrdinateCombo()
@@ -392,6 +401,9 @@ class ConfigWidget(QtWidgets.QWidget):
         minutes_per_vertical_line = 60/(self.vertical_lines_per_hour_spin.value()+1)
         if minutes_per_vertical_line != UIDict["minutes_per_vertical_line"]:
             UIDict["minutes_per_vertical_line"] = minutes_per_vertical_line
+            repaint = True
+        if self.minute_mark_gap_spin.value() != UIDict['minute_mark_gap_pix']:
+            UIDict['minute_mark_gap_pix'] = self.minute_mark_gap_spin.value()
             repaint = True
         if not self.system:
             if self.ordinateCombo.currentIndex() == 0:
