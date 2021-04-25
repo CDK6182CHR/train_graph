@@ -19,8 +19,8 @@ cgitb.enable(format='text')
 import sys
 from PyQt5 import QtWidgets, QtGui, QtCore, QtPrintSupport
 from PyQt5.QtCore import Qt
-from .data.graph import Graph,Train,Ruler,Line
-from .data.forbid import Forbid,ServiceForbid,ConstructionForbid
+from .data.graph import Graph, Train, Ruler, Line
+from .data.forbid import Forbid, ServiceForbid, ConstructionForbid
 from datetime import timedelta, datetime
 import time
 from enum import Enum
@@ -46,12 +46,12 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
     showNewStatus = QtCore.pyqtSignal([str], [str, int])  # 显示状态栏信息
     lineDoubleClicked = QtCore.pyqtSignal()
 
-    def __init__(self, graph:Graph, parent=None):
+    def __init__(self, graph: Graph, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle("GraphicsViewsTestWindow")
         self.setWindowIcon(QtGui.QIcon('icon.ico'))
-        QtWidgets.QScroller.grabGesture(self,QtWidgets.QScroller.TouchGesture)
+        QtWidgets.QScroller.grabGesture(self, QtWidgets.QScroller.TouchGesture)
         # self.setGeometry(200, 200, 1200, 600)
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
@@ -59,8 +59,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self._initMenu()
 
         self.appendix_margins = {
-            "title_row_height":40,  # 左侧表格的表头高度
-            "first_row_append":15,  # 第一行表格附加的高度
+            "title_row_height": 40,  # 左侧表格的表头高度
+            "first_row_append": 15,  # 第一行表格附加的高度
         }
         self.marginItemGroups = {
             "up": None,
@@ -87,27 +87,27 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         """
         menu = QtWidgets.QMenu()
         self.menu = menu
-        action = QtWidgets.QAction('标尺对照(Ctrl+W)',self)
+        action = QtWidgets.QAction('标尺对照(Ctrl+W)', self)
         menu.addAction(action)
         action = QtWidgets.QAction('两车次运行对照(Ctrl+Shift+Z)', self)
         menu.addAction(action)
-        action = QtWidgets.QAction('车次事件表(Ctrl+Z)',self)
+        action = QtWidgets.QAction('车次事件表(Ctrl+Z)', self)
         menu.addAction(action)
         menu.addSeparator()
-        menu.addAction(QtWidgets.QAction('时刻调整(Ctrl+A)',self))
-        menu.addAction(QtWidgets.QAction('时刻重排(Ctrl+V)',self))
-        menu.addAction(QtWidgets.QAction('批量复制(Ctrl+Shift+A)',self))
-        menu.addAction(QtWidgets.QAction('区间换线(Ctrl+5)',self))
-        menu.addAction(QtWidgets.QAction('推定时刻(Ctrl+2)',self))
+        menu.addAction(QtWidgets.QAction('时刻调整(Ctrl+A)', self))
+        menu.addAction(QtWidgets.QAction('时刻重排(Ctrl+V)', self))
+        menu.addAction(QtWidgets.QAction('批量复制(Ctrl+Shift+A)', self))
+        menu.addAction(QtWidgets.QAction('区间换线(Ctrl+5)', self))
+        menu.addAction(QtWidgets.QAction('推定时刻(Ctrl+2)', self))
         menu.addSeparator()
-        menu.addAction(QtWidgets.QAction('添加车次(Ctrl+Shift+C)',self))
-        menu.addAction(QtWidgets.QAction('标尺排图向导(Ctrl+R)',self))
+        menu.addAction(QtWidgets.QAction('添加车次(Ctrl+Shift+C)', self))
+        menu.addAction(QtWidgets.QAction('标尺排图向导(Ctrl+R)', self))
 
     def setMargin(self):
         """
         1.4版本修改：新增precondition：已知进入本函数时graph._config中的margins已经初始化完毕。
         """
-        self.margins = self.graph.UIConfigData().get("margins",None)
+        self.margins = self.graph.UIConfigData().get("margins", None)
 
     def setGraph(self, graph: Graph, paint=True):
         self.selectedTrain = None
@@ -125,7 +125,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.selectedTrain = None
         # if self.graph.isEmpty():
         #     return
-        if not force and not self.graph.UIConfigData().get('auto_paint',True):
+        if not force and not self.graph.UIConfigData().get('auto_paint', True):
             return
         self.showNewStatus.emit("正在铺画运行图：{}".format(self.graph.lineName()))
         self.setMargin()
@@ -141,7 +141,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 self.initSecne()
         except Exception as e:
             traceback.print_exc()
-            print("Unexpected Exception while painting graph",repr(e))
+            print("Unexpected Exception while painting graph", repr(e))
 
         self._resetDistanceAxis()
         self._resetTimeAxis()
@@ -230,12 +230,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.horizontalScrollBar().valueChanged.connect(self._resetDistanceAxis)
         self.graph.line.disableNumberMap()
 
-    def _resetForbidShow(self,forbid:Forbid):
+    def _resetForbidShow(self, forbid: Forbid):
         if forbid.downShow():
-            self.show_forbid(forbid,True)
+            self.show_forbid(forbid, True)
         if forbid.upShow():
-            self.show_forbid(forbid,False)
-
+            self.show_forbid(forbid, False)
 
     def _setHLines(self, UIDict: dict, gridColor: QtGui.QColor, width: int, height: int):
         """
@@ -246,20 +245,20 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         textColor = QtGui.QColor(UIDict["text_color"])
         brushColor = QtGui.QColor(Qt.white)
         brushColor.setAlpha(200)
-        label_start_x = self.margins["mile_label_width"]+self.margins["ruler_label_width"]
+        label_start_x = self.margins["mile_label_width"] + self.margins["ruler_label_width"]
         rectLeft = self.scene.addRect(0,
-                                      self.margins["up"] - self.appendix_margins["title_row_height"]-
+                                      self.margins["up"] - self.appendix_margins["title_row_height"] -
                                       self.appendix_margins["first_row_append"],
-                                      self.margins["label_width"]+self.margins["ruler_label_width"]+
-                                      self.margins["mile_label_width"]+self.margins["left_white"],
-                                      height + 2*self.appendix_margins["first_row_append"]+
+                                      self.margins["label_width"] + self.margins["ruler_label_width"] +
+                                      self.margins["mile_label_width"] + self.margins["left_white"],
+                                      height + 2 * self.appendix_margins["first_row_append"] +
                                       self.appendix_margins["title_row_height"])
         rectLeft.setBrush(QtGui.QBrush(brushColor))
         rectLeft.setPen(QtGui.QPen(Qt.transparent))
         rectLeft.setZValue(-1)
         leftItems.append(rectLeft)
 
-        rectRight = self.scene.addRect(self.scene.width() - self.margins["label_width"]-
+        rectRight = self.scene.addRect(self.scene.width() - self.margins["label_width"] -
                                        self.margins["right_white"],
                                        self.margins["up"] - self.appendix_margins["title_row_height"] -
                                        self.appendix_margins["first_row_append"],
@@ -270,8 +269,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         rectRight.setPen(QtGui.QPen(Qt.transparent))
         rightItems.append(rectRight)
 
-        defaultPen = QtGui.QPen(gridColor, UIDict.setdefault("default_grid_width",1))
-        boldPen = QtGui.QPen(gridColor, UIDict.setdefault("bold_grid_width",2.5))
+        defaultPen = QtGui.QPen(gridColor, UIDict.setdefault("default_grid_width", 1))
+        boldPen = QtGui.QPen(gridColor, UIDict.setdefault("bold_grid_width", 2.5))
         least_bold = UIDict["bold_line_level"]
 
         textFont = QtGui.QFont()
@@ -281,96 +280,99 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         rect_start_y = self.margins["up"] - \
                        self.appendix_margins["title_row_height"] - self.appendix_margins["first_row_append"]
-        rulerRect:QtWidgets.QGraphicsRectItem = self.scene.addRect(self.margins["left_white"],rect_start_y,
-                                       self.margins["mile_label_width"]+self.margins["ruler_label_width"],
-                                       self.scene.height()-rect_start_y-self.margins["down"]+
-                                       self.appendix_margins["first_row_append"])
+        rulerRect: QtWidgets.QGraphicsRectItem = self.scene.addRect(self.margins["left_white"], rect_start_y,
+                                                                    self.margins["mile_label_width"] + self.margins[
+                                                                        "ruler_label_width"],
+                                                                    self.scene.height() - rect_start_y - self.margins[
+                                                                        "down"] +
+                                                                    self.appendix_margins["first_row_append"])
         rulerRect.setPen(defaultPen)
         leftItems.append(rulerRect)
 
         # 表格纵向分界线
-        line = self.scene.addLine(self.margins["ruler_label_width"]+self.margins["left_white"],
+        line = self.scene.addLine(self.margins["ruler_label_width"] + self.margins["left_white"],
                                   rect_start_y,
-                                  self.margins["ruler_label_width"]+self.margins["left_white"],
-                                  self.scene.height()-self.margins["down"]+self.appendix_margins["first_row_append"]
+                                  self.margins["ruler_label_width"] + self.margins["left_white"],
+                                  self.scene.height() - self.margins["down"] + self.appendix_margins["first_row_append"]
                                   )
         line.setPen(defaultPen)
         leftItems.append(line)
 
         # 标尺栏横向分界线
-        line = self.scene.addLine(self.margins["left_white"],rect_start_y+self.appendix_margins["title_row_height"]/2,
-                                  self.margins["ruler_label_width"]+self.margins["left_white"],
-                                  rect_start_y+self.appendix_margins["title_row_height"]/2)
+        line = self.scene.addLine(self.margins["left_white"],
+                                  rect_start_y + self.appendix_margins["title_row_height"] / 2,
+                                  self.margins["ruler_label_width"] + self.margins["left_white"],
+                                  rect_start_y + self.appendix_margins["title_row_height"] / 2)
         line.setPen(defaultPen)
         leftItems.append(line)
 
         # 表头下横分界线
         line = self.scene.addLine(self.margins["left_white"],
                                   rect_start_y + self.appendix_margins["title_row_height"],
-                                  self.margins["ruler_label_width"]+self.margins["mile_label_width"]+
+                                  self.margins["ruler_label_width"] + self.margins["mile_label_width"] +
                                   self.margins["left_white"],
                                   rect_start_y + self.appendix_margins["title_row_height"])
         line.setPen(defaultPen)
         leftItems.append(line)
 
         nowItem: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(' ',
-                                                                  font=QtGui.QFont('Sim sum', 12))  # 当前车次信息显示在左上角
+                                                                              font=QtGui.QFont('Sim sum',
+                                                                                               12))  # 当前车次信息显示在左上角
         # timeItems.append(nowItem)
         self.nowItem = nowItem
         # nowItem.setDefaultTextColor(QtGui.QColor(UIDict["text_color"]))
         nowItem.setBrush(QtGui.QBrush(QtGui.QColor(UIDict['text_color'])))
         nowItem.setZValue(16)
 
-        rulerTitle = self._addLeftTableText('排图标尺',textFont,textColor,0,rect_start_y,
+        rulerTitle = self._addLeftTableText('排图标尺', textFont, textColor, 0, rect_start_y,
                                             self.margins["ruler_label_width"],
-                                            self.appendix_margins["title_row_height"]/2)
+                                            self.appendix_margins["title_row_height"] / 2)
         leftItems.append(rulerTitle)
 
-        downTitle = self._addLeftTableText('下行',textFont,textColor,0,
-                                           rect_start_y+self.appendix_margins["title_row_height"]/2,
-                                            self.margins["ruler_label_width"]/2,
-                                            self.appendix_margins["title_row_height"]/2)
+        downTitle = self._addLeftTableText('下行', textFont, textColor, 0,
+                                           rect_start_y + self.appendix_margins["title_row_height"] / 2,
+                                           self.margins["ruler_label_width"] / 2,
+                                           self.appendix_margins["title_row_height"] / 2)
         leftItems.append(downTitle)
 
-        upTitle = self._addLeftTableText('上行',textFont,textColor,
-                                         self.margins["ruler_label_width"]/2,
-                                           rect_start_y+self.appendix_margins["title_row_height"]/2,
-                                            self.margins["ruler_label_width"]/2,
-                                            self.appendix_margins["title_row_height"]/2)
+        upTitle = self._addLeftTableText('上行', textFont, textColor,
+                                         self.margins["ruler_label_width"] / 2,
+                                         rect_start_y + self.appendix_margins["title_row_height"] / 2,
+                                         self.margins["ruler_label_width"] / 2,
+                                         self.appendix_margins["title_row_height"] / 2)
         leftItems.append(upTitle)
 
-        mileTitle = self._addLeftTableText('延长公里',textFont,textColor,
-                                            self.margins["ruler_label_width"],
+        mileTitle = self._addLeftTableText('延长公里', textFont, textColor,
+                                           self.margins["ruler_label_width"],
                                            rect_start_y,
-                                            self.margins["mile_label_width"],
-                                            self.appendix_margins["title_row_height"])
+                                           self.margins["mile_label_width"],
+                                           self.appendix_margins["title_row_height"])
         leftItems.append(mileTitle)
 
         if ruler is not None and ruler.different():
             # 上下行分设，在标尺中间划线
-            line = self.scene.addLine(self.margins["ruler_label_width"]/2+self.margins["left_white"],
-                                      rect_start_y+self.appendix_margins["title_row_height"]/2,
-                                      self.margins["ruler_label_width"]/2+self.margins["left_white"],
-                                      height+self.margins["up"]+self.appendix_margins["first_row_append"]
+            line = self.scene.addLine(self.margins["ruler_label_width"] / 2 + self.margins["left_white"],
+                                      rect_start_y + self.appendix_margins["title_row_height"] / 2,
+                                      self.margins["ruler_label_width"] / 2 + self.margins["left_white"],
+                                      height + self.margins["up"] + self.appendix_margins["first_row_append"]
                                       # +self.appendix_margins["title_row_height"]/2,
                                       )
             line.setPen(defaultPen)
             leftItems.append(line)
 
-
         if ruler is None:
             # 按里程排图
             print("按里程排图")
             for st_dict in self.graph.stationDicts():
-                name,mile,level = st_dict["zhanming"],st_dict["licheng"],st_dict["dengji"]
-                dir_ = st_dict.setdefault("direction",0x3)
-                isShow = st_dict.setdefault("show",True)
+                name, mile, level = st_dict["zhanming"], st_dict["licheng"], st_dict["dengji"]
+                dir_ = st_dict.setdefault("direction", 0x3)
+                isShow = st_dict.setdefault("show", True)
                 h = mile * UIDict["pixes_per_km"] + self.margins["up"]
                 if isShow:
                     pen = boldPen if level <= least_bold else defaultPen
                     self._drawSingleHLine(textColor, textFont, h, name, pen, width, leftItems, rightItems, dir_,
                                           label_start_x)
-                    mileText = self._addStationTableText(f'{mile:.1f}',textFont,textColor,
+                    mileText = self._addStationTableText(f'{mile:.1f}', textFont, textColor,
                                                          self.margins["ruler_label_width"],
                                                          h,
                                                          self.margins["mile_label_width"])
@@ -388,9 +390,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             line_width = self.margins["ruler_label_width"] if not ruler.different() else \
                 self.margins["ruler_label_width"] / 2
             for st_dict in self.graph.stationDicts():
-                name,mile,level = st_dict["zhanming"],st_dict["licheng"],st_dict["dengji"]
-                dir_ = st_dict.setdefault("direction",0x3)
-                isShow = st_dict.setdefault("show",True)
+                name, mile, level = st_dict["zhanming"], st_dict["licheng"], st_dict["dengji"]
+                dir_ = st_dict.setdefault("direction", 0x3)
+                isShow = st_dict.setdefault("show", True)
                 if not self.graph.stationDirection(name):
                     # 上下行都不经过的站不铺画
                     isShow = False
@@ -407,14 +409,14 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     if not isShow:
                         continue
                     self._drawSingleHLine(textColor, textFont, y, name,
-                                          defaultPen, width, leftItems, rightItems, dir_,label_start_x)
+                                          defaultPen, width, leftItems, rightItems, dir_, label_start_x)
                     mileText = self._addStationTableText(f'{mile:.1f}', textFont, textColor,
                                                          self.margins["ruler_label_width"],
                                                          y,
                                                          self.margins["mile_label_width"])
                     leftItems.append(mileText)
                     line = self.scene.addLine(self.margins["left_white"], y,
-                                              line_width+self.margins["left_white"], y)
+                                              line_width + self.margins["left_white"], y)
                     line.setZValue(3)
                     line.setPen(defaultPen)
                     leftItems.append(line)
@@ -423,7 +425,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
                 if info is None:
                     # 标尺不完整，不能用于排图
-                    raise RulerNotCompleteError(last_station,name)
+                    raise RulerNotCompleteError(last_station, name)
                     # y += (mile - last_mile) * UIDict["pixes_per_km"]
                     # labeItem = self.scene.addText("{}km".format(mile-last_mile))
                     # labeItem.setY((y + last_y) / 2 - 13)
@@ -438,12 +440,12 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 if isShow:
                     if level <= least_bold:
                         self._drawSingleHLine(textColor, textFont, y, name,
-                                              boldPen, width, leftItems, rightItems, dir_,label_start_x)
+                                              boldPen, width, leftItems, rightItems, dir_, label_start_x)
                         # self.scene.addLine(self.margins["left"], y, width+self.margins["left"] , y,boldPen)
                     else:
                         # self.scene.addLine(self.margins["left"], y, width + self.margins["left"], y, defaultPen)
                         self._drawSingleHLine(textColor, textFont, y, name,
-                                              defaultPen, width, leftItems, rightItems, dir_,label_start_x)
+                                              defaultPen, width, leftItems, rightItems, dir_, label_start_x)
                     # 延长公里标记
                     mileText = self._addStationTableText(f'{mile:.1f}', textFont, textColor,
                                                          self.margins["ruler_label_width"],
@@ -451,27 +453,26 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                                                          self.margins["mile_label_width"])
                     leftItems.append(mileText)
                     # 区间标尺标记
-                    line = self.scene.addLine(self.margins["left_white"],y,
-                                              line_width+self.margins["left_white"],y)
+                    line = self.scene.addLine(self.margins["left_white"], y,
+                                              line_width + self.margins["left_white"], y)
                     line.setPen(defaultPen)
                     leftItems.append(line)
                     int_str = f'{int(this_interval_sum/60)}:{this_interval_sum%60:02d}'
                     intervalText = self._addStationTableText(int_str,
                                                              textFont, textColor,
-                                                         0,(y+last_showed_y)/2,
-                                                         line_width)
+                                                             0, (y + last_showed_y) / 2,
+                                                             line_width)
                     # print(int_str,last_station,name,last_y,y)
                     leftItems.append(intervalText)
                     last_showed_y = y
                     this_interval_sum = 0
 
-
                 last_y = y
                 last_station = name
 
             for station in ruler.downPass():
-                st_dict = self.graph.stationByDict(station,True)
-                dir_ = st_dict.setdefault('direction',0x3)
+                st_dict = self.graph.stationByDict(station, True)
+                dir_ = st_dict.setdefault('direction', 0x3)
                 mile = st_dict["licheng"]
                 # 补刀，画上行。注意不显示的站要画上行。
                 if station in ruler.upPass():
@@ -486,7 +487,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     t2 = ruler.getInfo(latter_dict["zhanming"], station, True)["interval"]
                 except:
                     print(station, former_dict["zhanming"], latter_dict["zhanming"])
-                    raise RulerNotCompleteError(former_dict['zhanming'],station)
+                    raise RulerNotCompleteError(former_dict['zhanming'], station)
                 dy = t1 / (t1 + t2) * total_y
                 y = former_dict["y_value"] + dy
 
@@ -496,15 +497,15 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     level = self.graph.stationLevel(station)
                     pen = boldPen if level <= UIDict["bold_line_level"] else defaultPen
                     self._drawSingleHLine(textColor, textFont, y,
-                                          station, pen, width, leftItems, rightItems, dir_,label_start_x)
-                    text = self._addStationTableText(f'{mile:.1f}',textFont,textColor,
-                                              self.margins["ruler_label_width"],y,
-                                              self.margins["mile_label_width"])
+                                          station, pen, width, leftItems, rightItems, dir_, label_start_x)
+                    text = self._addStationTableText(f'{mile:.1f}', textFont, textColor,
+                                                     self.margins["ruler_label_width"], y,
+                                                     self.margins["mile_label_width"])
                     leftItems.append(text)
 
             # 标记上行方向标尺的区间历时
             if ruler.different():
-                last_y = self.margins["up"]+height
+                last_y = self.margins["up"] + height
                 last_station = ''
                 last_showed_y = last_y
                 this_interval_sum = 0
@@ -526,8 +527,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                             last_station = name
                             y = self.graph.stationYValue(name)
                             last_y = y
-                            line = self.scene.addLine(line_width+self.margins["left_white"], y,
-                                                      line_width*2+self.margins["left_white"], y)
+                            line = self.scene.addLine(line_width + self.margins["left_white"], y,
+                                                      line_width * 2 + self.margins["left_white"], y)
                             line.setZValue(3)
                             line.setPen(defaultPen)
                             leftItems.append(line)
@@ -535,8 +536,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
                         # 只要能画出来，y_value是一定存在的，不用判断
                         y = self.graph.stationYValue(name)
-                        line = self.scene.addLine(line_width+self.margins["left_white"],y,
-                                                  2*line_width+self.margins["left_white"],y)
+                        line = self.scene.addLine(line_width + self.margins["left_white"], y,
+                                                  2 * line_width + self.margins["left_white"], y)
                         line.setPen(defaultPen)
                         line.setZValue(0.2)
                         leftItems.append(line)
@@ -551,8 +552,6 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                     last_y = y
                     last_station = name
 
-
-
         group1 = self.scene.createItemGroup(leftItems)
         group1.setZValue(15)
         group2 = self.scene.createItemGroup(rightItems)
@@ -560,27 +559,27 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.marginItemGroups["left"] = group1
         self.marginItemGroups["right"] = group2
 
-    def _addLeftTableText(self,text:str,textFont,textColor,start_x,start_y,width,height):
+    def _addLeftTableText(self, text: str, textFont, textColor, start_x, start_y, width, height):
         """
         左侧排图标尺表格中添加文字的函数。自动附加左侧白边宽度。
         """
         start_x += self.margins["left_white"]
-        rulerTitle:QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(text)
+        rulerTitle: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(text)
         font = QtGui.QFont()
         font.setRawName(textFont.rawName())
         width1 = rulerTitle.boundingRect().width()
         if width1 > width:
-            stretch = 100*width//width1
+            stretch = 100 * width // width1
             font.setStretch(stretch)
         rulerTitle.setFont(font)
         rulerTitle.setBrush(QtGui.QBrush(textColor))
         rect = rulerTitle.boundingRect()
-        rulerTitle.setX(start_x + (width-rect.width())/2)
+        rulerTitle.setX(start_x + (width - rect.width()) / 2)
         rulerTitle.setY(start_y +
-                        (height-rect.height())/2)
+                        (height - rect.height()) / 2)
         return rulerTitle
 
-    def _addStationTableText(self,text,textFont,textColor,start_x,center_y,width):
+    def _addStationTableText(self, text, textFont, textColor, start_x, center_y, width):
         """
         左侧排图标尺表格中【每个站】位置的字体。与上一个的区别是设置中心y而不是高度。自动附加左侧白边。
         """
@@ -596,7 +595,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         rulerTitle.setBrush(QtGui.QBrush(textColor))
         rulerRect = rulerTitle.boundingRect()
         rulerTitle.setX(start_x + (width - rulerRect.width()) / 2)
-        rulerTitle.setY(center_y-rulerRect.height() / 2)
+        rulerTitle.setY(center_y - rulerRect.height() / 2)
         return rulerTitle
 
     def _drawSingleHLine(self, textColor, textFont, y, name, pen, width, leftItems, rightItems, dir_,
@@ -604,7 +603,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         """
         """
         textFont.setBold(False)
-        name=name.replace('::','*')
+        name = name.replace('::', '*')
         # print(name,dir_)
         # dir_dict = {
         #     0x0: 'N', 0x1: 'D', 0x2: 'U', 0x3: '',
@@ -617,34 +616,34 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # textItem.setPen(QtGui.QPen(textColor))
         textItem.setBrush(QtGui.QBrush(textColor))
         textItem.setFont(textFont)
-        textItem.setY(y - textItem.boundingRect().height()/2)
+        textItem.setY(y - textItem.boundingRect().height() / 2)
         # textItem.setX(self.margins["label_width"] - len(name) * 18.2 - 5)
         textWidth = textItem.boundingRect().width()
         font = QtGui.QFont()
         font.setBold(textFont.bold())
         font.setRawName(textFont.rawName())
-        label_width = self.margins["label_width"] - 5  #左侧稍微多留出一点点边
+        label_width = self.margins["label_width"] - 5  # 左侧稍微多留出一点点边
         if textWidth > label_width:
             # 超大的字
-            stretch = int(100*label_width / textWidth+0.5)
+            stretch = int(100 * label_width / textWidth + 0.5)
             font.setStretch(stretch)
             textItem.setFont(font)
         textWidth = textItem.boundingRect().width()
         cnt = len(name)
-        if textWidth < label_width and cnt>1:
+        if textWidth < label_width and cnt > 1:
             # 两端对齐
-            font.setLetterSpacing(QtGui.QFont.AbsoluteSpacing,(label_width-textWidth)/(cnt-1))
+            font.setLetterSpacing(QtGui.QFont.AbsoluteSpacing, (label_width - textWidth) / (cnt - 1))
             textItem.setFont(font)
 
-        textItem.setX(label_start_x+self.margins["left_white"]+5)
+        textItem.setX(label_start_x + self.margins["left_white"] + 5)
         leftItems.append(textItem)
 
         # 右侧
         textItem = self.scene.addSimpleText(name)
         textItem.setBrush(QtGui.QBrush(textColor))
         textItem.setFont(textFont)
-        textItem.setY(y - textItem.boundingRect().height()/2)
-        textItem.setX(self.scene.width() - self.margins["label_width"]-self.margins["right_white"])
+        textItem.setY(y - textItem.boundingRect().height() / 2)
+        textItem.setX(self.scene.width() - self.margins["label_width"] - self.margins["right_white"])
         textWidth = textItem.boundingRect().width()
         label_width = self.margins["label_width"]
         font = QtGui.QFont()
@@ -666,9 +665,30 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
     def _setVLines(self, UIDict: dict, gridColor: QtGui.QColor, height: int, width: int, hour_count: int):
         gap = UIDict["minutes_per_vertical_line"]
+        gap_px = self._minutesToPixels(gap)
+        minute_thres = 200  # 最小的标记分钟线间隔
+        minute_marks_gap = max(minute_thres // gap_px, 1)  # 每隔多少条竖线标一次分钟
+        print(f"gap={gap_px}, minute_marks_gap={minute_marks_gap}")
+        vlines = int(60 / gap)  # 每小时纵线数量+1  添加的循环范围是range(1,vlines)
+        mark_count = vlines // minute_marks_gap
+        # 下面决定哪些竖线加标记
+        mark_js = set()
+        if mark_count:
+            centerj = (vlines)//2  # 奇数线是正中间的，偶数则是正中间往左那个
+            mark_js.add(centerj)
+            j = centerj
+            # 向左添加
+            while j > 0:
+                mark_js.add(j)
+                j -= minute_marks_gap
+            j = centerj
+            while j < vlines:
+                mark_js.add(j)
+                j += minute_marks_gap
+
         line_count = gap * hour_count
-        pen_hour = QtGui.QPen(gridColor, UIDict.setdefault("bold_grid_width",2.5))
-        pen_half = QtGui.QPen(gridColor, UIDict.setdefault("default_grid_width",1), Qt.DashLine)
+        pen_hour = QtGui.QPen(gridColor, UIDict.setdefault("bold_grid_width", 2.5))
+        pen_half = QtGui.QPen(gridColor, UIDict.setdefault("default_grid_width", 1), Qt.DashLine)
         pen_other = QtGui.QPen(gridColor, UIDict["default_grid_width"])
 
         timeItems = []  # 顶上的时间坐标行
@@ -705,25 +725,24 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         font.setPixelSize(25)
         font.setBold(True)
 
+        # 用来标记分钟数的字体
+        fontmin = QtGui.QFont()
+        fontmin.setPixelSize(15)
+        fontmin.setBold(False)
+
         for i in range(hour_count + 1):
 
             x = self.margins["left"] + i * 3600 / UIDict["seconds_per_pix"]
             hour = (i + UIDict["start_hour"]) % 24
 
-            textItem1: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(str(hour))
-            textItem2: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(str(hour))
-            textItem1.setFont(font)
-            textItem1.setX(x - textItem1.boundingRect().width()/2)
-            textItem1.setBrush(QtGui.QBrush(gridColor))
+            textItem1 = self._addTimeAxisMark(hour, gridColor, font, x)
+            textItem1.setY(30 - textItem1.boundingRect().height())
             # textItem1.setDefaultTextColor(gridColor)
             timeItems.append(textItem1)
 
             # 下时间坐标
-            textItem2.setFont(font)
-            textItem2.setX(x - textItem2.boundingRect().width()/2)
+            textItem2 = self._addTimeAxisMark(hour, gridColor, font, x)
             textItem2.setY(self.scene.height() - 30)
-            textItem2.setBrush(QtGui.QBrush(gridColor))
-            # textItem2.setDefaultTextColor(gridColor)
             downItems.append(textItem2)
 
             if i == hour_count:
@@ -733,12 +752,21 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             if i != 0:
                 self.scene.addLine(x, self.margins["up"], x, self.margins["up"] + height, pen_hour)
 
-            for j in range(1, int(60 / gap)):
+            for j in range(1, vlines):
                 x += gap * 60 / UIDict["seconds_per_pix"]
-                if j * gap == 30:
+                minu = j * gap
+                if minu == 30:
                     self.scene.addLine(x, self.margins["up"], x, self.margins["up"] + height, pen_half)
                 else:
                     self.scene.addLine(x, self.margins["up"], x, self.margins["up"] + height, pen_other)
+                if j in mark_js:
+                    # 标记分钟数
+                    upItem = self._addTimeAxisMark(int(round(minu)), gridColor, fontmin, x)
+                    upItem.setY(30 - upItem.boundingRect().height())
+                    timeItems.append(upItem)
+                    downItem = self._addTimeAxisMark(int(round(minu)), gridColor, fontmin, x)
+                    downItem.setY(self.scene.height() - 30)
+                    downItems.append(downItem)
 
         group1 = self.scene.createItemGroup(timeItems)
         group1.setZValue(15)
@@ -749,6 +777,17 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # print("y is: ",group2.y())
         self.marginItemGroups["down"] = group2
 
+    def _minutesToPixels(self, minu) -> float:
+        return minu * 60 / self.graph.UIConfigData()["seconds_per_pix"]
+
+    def _addTimeAxisMark(self, value: int, gridColor: QtGui.QColor,
+                         font: QtGui.QFont, x: int) -> QtWidgets.QGraphicsSimpleTextItem:
+        item: QtWidgets.QGraphicsSimpleTextItem = self.scene.addSimpleText(str(value))
+        item.setFont(font)
+        item.setX(x - item.boundingRect().width() / 2)
+        item.setBrush(QtGui.QBrush(gridColor))
+        return item
+
     def addTrainLine(self, train):
         """
         """
@@ -756,7 +795,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             # 若设置为不显示，忽略此命令
             # print("addTrainLine:not show train",train.fullCheci())
             return
-        self.graph.UIConfigData().setdefault('showFullCheci',False)
+        self.graph.UIConfigData().setdefault('showFullCheci', False)
         train.clearItems()
 
         if train.autoItem():
@@ -765,8 +804,8 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             train.clearItemInfo()
             while status != TrainItem.End:
                 # 扫描到最后总是会返回end
-                item = TrainItem(train,self.graph,self,
-                                 validWidth=self.graph.UIConfigData().setdefault('valid_width',3),
+                item = TrainItem(train, self.graph, self,
+                                 validWidth=self.graph.UIConfigData().setdefault('valid_width', 3),
                                  showFullCheci=self.graph.UIConfigData()['showFullCheci'],
                                  markMode=self.graph.UIConfigData()['show_time_mark']
                                  )
@@ -784,11 +823,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                         if item.down is not None:
                             # 只要铺画了有效的运行线，down就不可能是None
                             dct = {
-                                "start":item.startStation,
-                                "end":item.endStation,
-                                "down":item.down,
-                                "show_start_label":showStart,
-                                "show_end_label":False if status == TrainItem.Reversed else True,
+                                "start": item.startStation,
+                                "end": item.endStation,
+                                "down": item.down,
+                                "show_start_label": showStart,
+                                "show_end_label": False if status == TrainItem.Reversed else True,
                             }
                             train.addItemInfoDict(dct)
                             self.scene.addItem(item)
@@ -797,16 +836,16 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                         # 如果下一段的运行线不存在，而上一段的被以Reversed方向终止，则需要补上终止标签。
                         # 2019.11.18添加，解决杭深线D6315问题。
                         lastItemDict = train.lastItemInfo()
-                        if status == TrainItem.Pass and lastItemDict is not None\
+                        if status == TrainItem.Pass and lastItemDict is not None \
                                 and not lastItemDict['show_end_label']:
                             print(f"返回添加上一级标签：车次{train.fullCheci()}")
                             lastItemDict['show_end_label'] = True
-                            newItem = TrainItem(train,self.graph,self,lastItemDict['start'],lastItemDict['end'],
-                                        lastItemDict['down'],
-                                        validWidth=self.graph.UIConfigData().setdefault('valid_width', 3),
-                                        showFullCheci=self.graph.UIConfigData()['showFullCheci'],
-                                        markMode=self.graph.UIConfigData()['show_time_mark']
-                                    )
+                            newItem = TrainItem(train, self.graph, self, lastItemDict['start'], lastItemDict['end'],
+                                                lastItemDict['down'],
+                                                validWidth=self.graph.UIConfigData().setdefault('valid_width', 3),
+                                                showFullCheci=self.graph.UIConfigData()['showFullCheci'],
+                                                markMode=self.graph.UIConfigData()['show_time_mark']
+                                                )
                             newItem.setLine(showStartLabel=lastItemDict['show_start_label'],
                                             showEndLabel=True)
                             oldItem = train.takeLastItem()
@@ -820,14 +859,14 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         else:  # 手动模式，按照要求铺画
             for dct in train.itemInfo():
                 start = 0
-                item = TrainItem(train,self.graph,self,
-                                 dct['start'],dct['end'],dct['down'],
+                item = TrainItem(train, self.graph, self,
+                                 dct['start'], dct['end'], dct['down'],
                                  self.graph.UIConfigData()['valid_width'],
                                  self.graph.UIConfigData()['showFullCheci'],
                                  self.graph.UIConfigData()['show_time_mark']
                                  )
-                end,status = item.setLine(start,showStartLabel=dct['show_start_label'],
-                                          showEndLabel=dct['show_end_label'])
+                end, status = item.setLine(start, showStartLabel=dct['show_start_label'],
+                                           showEndLabel=dct['show_end_label'])
                 if status != TrainItem.Invalid:
                     self.scene.addItem(item)
                     train.addItem(item)
@@ -848,7 +887,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             # 这里需要遍历检查items，是因为防止ctrl+R操作中的train未添加进来，尝试删除引发错误。暂未找到更合适方案。
             # if item in self.scene.items():
             # if item.scene() is self.scene:
-            item:TrainItem
+            item: TrainItem
             self.scene.removeItem(item)
             for x in (item.endLabelInfo, item.startLabelInfo):
                 if x is not None:
@@ -865,11 +904,11 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         """
         重新铺画，先删除再铺画，但保留选择。2019.07.04新增。
         """
-        isSelected = (train==self.selectedTrain)
+        isSelected = (train == self.selectedTrain)
         self.delTrainLine(train)
         self.addTrainLine(train)
         if isSelected:
-            self._line_selected(train.firstItem(),emit=False)
+            self._line_selected(train.firstItem(), emit=False)
 
     def _resetTimeAxis(self):
         point = QtCore.QPoint(0, 0)
@@ -898,7 +937,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         except RuntimeError:
             pass
 
-    def stationPosCalculate(self, zm: str, sj: datetime)->QtCore.QPoint:
+    def stationPosCalculate(self, zm: str, sj: datetime) -> QtCore.QPoint:
         """
         计算时间、车站对应的点。
         保证数据是datetime对象而不是str。
@@ -915,10 +954,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         if dct_line is None:
             return None  # 线路上不存在这个站
 
-        y = dct_line.get('y_value',-1)
+        y = dct_line.get('y_value', -1)
         if self.graph.UIConfigData()["ordinate"] is not None:
             # if self.graph.stationExisted(zm):# 不必判断！
-            if dct_line.get('direction',Line.BothVia) == 0x0:
+            if dct_line.get('direction', Line.BothVia) == 0x0:
                 # 说明：按标尺排图时，若本线该站是“不通过”状态。
                 y = -1
 
@@ -936,7 +975,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
 
         return point
 
-    def _line_selected(self, item: QtWidgets.QGraphicsPathItem, ensure_visible=False,emit=True):
+    def _line_selected(self, item: QtWidgets.QGraphicsPathItem, ensure_visible=False, emit=True):
         # print(item)
         if item is None:
             return
@@ -966,7 +1005,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.nowItem.setText(' ')
         self.selectedTrain = None
 
-    def mousePressEvent(self, QMouseEvent:QtGui.QMouseEvent):
+    def mousePressEvent(self, QMouseEvent: QtGui.QMouseEvent):
         if QMouseEvent.button() == Qt.LeftButton:
             pos = self.mapToScene(QMouseEvent.pos())
             # print("mousePressEvent",pos)
@@ -1005,7 +1044,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             return
         self.lineDoubleClicked.emit()
 
-    def posTrain(self,pos)->Train:
+    def posTrain(self, pos) -> Train:
         """
         返回某点处的运行线对应列车对象
         """
@@ -1024,12 +1063,12 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         """
         若鼠标停留在当前选中运行线上，显示有关信息。
         """
-        train=self.posTrain(event.pos())
+        train = self.posTrain(event.pos())
         pos = self.mapToScene(event.pos())
         if train is None or train is not self.selectedTrain:
             self.setToolTip('')
             return
-        dct_pre,dct_lat = train.yToStationInterval(pos.y())
+        dct_pre, dct_lat = train.yToStationInterval(pos.y())
         if dct_pre is None:
             self.setToolTip('')
             return
@@ -1038,10 +1077,10 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             text = f"{train.fullCheci()}次({train.sfz}->{train.zdz})在{dct_pre['zhanming']}车站 "
             if train.stationStopped(dct_pre):
                 text += f"{dct_pre['ddsj'].strftime('%H:%M:%S')}/{dct_pre['cfsj'].strftime('%H:%M:%S')}\n"
-                dt:timedelta = dct_pre['cfsj'] - dct_pre['ddsj']
+                dt: timedelta = dct_pre['cfsj'] - dct_pre['ddsj']
                 sec = dt.seconds
                 if sec < 0:
-                    sec += 24*3600
+                    sec += 24 * 3600
                 sec_str = f"{sec%60:02d}秒"
                 text += f"停车{int(sec/60)}分{sec_str if sec%60 else ''}"
             else:
@@ -1050,29 +1089,33 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             self.setStatusTip(text)
         else:
             # 区间事件. 效率考虑，直接弄成作差。
-            dt1:timedelta = dct_lat['ddsj'] - dct_pre['cfsj']
-            dt2:timedelta = dct_pre['ddsj'] - dct_lat['cfsj']
+            dt1: timedelta = dct_lat['ddsj'] - dct_pre['cfsj']
+            dt2: timedelta = dct_pre['ddsj'] - dct_lat['cfsj']
             sec1 = dt1.seconds
             sec2 = dt2.seconds
             if sec1 < 0:
-                sec1 += 3600*24
+                sec1 += 3600 * 24
             if sec2 < 0:
-                sec2 += 3600*24
+                sec2 += 3600 * 24
             if sec1 < sec2:
-                pre = dct_pre;lat=dct_lat;sec=sec1
+                pre = dct_pre;
+                lat = dct_lat;
+                sec = sec1
             else:
-                pre = dct_lat;lat=dct_pre;sec=sec2
+                pre = dct_lat;
+                lat = dct_pre;
+                sec = sec2
             text = f"{train.fullCheci()}次({train.sfz}->{train.zdz})在{pre['zhanming']}-{lat['zhanming']}区间 "
             text += f"{pre['cfsj'].strftime('%H:%M:%S')}-{lat['ddsj'].strftime('%H:%M:%S')} "
             sec_str = f"{sec%60:02d}秒"
             text += f"区间运行{int(sec/60)}分{sec_str if sec%60 else ''}\n"
             try:
-                mile = self.graph.gapBetween(pre['zhanming'],lat['zhanming'])
+                mile = self.graph.gapBetween(pre['zhanming'], lat['zhanming'])
             except:
                 text += "区间里程数据错误，可使用ctrl+W查看区间均速等数据"
             else:
                 try:
-                    speed = mile*1000/sec*3.6
+                    speed = mile * 1000 / sec * 3.6
                 except ZeroDivisionError:
                     speed_str = 'NA'
                 else:
@@ -1087,7 +1130,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self._resetTimeAxis()
         self._resetDistanceAxis()
 
-    def save(self,filename, mark:str):
+    def save(self, filename, mark: str):
         """
         导出为PNG。
         """
@@ -1113,9 +1156,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # font.setUnderline(True)
         painter.setFont(font)
         painter.drawText(self.margins["left"], 80, "{}{}-{}间列车运行图".format(self.graph.lineName(),
-                                                                                self.graph.firstStation(),
-                                                                                self.graph.lastStation(),
-                                                                               ),
+                                                                          self.graph.firstStation(),
+                                                                          self.graph.lastStation(),
+                                                                          ),
                          )
         font.setPixelSize(20)
         font.setBold(False)
@@ -1126,7 +1169,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             painter.drawText(self.margins["left"], self.scene.height() + 100 + 40,
                              f"备注：{self.graph.markdown().replace(nnn,' ')}"
                              )
-        painter.drawText(self.scene.width()-400,self.scene.height()+100+40,mark)
+        painter.drawText(self.scene.width() - 400, self.scene.height() + 100 + 40, mark)
 
         painter.setRenderHint(painter.Antialiasing, True)
         self.scene.render(painter, target=QtCore.QRectF(0, 100, self.scene.width(), self.scene.height()))
@@ -1139,7 +1182,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self._resetDistanceAxis()
         self._resetTimeAxis()
 
-    def savePdf(self,filename:str,mark:str)->bool:
+    def savePdf(self, filename: str, mark: str) -> bool:
         self.marginItemGroups["left"].setX(0)
         self.marginItemGroups["right"].setX(0)
         self.marginItemGroups["up"].setY(0)
@@ -1152,7 +1195,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         printer.setOutputFormat(QtPrintSupport.QPrinter.PdfFormat)
         printer.setOutputFileName(filename)
         note_apdx = 80
-        size = QtCore.QSize(self.scene.width(),self.scene.height()+100+note_apdx)
+        size = QtCore.QSize(self.scene.width(), self.scene.height() + 100 + note_apdx)
         pageSize = QtGui.QPageSize(size)
         printer.setPageSize(pageSize)
 
@@ -1165,9 +1208,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         painter = QtGui.QPainter()
         painter.begin(printer)
         if not painter.isActive():
-            QtWidgets.QMessageBox.warning(self,'错误','保存pdf失败，可能是文件占用。')
+            QtWidgets.QMessageBox.warning(self, '错误', '保存pdf失败，可能是文件占用。')
             return False
-        painter.scale(printer.width()/self.scene.width(),printer.width()/self.scene.width())
+        painter.scale(printer.width() / self.scene.width(), printer.width() / self.scene.width())
         painter.setPen(QtGui.QPen(QtGui.QColor(self.graph.UIConfigData()["text_color"])))
         font = QtGui.QFont()
         font.setPixelSize(50)
@@ -1175,9 +1218,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # font.setUnderline(True)
         painter.setFont(font)
         painter.drawText(self.margins["left"], 80, "{}{}-{}间列车运行图".format(self.graph.lineName(),
-                                                                                self.graph.firstStation(),
-                                                                                self.graph.lastStation(),
-                                                                                ),
+                                                                          self.graph.firstStation(),
+                                                                          self.graph.lastStation(),
+                                                                          ),
                          )
         font.setPixelSize(20)
         font.setBold(False)
@@ -1328,9 +1371,9 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         # train: Train = self.selectedTrain
         # event_source.sort(key=lambda x: x["mile"])
         # 2019.02.23修改：按里程优先，时间次之的顺序排序。
-        train:Train = self.selectedTrain
+        train: Train = self.selectedTrain
         if train.firstDown():
-            event_source.sort(key=lambda x:(x["mile"],x["time"]))
+            event_source.sort(key=lambda x: (x["mile"], x["time"]))
         else:
             event_source.sort(key=lambda x: (-x["mile"], x["time"]))
 
@@ -1372,7 +1415,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         站内：停车的一方为待避，另一方为越行。
         站外：比较两站时刻。用时短的一方是越行。
         """
-        if train1.stationDown(former,self.graph) != train2.stationDown(former,self.graph):
+        if train1.stationDown(former, self.graph) != train2.stationDown(former, self.graph):
             return TrainEventType.meet
 
         if later is None:
@@ -1397,18 +1440,18 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
                 return TrainEventType.avoid
         return TrainEventType.unknown
 
-    def on_show_forbid_changed(self, forbid:Forbid,checked, down):
+    def on_show_forbid_changed(self, forbid: Forbid, checked, down):
         if checked:
-            self.show_forbid(forbid,down)
+            self.show_forbid(forbid, down)
         else:
-            self._remove_forbid(forbid,down)
+            self._remove_forbid(forbid, down)
 
-    def show_forbid(self, forbid_data:Forbid, down, remove=True):
-        print("show forbid",forbid_data)
+    def show_forbid(self, forbid_data: Forbid, down, remove=True):
+        print("show forbid", forbid_data)
         if remove:
-            self._remove_forbid(forbid_data,down)
+            self._remove_forbid(forbid_data, down)
         pen = QtGui.QPen(Qt.transparent)
-        isService = isinstance(forbid_data,ServiceForbid)
+        isService = isinstance(forbid_data, ServiceForbid)
         if isService:
             color = QtGui.QColor('#555555')
         else:
@@ -1421,15 +1464,15 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             brush.setStyle(Qt.FDiagPattern)
         else:
             brush.setStyle(Qt.BDiagPattern)
-        brush2=None
+        brush2 = None
         if not isService:
-            color=QtGui.QColor('#AAAAAA')
+            color = QtGui.QColor('#AAAAAA')
             color.setAlpha(80)
-            brush2=QtGui.QBrush(color)
+            brush2 = QtGui.QBrush(color)
         for node in forbid_data.nodes(down):
             items = self._add_forbid_rect(node, pen, brush)
             if not isService:
-                items.extend(self._add_forbid_rect(node,pen,brush2))
+                items.extend(self._add_forbid_rect(node, pen, brush2))
             for item in items:
                 forbid_data.addItem(down, item)
 
@@ -1458,7 +1501,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             rectItem.setPen(pen)
             rectItem.setBrush(brush)
             rectItem.setZValue(1)
-            return [rectItem,]
+            return [rectItem, ]
         else:
             # 跨日
             left_x = self.margins["left"]
@@ -1471,15 +1514,15 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
             rectItem2.setBrush(brush)
             rectItem1.setZValue(1)
             rectItem2.setZValue(1)
-            return [rectItem1, rectItem2,]
+            return [rectItem1, rectItem2, ]
 
-    def _remove_forbid(self,forbid, down):
+    def _remove_forbid(self, forbid, down):
         for item in forbid.items(down):
             if item in self.scene.items():  # 临时使用这种方法避免出错
                 self.scene.removeItem(item)
         forbid.clearItemList(down)
 
-    def setTrainShow(self,train:Train,show:bool=None):
+    def setTrainShow(self, train: Train, show: bool = None):
         """
         涵盖各种情况的设置是否显示问题，包含数据变更和铺画调整。
         凡修改是否显示运行线的问题只需要调用这个函数。2019.02.05新增。
@@ -1497,5 +1540,3 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         else:
             for item in train.items():
                 item.setVisible(False)
-
-

@@ -45,7 +45,7 @@ $(WIN64_OUT) : $(SOURCE)
 # egg版，直接在目标目录构建
 $(EGG_OUT) : $(SOURCE)
 	echo building pyETRC egg release version
-	xcopy train_graph $(EGG_DIR)\train_graph /Y
+	xcopy train_graph $(EGG_DIR)\train_graph /Y /E 
 # del /s/q $(EGG_DIR)\train_graph\__pycache__
 # rmdir $(EGG_DIR)\train_graph\__pycache__
 	7z a $(EGG_DIR)\tmp.zip $(EGG_DIR)\train_graph $(EGG_DIR)\Timetable_new $(EGG_DIR)\__main__.py

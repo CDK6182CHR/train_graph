@@ -95,7 +95,8 @@ class Line():
         """
         线性算法，重置站名查找表
         """
-        self.nameMap = {}
+        self.nameMap.clear()
+        # self.nameMap = {}
         for st in self.stations:
             self.nameMap[st['zhanming']] = st
 
@@ -103,7 +104,8 @@ class Line():
         """
         线性算法，重置所有站名-场名映射表
         """
-        self.fieldMap = {}
+        self.fieldMap.clear()
+        # self.fieldMap = {}
         for st in self.stations:
             self.fieldMap.setdefault(st["zhanming"].split('::')[0],[]).append(st['zhanming'])
 
@@ -522,6 +524,8 @@ class Line():
         self.rulers.clear()
         self.forbid.clear()
         self.forbid2.clear()
+        self.nameMap.clear()
+        self.fieldMap.clear()
 
     def firstStationName(self)->str:
         if not self.stations:

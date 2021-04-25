@@ -81,6 +81,7 @@ class Graph:
             "start_hour": 0,
             "end_hour": 24,
             "minutes_per_vertical_line": 10.0,
+            "minute_mark_gap_pix":200,
             "bold_line_level": 2,
             "show_line_in_station": True,
             "start_label_height": 30,
@@ -986,6 +987,10 @@ class Graph:
             for _, train in lst:
                 circuit.addTrain(train)
             self.addCircuit(circuit)
+
+    def delAllNonLocalStations(self):
+        for train in self.trains():
+            train.delNonLocal(self)
 
     def jointGraph(self, graph, former: bool, reverse: bool, line_only: bool):
         """

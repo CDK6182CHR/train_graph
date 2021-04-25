@@ -72,10 +72,10 @@ class MainGraphWindow(QtWidgets.QMainWindow):
         super().__init__()
         start = time.time()
         self.name = "pyETRC列车运行图系统"
-        self.version = "V3.3.2"
+        self.version = "V3.3.3"
         self.title = f"{self.name} {self.version}"  # 一次commit修改一次版本号
-        self.date = '20210311'
-        self.release = 'R49'  # 发布时再改这个
+        self.date = '20210425'
+        self.release = 'R50'  # 发布时再改这个
         self._system = None
         self.updating = True
         self.setWindowTitle(f"{self.title}   正在加载")
@@ -1256,6 +1256,10 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             actionDeleteAll.triggered.connect(self._delete_all)
             menu.addAction(actionDeleteAll)
 
+            actionDeleteNonLocal = QtWidgets.QAction('删除时刻表中所有非本线站点', self)
+            actionDeleteNonLocal.triggered.connect(self._delete_non_local)
+            menu.addAction(actionDeleteNonLocal)
+
             menu.addSeparator()
             action = QtWidgets.QAction('批量解析交路',self)
             action.setShortcut('ctrl+P')
@@ -1831,6 +1835,7 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             self.__addMenuAction(m,'重置列车类型',self._auto_type)
             m.addSeparator()
             self.__addMenuAction(m,'删除所有车次',self._delete_all)
+            self.__addMenuAction(m,'删除时刻表中的非本线站点',self._delete_non_local)
             group.set_corner_menu(m)
 
             group = toolBar.add_group('当前车次',menu,use_corner=False)  # 2行
@@ -2780,6 +2785,14 @@ class MainGraphWindow(QtWidgets.QMainWindow):
                             '是否继续？'):
             return
         self.graph.clearTrains()
+        self.GraphWidget.paintGraph()
+        self._refreshDockWidgets()
+
+    def _delete_non_local(self):
+        if not self.question('删除所有列车时刻表中不在本线的站点，此操作不可撤销。'
+                            '是否继续？'):
+            return
+        self.graph.delAllNonLocalStations()
         self.GraphWidget.paintGraph()
         self._refreshDockWidgets()
 
