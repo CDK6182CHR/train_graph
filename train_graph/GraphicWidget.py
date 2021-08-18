@@ -666,7 +666,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
     def _setVLines(self, UIDict: dict, gridColor: QtGui.QColor, height: int, width: int, hour_count: int):
         gap = UIDict["minutes_per_vertical_line"]
         gap_px = self._minutesToPixels(gap)
-        minute_thres = 200  # 最小的标记分钟线间隔
+        minute_thres = UIDict.get('minute_mark_gap_pix', 200)  # 最小的标记分钟线间隔
         minute_marks_gap = max(minute_thres // gap_px, 1)  # 每隔多少条竖线标一次分钟
         print(f"gap={gap_px}, minute_marks_gap={minute_marks_gap}")
         vlines = int(60 / gap)  # 每小时纵线数量+1  添加的循环范围是range(1,vlines)
@@ -1005,7 +1005,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.nowItem.setText(' ')
         self.selectedTrain = None
 
-    def mousePressEvent(self, QMouseEvent: QtGui.QMouseEvent):
+    def mousePressEvQent(self, QMouseEvent: QtGui.QMouseEvent):
         if QMouseEvent.button() == Qt.LeftButton:
             pos = self.mapToScene(QMouseEvent.pos())
             # print("mousePressEvent",pos)

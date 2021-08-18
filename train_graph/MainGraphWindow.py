@@ -220,6 +220,11 @@ class MainGraphWindow(QtWidgets.QMainWindow):
             '车次时刻表': self.trainTimetableDockWidget,
             '交互式时刻表':self.interactiveTimetableDockWidget,
         }
+        self.setDockOptions(QtWidgets.QMainWindow.VerticalTabs|QtWidgets.QMainWindow.AllowTabbedDocks
+                            # |QtWidgets.QMainWindow.ForceTabbedDocks
+                            )
+        self.setDocumentMode(True)
+        self.setTabShape(QtWidgets.QTabWidget.Triangular)
 
     def _initDockWidgetContents(self):
         self._initTrainWidget()

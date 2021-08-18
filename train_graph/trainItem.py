@@ -658,7 +658,6 @@ class TrainItem(QtWidgets.QGraphicsItem):
             else:
                 width = self.graph.UIConfigData()["default_huoche_width"]
             # train.setUI(width=width)
-
         return QtGui.QPen(color, width)
 
     def _incline_line(self, path: QtGui.QPainterPath, point1: QtCore.QPoint,

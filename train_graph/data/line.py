@@ -52,7 +52,7 @@ class Line():
         self.rulers = []  # type:List[Ruler]
         self.routes = []
         self.notes = {}
-        self.tracks = []
+        self.tracks = []   # not used??
         self.forbid = ServiceForbid(self)
         self.forbid2 = ConstructionForbid(self)
         self.item = None  # lineDB中使用。
@@ -708,7 +708,6 @@ class Line():
         """
         sub = Line(self.name)
         sub.stations = deepcopy(self.stations[start_index:end_index])
-        sub.setNameMap()
         sub.setNameMap()
         sub.setFieldMap()
         sub.verifyNotes()

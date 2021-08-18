@@ -887,6 +887,7 @@ class Graph:
         now_list = []
         last_name = None
         circuit_dict = {}
+        line = ''
         for i, line in enumerate(fp):
             line = line.strip()
             if not line:
@@ -931,6 +932,27 @@ class Graph:
                     now_list = []
         self._decodeTrcTrain(now_list, circuit_dict)
         self._decodeTrcCircuit(circuit_dict)
+        # 现在进入最下面的配置部分
+        # 2021.06.26 增加读入颜色
+        if line == '---Color---':
+            for line in fp:
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith('--'):
+                    break
+                ls = line.split(',')
+                if len(ls) != 4:
+                    continue
+                cc,sr,sg,sb = ls
+                r,g,b = map(int,(sr,sg,sb))
+                train = self.trainFromCheci(cc,full_only=True)
+                if train:
+                    try:
+                        train.setUI(color=f'#{r:02x}{g:02x}{b:02x}')
+                    except Exception as e:
+                        print("Graph::loadTrcGraph: WARNING: load color failed. ", line, e)
+
         self.setGraphFileName('')
 
     def _decodeTrcTrain(self, now_list: list, circuit_dict: dict):
