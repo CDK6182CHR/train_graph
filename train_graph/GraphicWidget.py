@@ -1005,7 +1005,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         self.nowItem.setText(' ')
         self.selectedTrain = None
 
-    def mousePressEvQent(self, QMouseEvent: QtGui.QMouseEvent):
+    def mousePressEvent(self, QMouseEvent: QtGui.QMouseEvent):
         if QMouseEvent.button() == Qt.LeftButton:
             pos = self.mapToScene(QMouseEvent.pos())
             # print("mousePressEvent",pos)

@@ -154,7 +154,7 @@ class CircuitDiagram(QtWidgets.QGraphicsView):
             dy=h
         elif endPoint.y() == startPoint.y():
             # k=0的特殊情况
-            dy=h
+            dy=0   # 2021.09.04  这个似乎应该是0？
             dx=w
         else:
             k = (endPoint.y()-startPoint.y())/(endPoint.x()-startPoint.x())

@@ -851,7 +851,7 @@ class Train():
         # print(running, stay)
         return running, stay
 
-    def localRunStayTime(self, graph) -> (int, int):
+    def localRunStayTime(self, graph) -> Tuple[int,int]:
         """
         计算本线纯运行时间的总和、本线停站时间总和。算法是从本线入图点开始，累加所有区间时分。
         2.0版本修改：计算所有【运行线铺画区段】的上述数值。区段包括首末站。不铺画运行线的区段不累计。
@@ -1437,7 +1437,7 @@ class Train():
     def resetYValueMap(self):
         self._yToStationMap = []
 
-    def yToStationInterval(self, y: float) -> (dict, dict):
+    def yToStationInterval(self, y: float) -> Tuple[dict, dict]:
         """
         返回区间的y值较小者，较大者。
         """
@@ -1648,12 +1648,12 @@ class Train():
         def __lt__(self, other):
             return self.value < other.value
 
-    def localDiff(self, train) -> (list, int):
+    def localDiff(self, train) -> Tuple[list, int]:
         """
         只考虑本线站，且不考虑折返情况下的粗糙比较。
         """
 
-    def globalDiff(self, train) -> (list, int):
+    def globalDiff(self, train) -> Tuple[list, int]:
         """
         2019年11月12日：未完成。
         与train所示对象比较时刻表信息，返回加标签的时刻表和不同的数目。

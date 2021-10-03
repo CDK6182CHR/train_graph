@@ -1980,7 +1980,7 @@ class Graph:
                              cutSigma:int=None, cutSeconds:int=None,
                              prec:int=1,
                              cutCount:int=1,
-                             )->(Dict[Tuple[str,str],Tuple[int,int,int]],
+                             )->(Dict[Tuple[str, str], Tuple[int,int,int]],
                                  Dict[Tuple[str, str], Dict[Train, Tuple[int, int]]],
                                  Dict[Tuple[str, str], Dict[int, Dict[int, int]]],
                                  Dict[Tuple[str, str], Dict[int, Tuple[int, int, bool]]]):
