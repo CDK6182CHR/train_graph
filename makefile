@@ -1,6 +1,6 @@
 # 构建pyETRC发行版
 
-NUITKA = python3 -m nuitka
+NUITKA = python -m nuitka
 
 MAIN_SCRIPT = main.py
 LOCAL_OUT = main.exe
