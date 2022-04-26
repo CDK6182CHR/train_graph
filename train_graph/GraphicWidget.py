@@ -569,7 +569,7 @@ class GraphicsWidget(QtWidgets.QGraphicsView):
         font.setRawName(textFont.rawName())
         width1 = rulerTitle.boundingRect().width()
         if width1 > width:
-            stretch = 100 * width // width1
+            stretch = int(round(100 * width // width1))
             font.setStretch(stretch)
         rulerTitle.setFont(font)
         rulerTitle.setBrush(QtGui.QBrush(textColor))

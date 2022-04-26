@@ -782,7 +782,7 @@ class Graph:
                 return nm
         return '其他'
 
-    def checiTypePassenger(self, checi: str) -> (str, int):
+    def checiTypePassenger(self, checi: str) -> Tuple[str, int]:
         """
         根据车次返回类型以及是否是客车。是否是客车按照Train中定义的常量。
         如果不符合任何一个，返回 其他, PassengerAuto。
@@ -1980,10 +1980,10 @@ class Graph:
                              cutSigma:int=None, cutSeconds:int=None,
                              prec:int=1,
                              cutCount:int=1,
-                             )->(Dict[Tuple[str, str], Tuple[int,int,int]],
+                             )->Tuple[Dict[Tuple[str, str], Tuple[int,int,int]],
                                  Dict[Tuple[str, str], Dict[Train, Tuple[int, int]]],
                                  Dict[Tuple[str, str], Dict[int, Dict[int, int]]],
-                                 Dict[Tuple[str, str], Dict[int, Tuple[int, int, bool]]]):
+                                 Dict[Tuple[str, str], Dict[int, Tuple[int, int, bool]]]]:
         """
         2020.03.13新增。从一组给定的（并假定拥有相同标尺）的车次中读取标尺。
         假定各个车次各个区间的运行情况是独立的；即不认为一个车次各个区间的标尺是相同的。
@@ -2055,7 +2055,7 @@ class Graph:
 
     def __intervalRulerMode(self, data:Dict[int,Dict[int,int]], defaultStart:int,
                             defaultStop:int,prec:int,cutCount:int,
-                            )->(int,int,int,Dict[int,Tuple[int,int,bool]]):
+                            )->Tuple[int,int,int,Dict[int,Tuple[int,int,bool]]]:
         """
         众数模式计算给定区间的标尺。
         众数模式下，如果能删除一个数据（最少的一个数据与次少的数量不一致），则不适用伪逆。
@@ -2103,12 +2103,12 @@ class Graph:
                             defaultStop:int,prec:int,
                             cutSigma:int=None,
                             cutSeconds:int=None,cutCount:int=None
-                            )->(Tuple[int,int,int],Dict[int,Tuple[int,int,bool]]):
+                            )->Tuple[Tuple[int,int,int],Dict[int,Tuple[int,int,bool]]]:
         """
         平均数模式计算给定区间的标尺。
         """
 
-        def moment(lst:List[Tuple[int, int]])->(float,float):
+        def moment(lst:List[Tuple[int, int]])->Tuple[float,float]:
             """返回均值和样本标准差"""
             N = sum(map(lambda x:x[1],lst))  # 样本总量, 保证大于1
             if N == 1:
@@ -2177,7 +2177,7 @@ class Graph:
 
     @staticmethod
     def __computeIntervalRuler(values:Dict[int,int],defaultStart:int,defaultStop:int,
-                               prec:int)->(int,int,int):
+                               prec:int)->Tuple[int,int,int]:
         """
         由算好的数据计算所给区间的区间数据，起步附加，停车附加
         :param values 非空字典
@@ -2229,7 +2229,7 @@ class Graph:
                 x = d-defaultStart-defaultStop
         return Graph.__round(x,prec),Graph.__round(y,prec),Graph.__round(z,prec)
 
-    def importTrainFromExcel(self,filename)->(int,int,int):
+    def importTrainFromExcel(self,filename)->Tuple[int,int,int]:
         """
         从指定Excel文件中导入时刻表数据。返回：
         导入成功数据数，失败数据数，新建车次数
