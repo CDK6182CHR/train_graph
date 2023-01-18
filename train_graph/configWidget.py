@@ -97,7 +97,7 @@ class ConfigWidget(QtWidgets.QWidget):
         spin9 = QtWidgets.QSpinBox()
         spin9.setSingleStep(1)
         spin9.setRange(1, 200)
-        spin9.setValue(60 / (self.UIDict["minutes_per_vertical_line"]) - 1)
+        spin9.setValue(int(60 // (self.UIDict["minutes_per_vertical_line"])) - 1)
         layout.addRow(label9, spin9)
         self.vertical_lines_per_hour_spin = spin9
 

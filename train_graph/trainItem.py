@@ -81,7 +81,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         self.startLabelInfo = None  # type: Tuple[float, Tuple[float, int, int, int]]
         self.endLabelInfo = None  # type: Tuple[float, Tuple[float, int, int, int]]
 
-    def setLine(self, start: int = 0, end: int = -1, showStartLabel=True, showEndLabel=True) -> (int, int):
+    def setLine(self, start: int = 0, end: int = -1, showStartLabel=True, showEndLabel=True) -> Tuple[int, int]:
         """
         2019.02.11新增逻辑：绘图过程中记录下每个车站的y_value。
         返回铺画结束的标号。如果有特殊情况，返回-1.
@@ -214,7 +214,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                      span_left: list, span_right: list,
                      mark_only: bool,
                      startIndex: int, *, valid_only=False
-                     ) -> (QtGui.QPainterPath, QtCore.QRectF, QtCore.QRectF, int, int):
+                     ) -> Tuple[QtGui.QPainterPath, QtCore.QRectF, QtCore.QRectF, int, int]:
         """
         从setLine中抽离出来的绘制pathItem函数。返回：path,start_point,end_point, endIndex, status（终止原因）
         """
@@ -581,7 +581,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
         if startAtThis:
             if down:
                 label.moveTo(start_point)
-                next_point = QtCore.QPoint(start_point.x(), start_point.y() - start_height)
+                next_point = QtCore.QPointF(start_point.x(), start_point.y() - start_height)
                 label.lineTo(next_point)
                 next_point.setX(next_point.x() - self.spanItemWidth / 2)
                 label.moveTo(next_point)
@@ -594,7 +594,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
                 label.lineTo(next_point)
 
             else:
-                next_point = QtCore.QPoint(start_point.x(), start_point.y() + start_height)
+                next_point = QtCore.QPointF(start_point.x(), start_point.y() + start_height)
                 label.lineTo(next_point)
                 next_point.setX(next_point.x() - self.spanItemWidth / 2)
                 next_point.setY(next_point.y())
@@ -843,7 +843,7 @@ class TrainItem(QtWidgets.QGraphicsItem):
 
         # 标签突出显示
         rectPen = QtGui.QPen(pen.color())
-        rectPen.setWidth(0.5)
+        rectPen.setWidth(1)
         pen.setWidth(2)
         if label is not None:
             label.setZValue(1)
